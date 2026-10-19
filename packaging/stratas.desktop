@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Stratas
+Comment=Race stronger MCSR Ranked players on their own seed
+Exec=stratas
+Icon=stratas
+Terminal=false
+Categories=Game;Utility;
+StartupWMClass=stratas

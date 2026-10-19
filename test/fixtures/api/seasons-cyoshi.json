@@ -1,0 +1,38 @@
+{
+  "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+  "nickname": "cyoshi",
+  "roleType": 2,
+  "eloRate": 1288,
+  "eloRank": 2538,
+  "country": "no",
+  "seasonResults": {
+    "9": {
+      "last": { "eloRate": 554, "eloRank": 13770, "phasePoint": 0, "percentile": 72.2 },
+      "highest": 587,
+      "lowest": 535,
+      "phaseHighest": 587,
+      "phases": []
+    },
+    "10": {
+      "last": { "eloRate": 1144, "eloRank": 4462, "phasePoint": 0, "percentile": 8.7 },
+      "highest": 1283,
+      "lowest": 527,
+      "phaseHighest": 1283,
+      "phases": []
+    },
+    "11": {
+      "last": { "eloRate": 1146, "eloRank": 5162, "phasePoint": 0, "percentile": 18.6 },
+      "highest": 1230,
+      "lowest": 981,
+      "phaseHighest": 1230,
+      "phases": []
+    },
+    "12": {
+      "last": { "eloRate": 1288, "eloRank": 2538, "phasePoint": 0, "percentile": 16.5 },
+      "highest": 1389,
+      "lowest": 1127,
+      "phaseHighest": 1389,
+      "phases": []
+    }
+  }
+}

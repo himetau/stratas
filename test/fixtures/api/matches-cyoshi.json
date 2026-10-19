@@ -1,0 +1,162 @@
+[
+  {
+    "id": 14235001,
+    "type": 2,
+    "season": 12,
+    "date": 1792241000,
+    "seedType": "VILLAGE",
+    "bastionType": "STABLES",
+    "seed": { "id": "s10", "overworld": "VILLAGE", "nether": "STABLES", "variations": ["biome:structure:savanna"] },
+    "players": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "nickname": "Chavron", "eloRate": 1362, "eloRank": 1758, "roleType": 0 }
+    ],
+    "changes": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1266, "change": 22 },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "eloRate": 1384, "change": -22 }
+    ],
+    "result": { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 665000 },
+    "forfeited": false,
+    "replayExists": 1
+  },
+  {
+    "id": 14234900,
+    "type": 2,
+    "season": 12,
+    "date": 1792240100,
+    "seedType": "SHIPWRECK",
+    "bastionType": "HOUSING",
+    "seed": { "id": "s9", "overworld": "SHIPWRECK", "nether": "HOUSING", "variations": [] },
+    "players": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "nickname": "_RUPER", "eloRate": 1310, "eloRank": 2100, "roleType": 1 }
+    ],
+    "changes": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1246, "change": 20 },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "eloRate": 1330, "change": -20 }
+    ],
+    "result": { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 710000 },
+    "forfeited": false,
+    "replayExists": 1
+  },
+  {
+    "id": 14234466,
+    "type": 2,
+    "season": 12,
+    "date": 1792232612,
+    "seedType": "BURIED_TREASURE",
+    "bastionType": "BRIDGE",
+    "seed": { "id": "mv98blpm2cnm5lpc", "overworld": "BURIED_TREASURE", "nether": "BRIDGE", "variations": ["bastion:triple:2"] },
+    "players": [
+      { "uuid": "888e57641682425792ae75386f41d387", "nickname": "Henuxun", "eloRate": 1358, "eloRank": 1793, "roleType": 0 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 }
+    ],
+    "changes": [
+      { "uuid": "888e57641682425792ae75386f41d387", "eloRate": 1265, "change": 19 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1265, "change": -19 }
+    ],
+    "result": { "uuid": "888e57641682425792ae75386f41d387", "time": 378671 },
+    "forfeited": true,
+    "replayExists": 1
+  },
+  {
+    "id": 14234287,
+    "type": 2,
+    "season": 12,
+    "date": 1792232040,
+    "seedType": "RUINED_PORTAL",
+    "bastionType": "STABLES",
+    "seed": { "id": "mtf38rqkuqdu2ys4", "overworld": "RUINED_PORTAL", "nether": "STABLES", "variations": [] },
+    "players": [
+      { "uuid": "6174765b71584d18af894692b2704ae8", "nickname": "OliverSR", "eloRate": 1262, "eloRank": 2866, "roleType": 3 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 }
+    ],
+    "changes": [
+      { "uuid": "6174765b71584d18af894692b2704ae8", "eloRate": 1237, "change": 21 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1286, "change": -21 }
+    ],
+    "result": { "uuid": "6174765b71584d18af894692b2704ae8", "time": 946151 },
+    "forfeited": false,
+    "replayExists": 1
+  },
+  {
+    "id": 14233921,
+    "type": 2,
+    "season": 12,
+    "date": 1792230810,
+    "seedType": "DESERT_TEMPLE",
+    "bastionType": "BRIDGE",
+    "seed": { "id": "mtf3cdkyfckq7nb1", "overworld": "DESERT_TEMPLE", "nether": "BRIDGE", "variations": [] },
+    "players": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 },
+      { "uuid": "62e74f90857a449e828a66efee99f927", "nickname": "minahaa", "eloRate": 1302, "eloRank": 2391, "roleType": 0 }
+    ],
+    "changes": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1268, "change": 18 },
+      { "uuid": "62e74f90857a449e828a66efee99f927", "eloRate": 1281, "change": -18 }
+    ],
+    "result": { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 313261 },
+    "forfeited": true,
+    "replayExists": 1
+  },
+  {
+    "id": 14232012,
+    "type": 2,
+    "season": 12,
+    "date": 1792229800,
+    "seedType": "DESERT_TEMPLE",
+    "bastionType": "TREASURE",
+    "seed": { "id": "s5", "overworld": "DESERT_TEMPLE", "nether": "TREASURE", "variations": [] },
+    "players": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 },
+      { "uuid": "16a45c3e54c84de3ac259b960342062b", "nickname": "nei1019V", "eloRate": 1240, "eloRank": 3100, "roleType": 0 }
+    ],
+    "changes": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1252, "change": 16 },
+      { "uuid": "16a45c3e54c84de3ac259b960342062b", "eloRate": 1256, "change": -16 }
+    ],
+    "result": { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 742000 },
+    "forfeited": false,
+    "replayExists": 1
+  },
+  {
+    "id": 14231000,
+    "type": 2,
+    "season": 12,
+    "date": 1792229000,
+    "seedType": "VILLAGE",
+    "bastionType": "HOUSING",
+    "seed": { "id": "s4", "overworld": "VILLAGE", "nether": "HOUSING", "variations": [] },
+    "players": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "nickname": "Chavron", "eloRate": 1362, "eloRank": 1758, "roleType": 0 }
+    ],
+    "changes": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1252, "change": 0 },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "eloRate": 1362, "change": 0 }
+    ],
+    "result": { "uuid": null, "time": 1200000 },
+    "forfeited": false,
+    "replayExists": 0
+  },
+  {
+    "id": 14182329,
+    "type": 2,
+    "season": 12,
+    "date": 1792056173,
+    "seedType": "VILLAGE",
+    "bastionType": "STABLES",
+    "seed": { "id": "mtf47ykgzske7num", "overworld": "VILLAGE", "nether": "STABLES", "variations": ["biome:structure:savanna"] },
+    "players": [
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "nickname": "Chavron", "eloRate": 1362, "eloRank": 1758, "roleType": 0 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 }
+    ],
+    "changes": [
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "eloRate": 1371, "change": 19 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1271, "change": -19 }
+    ],
+    "result": { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 785002 },
+    "forfeited": false,
+    "replayExists": 1
+  }
+]

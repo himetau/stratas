@@ -1,0 +1,48 @@
+{
+  "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+  "nickname": "cyoshi",
+  "roleType": 2,
+  "eloRate": 1288,
+  "eloRank": 2538,
+  "country": "no",
+  "season": 12,
+  "timestamp": {
+    "firstOnline": 1764328328,
+    "lastOnline": 1792253455,
+    "lastRanked": 1792232612,
+    "nextDecay": null
+  },
+  "statistics": {
+    "season": {
+      "bestTime": { "casual": null, "ranked": 624925 },
+      "completionTime": { "casual": 0, "ranked": 68102893 },
+      "completions": { "casual": 0, "ranked": 81 },
+      "currentWinStreak": { "casual": 0, "ranked": 2 },
+      "forfeits": { "casual": 0, "ranked": 34 },
+      "highestWinStreak": { "casual": 0, "ranked": 6 },
+      "loses": { "casual": 0, "ranked": 115 },
+      "playedMatches": { "casual": 0, "ranked": 250 },
+      "playtime": { "casual": 0, "ranked": 216342869 },
+      "wins": { "casual": 0, "ranked": 130 }
+    },
+    "total": {
+      "bestTime": { "casual": null, "ranked": 624925 },
+      "completionTime": { "casual": 0, "ranked": 186056290 },
+      "completions": { "casual": 0, "ranked": 192 },
+      "currentWinStreak": { "casual": 0, "ranked": 2 },
+      "forfeits": { "casual": 12, "ranked": 182 },
+      "highestWinStreak": { "casual": 2, "ranked": 13 },
+      "loses": { "casual": 12, "ranked": 413 },
+      "playedMatches": { "casual": 17, "ranked": 989 },
+      "playtime": { "casual": 15571099, "ranked": 814704901 },
+      "wins": { "casual": 5, "ranked": 429 }
+    }
+  },
+  "seasonResult": {
+    "last": { "eloRate": 1288, "eloRank": 2538, "phasePoint": 0, "percentile": 16.5 },
+    "highest": 1389,
+    "lowest": 1127,
+    "phaseHighest": 1389,
+    "phases": []
+  }
+}
