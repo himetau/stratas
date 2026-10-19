@@ -9,6 +9,7 @@ import { itemName, stepTotals, STEP_LABEL, type Step, type StepKind } from "./st
 import { eyesFor } from "./why";
 import { missedChests, simulateTrades, tradesDone, SPLIT_LABEL, tradeView, type Split, type SplitKey } from "./bastion";
 import { runMechanicNotes } from "./mechanics";
+import { statNotes } from "./stat-notes";
 
 export interface Side { run: Run; tl: ActivityTimeline; facts: Facts; steps: Step[] }
 export interface Note { text: string; seconds: number | null; at?: { you?: number; them?: number } }
@@ -128,9 +129,12 @@ function tradingNotes(Y: Side, T: Side, N: string, goals: LeaveGoals): Note[] {
   return out;
 }
 
-/** Time from entering the fortress to 6 rods */
+/** Time from entering the fortress to 6 rods, unless you blinded first and came back for them */
 function rodsNote(Y: Side, T: Side): Note[] {
-  const m = (s: Side) => { const f = s.run.mark("fortress"), r = s.run.rodsAt(6); return f !== undefined && r !== null && r > f ? { f, r } : null; };
+  const m = (s: Side) => {
+    const f = s.run.mark("fortress"), r = s.run.rodsAt(6), bl = s.run.mark("blind");
+    return f !== undefined && r !== null && r > f && !(bl !== undefined && bl < r) ? { f, r } : null;
+  };
   const y = m(Y), t = m(T);
   if (!y && !t) return [];
   const d = (x: { f: number; r: number } | null) => (x ? dur(x.r - x.f) : "—");
@@ -189,6 +193,7 @@ export function phaseNotes(phase: string, Y: Side, T: Side, ys: Span, ts: Span, 
   if (phase === "End") notes.push(...endNote(Y, T, ys, ts, N));
   notes.push(...deaths(Y, ys, "You"), ...deaths(T, ts, N));
   notes.push(...runMechanicNotes(phase, Y, T, ys, ts));
+  notes.push(...statNotes(phase, Y, T, ys, ts));
 
   const cy = ys ? stepTotals(Y.steps, ys[0], ys[1]) : {}, ct = ts ? stepTotals(T.steps, ts[0], ts[1]) : {};
   const compare = (Object.keys(STEP_LABEL) as StepKind[])

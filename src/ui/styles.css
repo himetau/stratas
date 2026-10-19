@@ -340,9 +340,11 @@ canvas.sicon { display: block; flex-shrink: 0; image-rendering: pixelated; }
 .gap-plot { position: relative; }
 .gap-svg { display: block; width: 100%; font-family: var(--font); user-select: none; }
 .gap-svg text { font-size: 11px; fill: var(--text-mid); }
+/* Faint outline in the graph background so text over the curve and lines still reads */
+.gap-svg text { paint-order: stroke; stroke: var(--bg); stroke-width: 2px; stroke-linejoin: round; stroke-opacity: .55; }
 .gap-svg text.dimt { fill: var(--text-dim); } .gap-svg text.midt { fill: var(--text-mid); } .gap-svg text.small { font-size: 10px; }
 .gap-svg .gap-hit { cursor: crosshair; }
-.gap-tip { position: absolute; z-index: 5; max-width: 320px; padding: 4px 7px; border-radius: 3px; background: rgba(10, 6, 7, .78); font-size: 11.5px; line-height: 1.35; white-space: nowrap; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; gap: 1px; }
+.gap-tip { position: absolute; z-index: 5; max-width: 320px; padding: 4px 7px; border-radius: 3px; background: rgba(10, 6, 7, .94); font-size: 11.5px; line-height: 1.35; white-space: nowrap; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; gap: 1px; }
 .gap-tip[hidden] { display: none; }
 .gap-tip .tip-top { display: flex; gap: 8px; font-variant-numeric: tabular-nums; }
 .gap-tip .tip-top b { font-weight: 400; }
@@ -376,6 +378,11 @@ canvas.sicon { display: block; flex-shrink: 0; image-rendering: pixelated; }
 .facts-t tr.f-sub td:first-child { padding-left: 14px; }
 .facts-t td[colspan] { white-space: normal; }
 .facts-t td:last-child { white-space: normal; } /* "you 0:44, Player 1:24" wraps instead of pushing the page sideways */
+.trades-t { width: auto; }
+.trades-t td:first-child { color: var(--text-dim); }
+.trades-t td:not(:first-child), .trades-t th:not(:first-child) { text-align: right; padding-left: 14px; }
+.trades-t tr.sum td { color: var(--text-mid); white-space: normal; }
+.trades-t tr.first td { border-top: 1px solid var(--line); }
 .facts-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; color: var(--text-mid); }
 .facts-notes li { display: flex; justify-content: space-between; gap: 16px; }
 .facts-notes li > span:last-child { white-space: nowrap; flex-shrink: 0; }

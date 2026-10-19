@@ -43,8 +43,8 @@ describe("corpus manifest & claims", () => {
 });
 
 describe("mechanic detectors on corpus runs", () => {
-  it("registers all 15 mechanics and detects occurrences on corpus replays", () => {
-    expect(MECHANICS.length).toBeGreaterThanOrEqual(15);
+  it("registers all 11 mechanics and detects occurrences on corpus replays", () => {
+    expect(MECHANICS.length).toBeGreaterThanOrEqual(11);
     const r1418 = corpus("14182329.rrf");
     const r1423 = corpus("14232012.rrf");
     const r14234 = corpus("14234287.rrf");
@@ -68,8 +68,6 @@ describe("mechanic detectors on corpus runs", () => {
     expect(findMech("overworld_desert_temple").detect(sCyoshi1423).length).toBeGreaterThan(0);
     expect(findMech("overworld_iron_pickaxe").detect(sCyoshi1418).length).toBeGreaterThan(0);
     expect(findMech("bastion_gold_blocks").detect(sCyoshi1418).length).toBeGreaterThan(0);
-    expect(findMech("bastion_craft_overlap").detect(sCyoshi1418).length).toBeGreaterThan(0);
-    expect(findMech("fortress_blazes").detect(sChav1418).length).toBeGreaterThan(0);
     expect(findMech("stronghold_nav").detect(sChav1418).length).toBeGreaterThan(0);
   });
 });

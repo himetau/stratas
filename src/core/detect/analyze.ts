@@ -10,13 +10,14 @@ import { buildSteps, type Step, type StepKind } from "./steps";
 import { findWindows } from "./windows";
 import { phaseWhy, type Part } from "./why";
 import { dragonFight, type DragonFight } from "./end";
+import { blazeBedBlasts, pearlsThrown, precrafts, tradeSummary, type Blast, type Precraft, type TradeItem } from "./stats";
 
 /** From entering the End to the end of the run */
 const endSpan = (r: Run): [number, number] | undefined => { const e = r.mark("end"); return e === undefined ? undefined : [e, r.end]; };
 
 export { DEFAULT_LEAVE, type LeaveGoals } from "./findings";
 
-export const ANALYSIS_VERSION = 33;
+export const ANALYSIS_VERSION = 40;
 
 export interface RunnerInfo { uuid: string; name: string; elo: number | null; finished: boolean; endTicks: number; quit?: boolean }
 
@@ -48,10 +49,48 @@ export interface RaceAnalysis {
   gains: Finding[];
   /** Per phase, exact time lost and what it went to */
   report: PhaseReport[];
+  /** Each blaze rod each of you picked up: when it dropped and when you got it */
+  rods?: { you: { dropped: number; got: number }[]; them: { dropped: number; got: number }[] };
+  /** When each of you killed each blaze */
+  blazeKills?: { you: number[]; them: number[] };
+  /** Precrafts, pearls on the way to the fortress, blaze bed explosives and the bastion trade overview */
+  stats?: { you: RunStats; them: RunStats };
   /** Dragon fight for each of you if you got to the End */
   end?: { you: DragonFight | null; them: DragonFight | null };
   /** Only when opts.debugClaims is set */
   claims?: Claim[];
+}
+
+export interface RunStats {
+  precrafts: Precraft[];
+  /** Pearl throws from leaving the bastion to entering the fortress */
+  pearlsToFort: number[];
+  blasts: Blast[];
+  trades: {
+    n: number;
+    /** The trade that covered what you used later, null if none did or none were needed */
+    needed: { n: number; t: number } | null;
+    noneNeeded: boolean;
+    got: Partial<Record<TradeItem, number>>;
+    left: Partial<Record<TradeItem, number>>;
+    leftWith: Partial<Record<TradeItem, number>>;
+    used: Partial<Record<TradeItem, number>>;
+    /** What each barter gave, in order (same order for everyone on the seed) */
+    items: Record<string, number>[];
+    /** Pickups from barter drops with your running total of that item */
+    pickups: { t: number; item: TradeItem; total: number }[];
+  } | null;
+}
+
+function runStats(s: Side): RunStats {
+  const r = s.run, l = r.mark("bastion_left"), f = r.mark("fortress");
+  const ts = tradeSummary(r);
+  return {
+    precrafts: precrafts(s),
+    pearlsToFort: l !== undefined && f !== undefined && f > l ? pearlsThrown(r, l, f) : [],
+    blasts: blazeBedBlasts(s),
+    trades: ts && { n: ts.barters.length, needed: ts.needed, noneNeeded: ts.noneNeeded, got: ts.got, left: ts.left, leftWith: ts.leftWith, used: ts.used, items: ts.barters.map((b) => b.items), pickups: ts.pickups },
+  };
 }
 
 export interface PhaseReport {
@@ -190,6 +229,9 @@ export function analyzeRace(replay: Replay, youUuid: string, themUuid: string, o
     seed: { overworld: replay.meta.overworldSeed, nether: replay.meta.netherSeed },
     you: info(you), them: info(them),
     finalGap, matchedSeconds: matched, totalSeconds: total, curve: points,
+    rods: { you: you.rodTimes(), them: them.rodTimes() },
+    stats: { you: runStats(Y), them: runStats(T) },
+    blazeKills: { you: Y.facts.kills.filter((k) => k.entity === "blaze").map((k) => k.t), them: T.facts.kills.filter((k) => k.entity === "blaze").map((k) => k.t) },
     splits: withRods(keys.map((k) => ({ name: (you.marks.find((m) => m.key === k) ?? them.marks.find((m) => m.key === k))!.label, you: you.mark(k) ?? null, them: them.mark(k) ?? null })), you, them),
     phases,
     report,
