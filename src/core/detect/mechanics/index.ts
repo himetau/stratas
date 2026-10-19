@@ -9,11 +9,8 @@ import { overworldDesertTempleMechanic } from "./overworld-desert-temple";
 import { overworldIronPickaxeMechanic } from "./overworld-tools";
 import { netherBridgingMechanic } from "./nether-travel-bridging";
 import { bastionGoldBlocksMechanic } from "./bastion-gold-blocks";
-import { bastionCraftOverlapMechanic } from "./bastion-craft-overlap";
 import { pearlHangsMechanic } from "./pearl-hangs";
-import { fortressBlazesMechanic } from "./fortress-blazes";
 import { strongholdNavigationMechanic } from "./stronghold-navigation";
-import { pieChartMechanic, fireResMechanic } from "./cross-phase-checks";
 
 export interface Occurrence {
   t0: number;
@@ -43,12 +40,8 @@ export const MECHANICS: Mechanic[] = [
   overworldIronPickaxeMechanic,
   netherBridgingMechanic,
   bastionGoldBlocksMechanic,
-  bastionCraftOverlapMechanic,
   pearlHangsMechanic,
-  fortressBlazesMechanic,
   strongholdNavigationMechanic,
-  pieChartMechanic,
-  fireResMechanic,
 ];
 
 /** Runs all mechanics for a phase and returns notes */

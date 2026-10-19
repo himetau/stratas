@@ -2,6 +2,7 @@
 // Opening a phase shows what each player did in it side by side
 import { g, type RaceAnalysis, type RaceRow } from "../bridge";
 import { buildDeltaModel } from "../../core/detect/segments";
+import { kitText, TRADE_ITEMS, TRADE_NAME } from "../../core/detect/stats";
 import { clockSec, deltaClass, fmtClock, fmtDelta, h } from "../dom";
 import { callLabel, gapChart, gapStrip, STRIP_H } from "../gap";
 import { bindKey, copyField, head, openInMinecraft, panel, rank } from "../parts";
@@ -56,8 +57,28 @@ function watch(at: { you?: number; them?: number } | undefined, theirName: strin
   return [at.you != null ? `you ${fmtClock(at.you)}` : null, at.them != null ? `${theirName} ${fmtClock(at.them)}` : null].filter(Boolean).join(", ");
 }
 
+/** Bastion trades side by side: what each of you picked up and left on the ground, what you left with and used, and
+ * which trade covered what you used */
+function tradesTable(a: RaceAnalysis, theirName: string) {
+  const y = a.stats?.you.trades, t = a.stats?.them.trades;
+  if (!y && !t) return null;
+  const n = (v: number | undefined) => (v ? String(v) : "");
+  const rows = TRADE_ITEMS.filter((k) => [y?.got, y?.left, t?.got, t?.left].some((d) => (d?.[k] ?? 0) > 0)).map((k) =>
+    h("tr", null, h("td", null, TRADE_NAME[k]), h("td", null, n(y?.got[k])), h("td", { class: "dim" }, n(y?.left[k])), h("td", null, n(t?.got[k])), h("td", { class: "dim" }, n(t?.left[k]))));
+  const need = (s: typeof y) => (!s ? "—" : s.noneNeeded ? "none" : s.needed ? `${s.needed.n} of ${s.n} (${fmtClock(s.needed.t)})` : `? of ${s.n}`);
+  const both = (label: string, f: (s: NonNullable<typeof y>) => string, first = false) => h("tr", { class: first ? "sum first" : "sum" }, h("td", null, label), h("td", { colspan: 2 }, y ? f(y) : "—"), h("td", { colspan: 2 }, t ? f(t) : "—"));
+  return h("table", { class: "plain trades-t" },
+    h("tr", null, h("th", null, "Trades"), h("th", { class: "you" }, "You got"), h("th", null, "left"), h("th", { class: "them" }, `${theirName} got`), h("th", null, "left")),
+    rows,
+    both("Trades", (s) => String(s.n), true),
+    both("Left on", (s) => kitText(s.leftWith)),
+    both("Used after", (s) => kitText(s.used)),
+    h("tr", { class: "sum" }, h("td", null, "Needed"), h("td", { colspan: 2 }, need(y)), h("td", { colspan: 2 }, need(t))));
+}
+
 /** What each player did in one phase */
-function facts(p: Report, theirName: string) {
+function facts(p: Report, theirName: string, a: RaceAnalysis) {
+  const trades = p.phase === "Bastion" ? tradesTable(a, theirName) : null;
   const rows: HTMLElement[] = [];
   for (const w of p.why ?? []) {
     const [first, ...rest] = w.text.split(" · ");
@@ -73,13 +94,15 @@ function facts(p: Report, theirName: string) {
         : h("tr", { class: "f-sub" }, h("td"), h("td", { colspan: 4 }, part)));
     }
   }
-  const notes = (p.notes ?? []).filter((n) => !/^could have/i.test(n.text));
+  // The trades table already shows these
+  const notes = (p.notes ?? []).filter((n) => !/^could have/i.test(n.text) && !(trades && /^(Trades:|Left on the ground:)/.test(n.text)));
   return h("div", { class: "facts" },
     p.unfinished ? h("div", { class: "dim" }, "Your run ended in this phase.") : null,
     p.theirsEnded ? h("div", { class: "dim" }, `${theirName}'s run ended in this phase.`) : null,
     rows.length ? h("table", { class: "plain facts-t" },
       h("tr", null, h("th", null, ""), h("th", { class: "you" }, "You"), h("th", { class: "them" }, theirName), h("th", null, "Cost"), h("th", null, "Watch at")),
       rows) : null,
+    trades,
     notes.length ? h("ul", { class: "facts-notes" }, notes.map((n) => h("li", null, h("span", null, n.text.replace(/ · /g, ", ")), h("span", { class: "dim" }, watch(n.at, theirName))))) : null,
     playByPlay(p, theirName));
 }
@@ -112,7 +135,7 @@ function splitsTable(a: RaceAnalysis, id: number, seedType: string | null, selec
         h("td", null, s.splitName), h("td", null, t(sp.you)), h("td", null, t(sp.them)),
         h("td", { class: changeCls(s.segDelta) }, signed(s.segDelta)), h("td", { class: changeCls(s.gap1) }, signed(s.gap1))));
     }
-    if (on && p) body.push(h("tr", { class: "facts-row" }, h("td", { colspan: 5 }, facts(p, a.them.name))));
+    if (on && p) body.push(h("tr", { class: "facts-row" }, h("td", { colspan: 5 }, facts(p, a.them.name, a))));
   }
   if (unreached.length) {
     body.push(h("tr", { class: "grp off" }, h("td", { colspan: 5 }, unreached.every((x) => x.you !== null) ? "Only you reached" : unreached.every((x) => x.them !== null) ? `Only ${a.them.name} reached` : "Only one of you reached")));

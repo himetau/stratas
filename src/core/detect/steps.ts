@@ -5,6 +5,7 @@ import { ACTIVITIES } from "./activity";
 import { Facts } from "./facts";
 import { Run, type Action } from "./run";
 import { fmtDur } from "./names";
+import { meals } from "./stats";
 
 export type StepKind = "trade" | "loot" | "craft" | "sort" | "mine" | "fight" | "portal" | "build" | "eyes" | "beds" | "eat" | "death" | "pause" | "travel" | "still";
 /** Text is the headline, detail is what was gained or used if any */
@@ -83,11 +84,17 @@ export function buildSteps(r: Run, tl: ActivityTimeline, f: Facts): Step[] {
     const ln = lava.filter((b) => b.op === "empty" && b.fluid === "lava").length, wn = lava.filter((b) => b.op === "empty" && b.fluid === "water").length;
     add(t0, enter, "portal", "Built a lava portal", `${ln} lava, ${wn} water`);
   }
+  const blind = r.mark("blind");
   for (const c of clusters(of("place").filter((p) => p.what === "obsidian"), 200)) {
     if (c.length < 4) continue;
     const [a, b] = span(c);
-    const lit = A.find((x) => x.kind === "portal" && x.t0 >= b && x.t0 <= b + 600);
-    if (lit) add(a, lit.t0, "portal", "Built a portal", `${c.length} obsidian`);
+    // Going through starts at your last position record, which is before the last block if you stood still while
+    // placing it, so match on when you came out
+    const lit = A.find((x) => x.kind === "portal" && x.t1 > b && x.t0 <= b + 600);
+    // Built in the Nether = the blind, out to the Overworld to measure eyes. One after blind travel (back for more
+    // rods) goes to stronghold coords already measured
+    const t1 = lit ? Math.max(lit.t0, b) : b, nether = lit?.w === 1;
+    if (lit) add(a, t1, "portal", nether ? (blind !== undefined && t1 > blind ? "Built a portal to the stronghold" : "Built a blind portal") : "Built a portal", `${c.length} obsidian`);
     else add(a, b, "build", `Placed ${c.length} obsidian`);
   }
 
@@ -114,8 +121,11 @@ export function buildSteps(r: Run, tl: ActivityTimeline, f: Facts): Step[] {
 
   // Fights = your hits on one mob type plus what you killed
   const hits = of("hit");
-  for (const c of clusters(hits, 100)) {
+  const fights = clusters(hits, 100);
+  for (const [i, c] of fights.entries()) {
     const [a, b] = span(c);
+    // Rods picked up after the fight, until the next one starts so none count twice
+    const until = Math.min(b + 200, i + 1 < fights.length ? span(fights[i + 1])[0] - 1 : Infinity);
     const mobs: Record<string, number> = {};
     for (const h of c) mobs[h.what ?? "mob"] = (mobs[h.what ?? "mob"] ?? 0) + 1;
     const killed = f.kills.filter((k) => k.t >= a && k.t <= b + 40);
@@ -123,7 +133,7 @@ export function buildSteps(r: Run, tl: ActivityTimeline, f: Facts): Step[] {
     for (const k of killed) kt[k.entity] = (kt[k.entity] ?? 0) + 1;
     const main = Object.entries(mobs).sort((p, q) => q[1] - p[1])[0][0];
     if (!killed.length && (c.length < 3 || main === "mob")) continue;
-    const rods = main === "blaze" ? (r.invAt(b + 200).get("blaze_rod") ?? 0) - (r.invAt(a - 1).get("blaze_rod") ?? 0) : 0;
+    const rods = main === "blaze" ? r.rodsIn(a, until) : 0;
     const kills = Object.entries(kt).map(([m, n]) => `${n} ${m.replace(/_/g, " ")}${n > 1 ? "s" : ""}`).join(", ");
     add(a, b, "fight", kills ? `Killed ${kills}` : `Fought ${main.replace(/_/g, " ")}s`, rods > 0 ? `${rods} rod${rods > 1 ? "s" : ""}` : undefined);
   }
@@ -155,7 +165,8 @@ export function buildSteps(r: Run, tl: ActivityTimeline, f: Facts): Step[] {
       add(a, b, "build", up >= across && up >= 3 ? `Pillared ${up} blocks` : across >= 3 ? `Bridged ${across} blocks` : `Placed ${c.length} blocks`);
     }
   }
-  for (const x of of("eat")) add(x.t0, x.t1, "eat", "Ate");
+  const food = meals(r);
+  for (const x of of("eat")) { const m = food.find((f) => f.t === x.t1)?.item; add(x.t0, x.t1, "eat", m ? `Ate ${itemName(m).replace(/(?<!ie)s$/, "")}` : "Ate"); }
 
   // Whatever time is left is travel or standing still
   steps.sort((a, b) => a.t0 - b.t0);

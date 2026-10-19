@@ -42,6 +42,8 @@ export interface Action {
   what?: string;
   /** Entity involved, like which piglin a barter came from */
   id?: number;
+  /** When a picked up item dropped */
+  dropped?: number;
 }
 
 const CONTAINER_KIND: Record<string, ActionKind> = {
@@ -156,15 +158,26 @@ export class Run {
 
   // ---- queries
 
-  /** When you picked up n rods total. Counts pickups since rods get crafted away */
+  /** When you picked up n rods total. Counts pickups since rods get crafted away, and moving rods between
+   *  slots or through the crafting grid makes inventory counts go up without any new rods */
   rodsAt(n: number): number | null {
-    let got = 0, prev = 0;
-    for (let i = 0; i < this.inv.length; i++) {
-      const c = this.inv[i].c.get("blaze_rod") ?? 0;
-      if (c > prev) { got += c - prev; if (got >= n) return this.inv[i].t; }
-      prev = c;
+    let got = 0;
+    for (const a of this.actions) {
+      if (a.kind !== "pickup" || a.item !== "blaze_rod") continue;
+      got += a.count ?? 1;
+      if (got >= n) return a.t0;
     }
     return null;
+  }
+
+  /** Each rod you picked up, when it dropped and when you got it, one entry per rod */
+  rodTimes(): { dropped: number; got: number }[] {
+    return this.actions.flatMap((a) => (a.kind === "pickup" && a.item === "blaze_rod" ? Array.from({ length: a.count ?? 1 }, () => ({ dropped: a.dropped ?? a.t0, got: a.t0 })) : []));
+  }
+
+  /** Rods picked up in [t0, t1] */
+  rodsIn(t0: number, t1: number): number {
+    return this.actions.reduce((n, a) => n + (a.kind === "pickup" && a.item === "blaze_rod" && a.t0 >= t0 && a.t0 <= t1 ? a.count ?? 1 : 0), 0);
   }
 
   posAt(t: number): TrackPoint {
@@ -261,7 +274,7 @@ export class Run {
   private buildActions(tl: TimelineEntry[]) {
     let open: ReplayEvent | null = null;
     const mining = new Map<string, { t0: number; t1: number; w: number; at: Vec3 }>();
-    const itemEntities = new Map<number, string>();
+    const itemEntities = new Map<number, string>(), itemSpawned = new Map<number, number>();
     const justMined: Action[] = [];
     const flying = new Map<number, Action>();
     const entityType = new Map<number, string>();
@@ -300,6 +313,7 @@ export class Run {
         }
         case "ITEM_ENTITY": {
           itemEntities.set(e.id!, e.item!);
+          if (!itemSpawned.has(e.id!)) itemSpawned.set(e.id!, e.t);
           // Block drop spawns where it broke a tick or two later
           const m = justMined.find((a) => !a.item && e.t - a.t1 <= 4 && a.at && e.pos && Math.hypot(e.pos[0] - a.at[0] - 0.5, e.pos[1] - a.at[1] - 0.5, e.pos[2] - a.at[2] - 0.5) <= 1.5);
           if (m) { m.item = e.item; m.count = e.count; }
@@ -307,7 +321,7 @@ export class Run {
           break;
         }
         case "ITEM_PICKUP":
-          if (e.collector === -2) this.add({ kind: "pickup", t0: e.t, t1: e.t, item: itemEntities.get(e.id!) ?? "?", count: e.count });
+          if (e.collector === -2) this.add({ kind: "pickup", t0: e.t, t1: e.t, item: itemEntities.get(e.id!) ?? "?", count: e.count, dropped: itemSpawned.get(e.id!) });
           break;
         case "PIGLIN_BARTER": {
           const d: Record<string, number> = {};

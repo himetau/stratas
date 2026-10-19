@@ -103,12 +103,13 @@ describe("leaving the bastion by pearl", () => {
     const left = a.splits.find((s) => s.name === "Left the Bastion")!;
     expect(Math.round(left.you! / 20)).toBe(304);
     expect(Math.round(left.them! / 20)).toBe(324);
-    // Who got 6 rods first. Counts pickups since rods get crafted away
+    // Who got 6 rods first. Counts pickups, the 5 rods moved to the crafting grid at 7:46 are not new
     const rods = a.splits.find((s) => s.name === "6 Blaze Rods")!;
-    expect([Math.round(rods.you! / 20), Math.round(rods.them! / 20)]).toEqual([466, 548]);
+    expect([Math.round(rods.you! / 20), Math.round(rods.them! / 20)]).toEqual([495, 548]);
     // Fortress to stronghold split at its milestones in time order, ends at eye spy
+    // You blinded on 5 rods before your 6th, so both are split at blind
     const f = a.report.find((p) => p.phase === "Fortress to stronghold")!;
-    expect(f.why.map((w) => [w.label, Math.round(w.seconds)])).toEqual([["6 rods", -68], ["To the stronghold", 18]]);
+    expect(f.why.map((w) => [w.label, Math.round(w.seconds)])).toEqual([["To blind", -7], ["To the stronghold", -43]]);
     // Inside the stronghold is its own phase
     const sh = a.report.find((p) => p.phase === "Stronghold")!;
     expect(Math.round(sh.change!)).toBe(12);

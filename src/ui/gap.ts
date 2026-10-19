@@ -9,7 +9,8 @@ const NS = "http://www.w3.org/2000/svg";
 const PAD_L = 64, PAD_R = 14, PLOT_H = 210, RAIL_H = 74;
 
 /** Phase span on your clock (you0..you1) and on theirs (them0..them1) */
-export interface PhaseBand { phase: string; you0: number; you1: number; them0: number; them1: number; change: number | null; you: number | null; them: number | null }
+/** them0/them1 stretch to cover their steps in the phase, themFrom/themTo are their actual splits */
+export interface PhaseBand { phase: string; you0: number; you1: number; them0: number; them1: number; themFrom: number; themTo: number; change: number | null; you: number | null; them: number | null }
 
 /** Your span in each report phase, in play order */
 export function phaseBands(a: RaceAnalysis): PhaseBand[] {
@@ -17,11 +18,11 @@ export function phaseBands(a: RaceAnalysis): PhaseBand[] {
   for (const s of buildDeltaModel(a).segments) {
     const name = s.reportPhase ?? s.segLabel;
     const last = out.at(-1);
-    if (last && last.phase === name) { last.you1 = s.you1; last.them1 = Math.max(last.them1, s.them1); }
+    if (last && last.phase === name) { last.you1 = s.you1; last.them1 = Math.max(last.them1, s.them1); last.themTo = s.them1; }
     else {
       const p = a.report?.find((r) => r.phase === name);
       const st = p?.steps?.them ?? [];
-      out.push({ phase: name, you0: s.you0, you1: s.you1, them0: st.length ? Math.min(...st.map((x) => x.t0)) / 20 : s.them0, them1: st.length ? Math.max(s.them1, ...st.map((x) => x.t1 / 20)) : s.them1,
+      out.push({ phase: name, you0: s.you0, you1: s.you1, them0: st.length ? Math.min(...st.map((x) => x.t0)) / 20 : s.them0, them1: st.length ? Math.max(s.them1, ...st.map((x) => x.t1 / 20)) : s.them1, themFrom: s.them0, themTo: s.them1,
         change: p?.change ?? null, you: p?.you ?? null, them: p?.them ?? null });
     }
   }
@@ -44,7 +45,8 @@ function gapRange(curve: [number, number][], gapAt: (s: number) => number, x0: n
   const gs = curve.filter((p) => p[0] >= x0 && p[0] <= x1).map((p) => p[1]).concat([gapAt(x0), gapAt(x1), 0]);
   const lo = Math.min(...gs), hi = Math.max(...gs);
   const step = [10, 15, 20, 30, 60, 90, 120, 180, 300].find((v) => v >= (hi - lo) / 3) ?? 300;
-  return { step, gTop: Math.ceil((hi + (hi - lo) * (0.28 + roomy) + 1) / step) * step, gBot: Math.floor((lo - (hi - lo) * (0.2 + roomy) - 1) / step) * step };
+  // Theirs go under the curve, so zoomed in there's more room below
+  return { step, gTop: Math.ceil((hi + (hi - lo) * (0.28 + roomy) + 1) / step) * step, gBot: Math.floor((lo - (hi - lo) * (0.2 + roomy * 2) - 1) / step) * step };
 }
 
 // Rounds like clockSec so the same time reads the same here and in the table
@@ -53,7 +55,20 @@ const short = (s: number) => { const r = Math.round(s), a = Math.abs(r); return 
 const sentence = (t: string) => t.charAt(0) + t.slice(1).toLowerCase();
 const tone = (g: number | null) => (g === null || Math.abs(g) < 0.5 ? "var(--text-dim)" : g > 0 ? "var(--bad)" : "var(--good)");
 const toneCls = (g: number) => (g > 0.5 ? "bad" : g < -0.5 ? "good" : "dim");
-const textW = (t: string) => t.length * 6.8 + 4;
+// Measured in the chart font so labels are sized to what's drawn (guessing per character let long ones run off)
+let measureCtx: CanvasRenderingContext2D | null = null;
+const textW = (t: string, size = 11) => {
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return t.length * 7 + 4;
+  measureCtx.font = `${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--font") || "monospace"}`;
+  return measureCtx.measureText(t).width + 4;
+};
+/** Cut to fit a width, with an ellipsis. Empty if not even one letter fits */
+const fitText = (t: string, w: number, size = 11) => {
+  if (textW(t, size) <= w) return t;
+  for (let n = t.length - 1; n > 0; n--) { const c = `${t.slice(0, n).trimEnd()}…`; if (textW(c, size) <= w) return c; }
+  return "";
+};
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 /** Analysis cost labels reworded the way runners say them */
 export function callLabel(label: string, v: number): string {
@@ -62,13 +77,26 @@ export function callLabel(label: string, v: number): string {
   if (rods) return `Getting ${rods[1]} rods`;
   const named: Record<string, string> = {
     "First throw": "First trade", "After trading": "Leaving the bastion", Stronghold: "In the stronghold", Eyes: "Eye throws",
-    Idle: "Standing still", "In a portal": "Portal waits", Death: "Dead", Distance: v > 0 ? "Longer route" : "Shorter route", Speed: v > 0 ? "Slower travel" : "Faster travel",
+    Idle: "Standing still", "In a portal": "Portal waits", Death: "Dead", Distance: v > 0 ? "Longer route" : "Shorter route", "To blind": "Fortress to blind", Speed: v > 0 ? "Slower travel" : "Faster travel",
   };
   return named[l] ?? l;
 }
 const SHORT: Record<string, string> = { "Nether travel": "Nether", "Bastion to fortress": "To fortress", "Fortress to stronghold": "To stronghold", "Bastion to blind": "To blind", "After the bastion": "After bastion" };
 const SPLIT_SHORT: Record<string, string> = { "Entered the Nether": "Nether", "Entered Bastion": "Bastion", "Left the Bastion": "Left bastion", "Entered Fortress": "Fortress", "6 Blaze Rods": "6 rods", "Blind Travelled": "Blind", "Eye Spy": "Eye Spy", "Entered the End": "End", "Defeated the Dragon": "Dragon" };
-const MOMENT_COLOR: Record<string, string> = { perch: "var(--warn)", zero: "var(--warn)", kill: "var(--good)", done: "var(--text)", trade: "var(--warn)", dead: "var(--bad)", blaze: "color-mix(in srgb, var(--warn) 60%, var(--bad))", portal: "color-mix(in srgb, var(--accent) 55%, var(--them))", eyes: "var(--them)" };
+/** "2 beds", "1 bed 1 tnt", "3 tnt" */
+const blastsText = (bs: { what: "bed" | "tnt" }[]) => {
+  const beds = bs.filter((b) => b.what === "bed").length, tnt = bs.length - beds;
+  return [beds ? `${beds} bed${beds > 1 ? "s" : ""}` : "", tnt ? `${tnt} tnt` : ""].filter(Boolean).join(" ");
+};
+/** When room on the curve is short, the extras get placed after everything else (which goes in time order) */
+const PLACE_FIRST: Record<string, number> = { pearls: 1, blast: 1, kit: 2, craft: 2 };
+/** What you picked up from trades: these go in the trade line's label, the rest only in its detail */
+const PICKED_LABEL: [string, string][] = [["ender_pearl", "pearls"], ["obsidian", "obby"], ["string", "string"]];
+const PICKED_NAME: Record<string, string> = { ender_pearl: "pearls", obsidian: "obsidian", string: "string", crying_obsidian: "crying obsidian", fire_res: "fire res", fire_charge: "fire charges", glowstone_dust: "glowstone dust" };
+/** Precraft items worth naming on the line */
+const PRECRAFT_NAME: Record<string, string> = { respawn_anchor: "anchor", bow: "bow", iron_axe: "iron axe", iron_sword: "iron sword", golden_pickaxe: "gold pick", ender_eye: "eye" };
+const PRECRAFT_SHORT: Record<string, string> = { bastion: "bastion precraft", fort: "fort precraft", stronghold: "stronghold precraft" };
+const MOMENT_COLOR: Record<string, string> = { kit: "var(--warn)", craft: "var(--accent)", blast: "var(--bad)", pearls: "color-mix(in srgb, var(--them) 50%, var(--you))", perch: "var(--warn)", zero: "var(--warn)", kill: "var(--good)", done: "var(--text)", trade: "var(--warn)", dead: "var(--bad)", blaze: "color-mix(in srgb, var(--warn) 60%, var(--bad))", portal: "color-mix(in srgb, var(--accent) 55%, var(--them))", eyes: "var(--them)" };
 
 type Layers = { splits: boolean; times: boolean; lead: boolean };
 type Mode = "curve" | "rail" | "list" | "off";
@@ -86,7 +114,9 @@ function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
   return e;
 }
 
-interface Moment { who: "you" | "them"; kind: string; label: string; a: number; b: number; own: number; detail: string }
+/** Marks along a moment's line, in seconds: counts written into the line (rods, the needed trade) and dots (blaze
+ * kills, pearls) */
+interface Moment { who: "you" | "them"; kind: string; label: string; a: number; b: number; own: number; detail: string; nums?: { t: number; n: number }[]; dots?: number[] }
 type Box = { x0: number; x1: number; y0: number; y1: number };
 
 export interface GapChart extends HTMLElement {
@@ -123,24 +153,82 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
   const moments = (who: "you" | "them"): Moment[] => {
     const L = (a.report ?? []).flatMap((r) => r.steps?.[who] ?? []);
     const out: Moment[] = [];
-    const add = (kind: string, label: string, s0: number, s1: number, detail = "") => out.push({ who, kind, label, a: s0, b: s1, own: s0, detail });
+    const add = (kind: string, label: string, s0: number, s1: number, detail = "", extra: Pick<Moment, "nums" | "dots"> = {}) => out.push({ who, kind, label, a: s0, b: s1, own: s0, detail, ...extra });
+    const st = a.stats?.[who];
+    const split = (re: RegExp) => a.splits.find((sp) => re.test(sp.name))?.[who] ?? null;
     const merge = (xs: { a: number; b: number; n: number }[], gap: number) => {
       const m: typeof xs = [];
       for (const x of xs.sort((p, q) => p.a - q.a)) { const l = m.at(-1); if (l && x.a - l.b <= gap) { l.b = Math.max(l.b, x.b); l.n += x.n; } else m.push({ ...x }); }
       return m;
     };
-    for (const m of merge(L.filter((s) => s.kind === "trade").map((s) => ({ a: s.t0 / 20, b: s.t1 / 20, n: Number(/^(\d+)/.exec(s.text)?.[1] ?? 0) })), 60))
-      add("trade", m.n ? `${m.n} trades in ${clock(m.b - m.a)}` : `trading for ${clock(m.b - m.a)}`, m.a, m.b);
+    // The trade that covered what you used later is written into the line
+    const need = st?.trades?.needed;
+    // Each pickup from barter drops as an amount (the analysis keeps running totals per item)
+    const pickups: { t: number; item: string; n: number }[] = [];
+    const prevTotal: Record<string, number> = {};
+    for (const p of st?.trades?.pickups ?? []) { pickups.push({ t: p.t / 20, item: p.item, n: p.total - (prevTotal[p.item] ?? 0) }); prevTotal[p.item] = p.total; }
+    const tradeLines = merge(L.filter((s) => s.kind === "trade").map((s) => ({ a: s.t0 / 20, b: s.t1 / 20, n: Number(/^(\d+)/.exec(s.text)?.[1] ?? 0) })), 60);
+    for (const [i, m] of tradeLines.entries()) {
+      const here = need && need.t / 20 >= m.a && need.t / 20 <= m.b ? need : null;
+      // What you picked up from trades: pearls, obsidian and string in the label, everything with times in the detail.
+      // A pickup counts for the line that started before it (the last drops get picked up on the way out)
+      const until = tradeLines[i + 1]?.a ?? Infinity;
+      const picks = pickups.filter((p) => p.t >= (i ? m.a : -Infinity) && p.t < until);
+      const got = new Map<string, { n: number; at: number[] }>();
+      for (const p of picks) { const g = got.get(p.item) ?? { n: 0, at: [] }; g.n += p.n; g.at.push(p.t); got.set(p.item, g); }
+      const short = PICKED_LABEL.filter(([k]) => got.get(k)?.n).map(([k, name]) => `${got.get(k)!.n} ${name}`).join(", ");
+      const long = [...got].filter(([, g]) => g.n).map(([k, g]) => `${g.n} ${PICKED_NAME[k] ?? k} (${[...new Set(g.at.map((t) => clock(t)))].join(", ")})`).join(", ");
+      add("trade", `${m.n ? `${m.n} trades in ${clock(m.b - m.a)}` : `trading for ${clock(m.b - m.a)}`}${short ? ` · got ${short}` : ""}`, m.a, m.b,
+        [long ? `picked up ${long}` : "", here ? `trade ${here.n} covered what you used later, at ${clock(here.t / 20)}` : ""].filter(Boolean).join("; "),
+        here ? { nums: [{ t: here.t / 20, n: here.n }] } : {});
+    }
+    // What you left the bastion with
+    const kit = st?.trades?.leftWith, leftAt = split(/left the bastion/i);
+    if (kit && leftAt !== null) {
+      const parts = [["ender_pearl", "pearls"], ["obsidian", "obby"], ["string", "string"]].filter(([k]) => (kit[k as keyof typeof kit] ?? 0) > 0).map(([k, name]) => `${kit[k as keyof typeof kit]} ${name}`);
+      // On the split, so it belongs to the phase after the bastion
+      if (parts.length) add("kit", `left on ${parts.join(", ")}`, leftAt / 20, leftAt / 20);
+    }
     for (const s of L.filter((x) => x.kind === "death")) add("dead", s.text === "Died" ? `dead for ${clock((s.t1 - s.t0) / 20)}` : `${s.text.toLowerCase()}, ${clock((s.t1 - s.t0) / 20)}`, s.t0 / 20, s.t1 / 20);
-    // Rods = first blaze fight to 6 rods (the split) so both are measured the same
+    // Rods = first blaze fight to 6 rods (the split) so both are measured the same. Marks each blaze killed and
+    // numbers each rod where it dropped
     const blazes = L.filter((s) => s.kind === "fight" && /blaze/.test(s.text)).sort((p, q) => p.t0 - q.t0);
     if (blazes.length) {
-      const six = a.splits.find((sp) => /blaze rods/i.test(sp.name))?.[who] ?? null;
+      const six = split(/blaze rods/i);
       const from = blazes[0].t0 / 20, to = six !== null ? six / 20 : blazes.at(-1)!.t1 / 20;
-      const rods = blazes.reduce((n, s) => n + Number(/(\d+) rod/.exec(s.detail ?? "")?.[1] ?? 0), 0);
-      if (to > from) add("blaze", six !== null ? `6 rods in ${clock(to - from)}` : rods ? `${rods} rod${rods > 1 ? "s" : ""} in ${clock(to - from)}, never got 6` : `fought blazes for ${clock(to - from)}`, from, to);
+      const got = (a.rods?.[who] ?? []).filter((r) => r.got / 20 >= from && r.got / 20 <= to).map((r) => r.dropped / 20);
+      // Kills without a rod; the rod's count stands for the kill that dropped it (the closest one before the drop)
+      const kills = (a.blazeKills?.[who] ?? []).map((t) => t / 20).filter((t) => t >= from && t <= to);
+      for (const d of got) {
+        const k = kills.reduce((best, t, i) => (t <= d + 0.5 && t >= d - 5 && (best < 0 || t > kills[best]) ? i : best), -1);
+        if (k >= 0) kills.splice(k, 1);
+      }
+      // Analyses saved before rod times were kept only have the count per fight
+      const rods = a.rods ? got.length : blazes.reduce((n, s) => n + Number(/(\d+) rod/.exec(s.detail ?? "")?.[1] ?? 0), 0);
+      // Beds and TNT set off for the blaze bed go in the line's detail
+      const blasts = (st?.blasts ?? []).filter((b) => b.t / 20 >= from && b.t / 20 <= to);
+      const blastNote = blasts.length ? `blaze bed ${blastsText(blasts)} at ${clock(blasts[0].t / 20)}` : "";
+      if (to > from) add("blaze", six !== null ? `6 rods in ${clock(to - from)}` : rods ? `${rods} rod${rods > 1 ? "s" : ""} in ${clock(to - from)}, never got 6` : `fought blazes for ${clock(to - from)}`,
+        from, to, [got.length ? `rods at ${got.map(clock).join(", ")}` : "", blastNote].filter(Boolean).join(", "),
+        { nums: got.map((t, i) => ({ t, n: i + 1 })), dots: kills });
     }
-    for (const s of L.filter((x) => x.kind === "portal")) add("portal", /lava/.test(s.text) ? "built a lava portal" : "built a portal", s.t1 / 20, s.t1 / 20, s.detail);
+    // Blaze bed set off outside the rods line gets its own mark
+    const lineSpan = out.find((m) => m.kind === "blaze");
+    const loose = (st?.blasts ?? []).filter((b) => !lineSpan || b.t / 20 < lineSpan.a || b.t / 20 > lineSpan.b);
+    if (loose.length) add("blast", `blaze bed: ${blastsText(loose)}`, loose[0].t / 20, loose[0].t / 20);
+    // Pearls thrown on the way from the bastion to the fortress, a dot each
+    const pearls = st?.pearlsToFort ?? [], left = split(/left the bastion/i), fort = split(/entered fortress/i);
+    if (pearls.length && left !== null && fort !== null && fort > left)
+      add("pearls", `${pearls.length} pearl${pearls.length > 1 ? "s" : ""} to the fortress`, left / 20, fort / 20, `thrown at ${pearls.map((t) => clock(t / 20)).join(", ")}`, { dots: pearls.map((t) => t / 20) });
+    // Precrafts, with what they made
+    for (const p of st?.precrafts ?? []) {
+      const items = Object.entries(p.items).sort((x, y) => y[1] - x[1]).map(([it, n]) => `${n} ${it.replace(/_/g, " ")}`).join(", ");
+      // The label names the end items, the rest (wool, glowstone, bricks) is in the detail
+      const made = Object.entries(p.items).filter(([it]) => PRECRAFT_NAME[it] || /_bed$/.test(it))
+        .map(([it, n]) => { const name = PRECRAFT_NAME[it] ?? "bed"; return n === 1 ? name : `${n} ${name}s`; });
+      add("craft", `${PRECRAFT_SHORT[p.kind]} ${Math.round(p.secs)} s${made.length ? `: ${made.join(", ")}` : ""}`, p.t0 / 20, p.t1 / 20, items);
+    }
+    for (const s of L.filter((x) => x.kind === "portal")) add("portal", /blind/.test(s.text) ? "blind" : /stronghold/.test(s.text) ? "to stronghold" : /lava/.test(s.text) ? "built a lava portal" : "built a portal", s.t1 / 20, s.t1 / 20, s.detail);
     for (const s of L.filter((x) => x.kind === "eyes")) add("eyes", s.text.replace("Threw ", "threw "), s.t0 / 20, s.t0 / 20, s.detail);
     // Dragon fight: zero cycle or attempt, each perch, free the End, finish
     const f = a.end?.[who];
@@ -219,17 +307,18 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
   function drawStatus() {
     const b = zoomed ? bands.find((x) => x.phase === selected) : undefined;
     const kids: (HTMLElement | string)[] = [];
+    // "0:31 behind", "0:08 ahead", "even"
+    const gapText = (g: number) => (Math.abs(g) < 0.5 ? "even" : `${clock(Math.abs(g))} ${g > 0 ? "behind" : "ahead"}`);
     if (b) {
       kids.push(h("b", null, b.phase));
-      if (b.you !== null && b.them !== null) kids.push(h("span", { class: "dim" }, `${clock(b.you)} for you, ${clock(b.them)} for ${them}`));
-      if (b.change !== null) kids.push(h("span", { class: toneCls(b.change) }, fmtDelta(b.change)));
+      if (b.you !== null && b.them !== null) kids.push(h("span", null, `${clock(b.you)} vs ${clock(b.them)}`));
+      if (b.change !== null) kids.push(h("span", { class: toneCls(b.change) }, gapText(b.change)));
       kids.push(h("button", { class: "btn sm ghost", onclick: () => pick(null) }, "Whole run", h("span", { class: "kbd" }, "ESC")));
     } else {
-      const end = a.you.finished ? `finished ${clock(a.you.endTicks / 20)}` : "didn't finish";
-      kids.push(h("b", null, "Whole run"), h("span", { class: toneCls(a.finalGap) }, Math.abs(a.finalGap) < 0.5 ? "even" : `${fmtDelta(a.finalGap)} ${a.finalGap > 0 ? "behind" : "ahead"}`),
-        h("span", { class: "dim" }, `${end}. Hover a phase for detail, click to zoom.`));
+      kids.push(h("b", null, a.you.finished ? `Finished ${clock(a.you.endTicks / 20)}` : "Didn't finish"), h("span", { class: toneCls(a.finalGap) }, gapText(a.finalGap)));
     }
     status.replaceChildren(...kids);
+    status.title = b ? "" : "Hover a phase for detail, click to zoom";
   }
 
   let showAt = (_sec: number) => {}, hideCursor = () => {};
@@ -248,7 +337,16 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
     const free = (b: Box) => b.x0 >= L - 2 && b.x1 <= R + 2 && b.y0 >= top - 2 && b.y1 <= bot + 2 && boxes.every((o) => b.x1 < o.x0 || b.x0 > o.x1 || b.y1 < o.y0 || b.y0 > o.y1);
     // Only show detail for the zoomed phase or the one under the cursor
     const focus = bands.find((b) => b.phase === (zoomed ? selected : hovered)) ?? null;
-    const inFocus = (t0: number, t1: number, who: "you" | "them" = "you") => !!focus && (who === "you" ? t1 >= focus.you0 && t0 <= focus.you1 : t1 >= focus.them0 && t0 <= focus.them1);
+    // Everything shows in one phase only: a point where it is, a line where its middle is (a blaze hit just before
+    // entering the fortress doesn't put the rods line in the phase before). A phase has its start but not its end
+    const inFocus = (t0: number, t1: number, who: "you" | "them" = "you") => {
+      if (!focus) return false;
+      const [a0, b0] = who === "you" ? [focus.you0, focus.you1] : [focus.themFrom, focus.themTo];
+      // The last phase keeps its end, that's where the run finished
+      const last = b0 >= (who === "you" ? a.you.endTicks : a.them.endTicks) / 20 - 0.1;
+      const t = (t0 + t1) / 2;
+      return t >= a0 && (t < b0 || (last && t <= b0));
+    };
 
     const X = (s: number) => L + ((s - x0) / (x1 - x0)) * (R - L);
     const roomy = zoomed && mode === "curve" ? 0.3 : 0; // When zoomed, leave room around the curve for callouts
@@ -283,7 +381,8 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
         if (t < x0 || t > x1) continue;
         const x = X(t);
         g.appendChild(el("line", { x1: x, x2: x, y1: top - 10, y2: bot, stroke: "rgba(255,255,255,.14)", "stroke-dasharray": "1 3" }));
-        if (x - lastX > 64) { g.appendChild(el("text", { x, y: top - 14, "text-anchor": "middle", class: "dimt" }, SPLIT_SHORT[s.name] ?? s.name)); lastX = x; }
+        const name = SPLIT_SHORT[s.name] ?? s.name, w = textW(name), cx = Math.max(L + w / 2, Math.min(R - w / 2, x));
+        if (cx - w / 2 > lastX + 6) { g.appendChild(el("text", { x: cx, y: top - 14, "text-anchor": "middle", class: "dimt" }, name)); lastX = cx + w / 2; }
       }
     }
     // Gap curve, or shaded by who was gaining
@@ -314,13 +413,15 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
         `${c.label.toLowerCase()} `, h("span", { class: toneCls(c.v) }, fmtDelta(c.v)), i < shownCosts.length - 1 ? "," : ""))] : []));
     // What each player did
     for (let x = L; x <= R; x += 6) { const y = Y(gapAt(x0 + ((x - L) / (R - L)) * (x1 - x0))); boxes.push({ x0: x - 3, x1: x + 3, y0: y - 3, y1: y + 3 }); }
-    const labelled: { m: Moment; box: Box; pc: string }[] = [], called: { box: Box; text: string }[] = [];
+    const labelled: { m: Moment; box: Box; pc: string; ends: boolean }[] = [], called: { box: Box; text: string }[] = [];
     const tipText = (m: Moment) => `${m.who === "you" ? "You" : them}, ${m.b > m.a ? `${clock(m.a)} to ${clock(m.b)}` : `at ${clock(m.a)}`}: ${cap(m.label)}${m.detail ? `, ${m.detail}` : ""}`;
-    const worth = (m: Moment) => !(m.b - m.a > 0 && m.b - m.a < 15 && !["dead", "zero", "perch"].includes(m.kind));
+    const worth = (m: Moment) => !(m.b - m.a > 0 && m.b - m.a < 15 && !["dead", "zero", "perch", "craft", "pearls"].includes(m.kind));
     if (mode === "curve") {
       // Dot at the start, line for the duration. Yours sits above the curve, theirs along the bottom
       // since the curve is your gap not their position
-      const queue = (["you", "them"] as const).flatMap((who) => MOM[who].filter((m) => worth(m)));
+      // Moments get placed in time order, the extras after
+      const rank = (m: Moment) => PLACE_FIRST[m.kind] ?? 0;
+      const queue = (["you", "them"] as const).flatMap((who) => MOM[who].filter((m) => worth(m))).sort((p, q) => rank(p) - rank(q));
       for (const m of queue) {
         const who = m.who;
         if (m.b < x0 || m.a > x1 || !inFocus(m.a, m.b, who)) continue;
@@ -328,22 +429,52 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
         const xa = X(Math.max(m.a, x0)), xb = X(Math.min(m.b, x1)), span = xb - xa > 4;
         // Diff vs their matching moment (same kind, same index)
         const mine = MOM[who].filter((q) => q.kind === m.kind), other = MOM[up ? "them" : "you"].filter((q) => q.kind === m.kind)[mine.indexOf(m)];
-        const diff = other && m.b > m.a && other.b > other.a && !up && !["perch", "zero"].includes(m.kind) ? Math.floor(m.b - m.a) - Math.floor(other.b - other.a) : 0; // Whole seconds to match the labels
-        const label = `${up ? "You" : them}: ${m.label}${Math.abs(diff) >= 1 ? `, ${Math.round(Math.abs(diff))} s ${diff < 0 ? "quicker" : "slower"}` : ""}`, w = textW(label);
+        const diff = other && m.b > m.a && other.b > other.a && !up && !["perch", "zero", "craft"].includes(m.kind) ? Math.floor(m.b - m.a) - Math.floor(other.b - other.a) : 0; // Whole seconds to match the labels
+        const label = fitText(`${up ? "You" : them}: ${m.label}${Math.abs(diff) >= 1 ? `, ${Math.round(Math.abs(diff))} s ${diff < 0 ? "quicker" : "slower"}` : ""}`, R - L - 8), w = textW(label);
         // Start/end times at each end of the line, only if they fit in the plot
         const tA = clock(m.a), tB = clock(m.b), ends = span && (zoomed || xb - xa > 90) && xa - textW(tA) - 12 >= L && xb + textW(tB) + 12 <= R;
         const padA = ends ? textW(tA) + 8 : 0, padB = ends ? textW(tB) + 8 : 0;
         const ys = curve.filter((p) => p[0] >= m.a && p[0] <= m.b).map((p) => Y(p[1])).concat([Y(gapAt(m.a)), Y(gapAt(m.b))]);
-        for (let k = 0; k < 5; k++) {
+        // Theirs sit between the curve and the phase labels, which can take a few rows to clear
+        for (let k = 0; k < (up ? 5 : 8); k++) {
           const y = up ? Math.min(...ys) - 8 - k * 16 : bot - 6 - k * 16, ly = y - 5, lx = Math.max(L + 4, Math.min(xa - 3, R - w - 4));
-          const box = { x0: Math.min(xa - padA, lx) - 4, x1: Math.max(xb + padB, lx + w) + 4, y0: ly - 11, y1: y + 4 };
+          // Kept inside the plot, a line that starts or ends past the edge of the view is cut off there
+          const box = { x0: Math.max(L - 2, Math.min(xa - padA, lx) - 4), x1: Math.min(R + 2, Math.max(xb + padB, lx + w) + 4), y0: ly - 11, y1: y + 4 };
           // Yours stays above the curve and theirs below, across the whole label width
           const cy: number[] = [];
           for (let x = Math.max(L, box.x0); x <= Math.min(R, box.x1); x += 4) cy.push(Y(gapAt(x0 + ((x - L) / (R - L)) * (x1 - x0))));
           if (!free(box) || (up ? box.y1 > Math.min(...cy) - 2 : box.y0 < Math.max(...cy) + 2)) continue;
           boxes.push(box);
-          labelled.push({ m, box, pc });
-          if (span) g.appendChild(el("path", { d: `M${xa} ${y}H${xb}M${xb} ${y - 3}V${y + 3}`, fill: "none", stroke: pc, "stroke-width": 2 }));
+          labelled.push({ m, box, pc, ends });
+          // Counts written into the line (which breaks around them), dots for each blaze killed that dropped no rod or
+          // pearl thrown. Counts that would touch merge into the later one. Marks slide apart to
+          // not touch and stay clear of the start square and end tick (text is 11px, see textW)
+          const half = (n: number) => String(n).length * 3.4 + 2;
+          const nums: { x: number; n: number }[] = [];
+          for (const { t, n } of m.nums ?? []) {
+            if (t < x0 || t > x1) continue;
+            const rx = X(t), last = nums.at(-1);
+            if (last && rx - half(n) < last.x + half(last.n)) last.n = n; else nums.push({ x: rx, n });
+          }
+          // Too tight to fit: dots touch, then counts merge into the next one, and last of all the dots go
+          const kx = (m.dots ?? []).filter((t) => t >= x0 && t <= x1).map(X);
+          const lay = (dots: boolean, gap: number) => {
+            const ms = [...(dots ? kx.map((x) => ({ x, r: gap ? 1.6 : 1.3, n: 0 })) : []), ...nums.map(({ x, n }) => ({ x, r: half(n), n }))].sort((p, q) => p.x - q.x || p.n - q.n);
+            for (let k = 0, prev = xa + 3; k < ms.length; k++) { ms[k].x = Math.max(ms[k].x, prev + gap + ms[k].r); prev = ms[k].x + ms[k].r; }
+            for (let k = ms.length - 1, next = xb - 1; k >= 0; k--) { ms[k].x = Math.min(ms[k].x, next - gap - ms[k].r); next = ms[k].x - ms[k].r; }
+            return !ms.length || ms[0].x - ms[0].r >= xa + 3 - 0.01 ? ms : null;
+          };
+          let marks = lay(true, 1) ?? lay(true, 0);
+          while (!marks && nums.length > 1) { nums.splice(0, 1); marks = lay(true, 0); }
+          marks ??= lay(false, 1) ?? [];
+          const gaps = marks.filter((q) => q.n).map((q) => [q.x - q.r, q.x + q.r]);
+          if (span) {
+            let d = "", from = xa;
+            for (const [g0, g1] of gaps) { if (g0 > from) d += `M${from} ${y}H${g0}`; from = Math.max(from, g1); }
+            if (xb > from) d += `M${from} ${y}H${xb}`;
+            g.appendChild(el("path", { d: `${d}M${xb} ${y - 3}V${y + 3}`, fill: "none", stroke: pc, "stroke-width": 2 }));
+          }
+          for (const q of marks) g.appendChild(q.n ? el("text", { x: q.x, y: y + 4, "text-anchor": "middle", fill: pc }, String(q.n)) : el("circle", { cx: q.x, cy: y, r: q.r, fill: "var(--text)" }));
           g.appendChild(el("rect", { x: xa - 3, y: y - 3, width: 6, height: 6, fill: pc }));
           g.appendChild(el("text", { x: lx, y: ly, fill: pc }, label));
           if (ends) {
@@ -355,7 +486,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
       }
       // Zoomed in, label what cost or saved time on the curve where it happened
       if (zoomed && focus) for (const c of calls.filter((q) => q.t >= x0 && q.t <= x1 && inFocus(q.t, q.t)).slice(0, 8)) {
-        const xc = X(c.t), yc = Y(gapAt(c.t)), num = fmtDelta(c.v), name = `${c.label.toLowerCase()} `, w = textW(name + num);
+        const xc = X(c.t), yc = Y(gapAt(c.t)), num = fmtDelta(c.v), name = `${fitText(c.label.toLowerCase(), R - L - textW(num) - 6)} `, w = textW(name + num);
         for (let k = 0; k < 8; k++) {
           const up = k % 2 === 0, d = 18 + Math.floor(k / 2) * 15, ly = up ? yc - d : yc + d + 10, lx = Math.max(L, Math.min(xc - w / 2, R - w));
           const box = { x0: lx - 2, x1: lx + w + 2, y0: ly - 11, y1: ly + 3 };
@@ -382,10 +513,13 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
           if (row < 0) continue;
           const y = base + 6 + row * 17;
           g.appendChild(span ? el("rect", { x: xa, y: y + 2, width: xb - xa, height: 3, fill: MOMENT_COLOR[m.kind] }) : el("rect", { x: xa - 3, y, width: 6, height: 6, fill: MOMENT_COLOR[m.kind] }));
-          const t = el("text", { x: xa + (span ? 0 : 6), y: y + 15, class: "midt" }, cap(m.label));
+          for (const { t } of m.nums ?? []) if (t >= x0 && t <= x1) g.appendChild(el("rect", { x: X(t) - 0.75, y: y - 1, width: 1.5, height: 9, fill: MOMENT_COLOR[m.kind] }));
+          const lbl = fitText(cap(m.label), R - xa - (span ? 0 : 6));
+          if (!lbl) continue;
+          const t = el("text", { x: xa + (span ? 0 : 6), y: y + 15, class: "midt" }, lbl);
           t.appendChild(el("title", {}, tipText(m)));
           g.appendChild(t);
-          ends[row] = Math.max(xb, xa + textW(cap(m.label)) + (span ? 0 : 6));
+          ends[row] = Math.max(xb, xa + textW(lbl) + (span ? 0 : 6));
         }
       });
     }
@@ -394,29 +528,36 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
     for (const b of bands) {
       const xa = Math.max(X(b.you0), L), xb = Math.min(X(b.you1), R), w = xb - xa;
       if (w < 30) continue;
-      const keys = phaseIconKeys(b.phase, opts.seedType), cx = xa + 6, withIcon = keys.length > 0 && w > 60 + 18 * (keys.length - 1), tx = cx + (withIcon ? 4 + 18 * keys.length : 0);
+      // Icons only if the name still fits after them, name then short name then cut, all inside the band
+      const keys = phaseIconKeys(b.phase, opts.seedType), cx = xa + 6, room = xb - cx - 4, iconW = 4 + 18 * keys.length;
+      const delta = b.change !== null ? fmtDelta(b.change) : null;
+      const pickName = (r: number) => (textW(b.phase) <= r ? b.phase : fitText(SHORT[b.phase] ?? b.phase, r));
+      const withIcon = w > 60 && keys.length > 0 && textW(SHORT[b.phase] ?? b.phase) <= room - iconW, tx = cx + (withIcon ? iconW : 0);
+      const name = w > 60 ? pickName(xb - tx - 4) : "";
       if (withIcon) keys.forEach((k, i) => { const ic = structIcon(k); if (ic) { const fo = el("foreignObject", { x: cx + 18 * i, y: phY + 2, width: 16, height: 16 }); fo.appendChild(ic); g.appendChild(fo); } });
-      if (w > 60) g.appendChild(el("text", { x: tx, y: phY + 14, fill: "var(--text)" }, w > b.phase.length * 7 + 40 ? b.phase : SHORT[b.phase] ?? b.phase));
-      if (b.change !== null && w > 40) g.appendChild(el("text", { x: w > 60 ? tx : cx, y: phY + (w > 60 ? 27 : 14), fill: tone(b.change) }, fmtDelta(b.change)));
+      if (name) g.appendChild(el("text", { x: tx, y: phY + 14, fill: "var(--text)" }, name));
+      if (delta && textW(delta) <= (name ? xb - tx - 4 : room)) g.appendChild(el("text", { x: name ? tx : cx, y: phY + (name ? 27 : 14), fill: tone(b.change) }, delta));
       if (layers.times && b.you !== null && w > 70) {
-        const bw = Math.min(w - 60, 220);
+        const bw = Math.min(w - 60, 220), tw = textW("00:00", 10);
         ([["you", b.you], ["them", b.them]] as const).forEach(([who, d], i) => {
           if (d === null) return;
           const y = phY + 34 + i * 10;
           g.appendChild(el("rect", { x: cx, y, width: Math.max(2, (d / maxDur) * bw), height: 6, fill: who === "you" ? "var(--you)" : "var(--them)", "fill-opacity": 0.75 }));
-          g.appendChild(el("text", { x: cx + (d / maxDur) * bw + 6, y: y + 6, class: "dimt small" }, clock(d)));
+          if (cx + (d / maxDur) * bw + 6 + tw <= xb) g.appendChild(el("text", { x: cx + (d / maxDur) * bw + 6, y: y + 6, class: "dimt small" }, clock(d)));
         });
       }
     }
     // Time axis
     const every = [30, 60, 120, 180, 300].find((v) => v >= (x1 - x0) / Math.max(4, Math.floor((R - L) / 100))) ?? 300;
-    for (let t = Math.ceil(x0 / every) * every; t <= x1; t += every) svg.appendChild(el("text", { x: X(t), y: H - 6, "text-anchor": "middle", class: "dimt" }, clock(t)));
+    for (let t = Math.ceil(x0 / every) * every; t <= x1; t += every) { const hw = textW(clock(t)) / 2; svg.appendChild(el("text", { x: Math.max(hw, Math.min(W - hw, X(t))), y: H - 6, "text-anchor": "middle", class: "dimt" }, clock(t))); }
     // Playhead at the split you're reading
     if (playhead !== null && playhead >= x0 && playhead <= x1) {
-      const px = X(playhead), pg = gapAt(playhead), py = Y(pg), lbl = `${clock(playhead)} ${Math.abs(pg) < 0.5 ? "even" : fmtDelta(pg)}`, right = px + 12 + textW(lbl) < R;
+      const px = X(playhead), pg = gapAt(playhead), py = Y(pg), lbl = `${clock(playhead)} ${Math.abs(pg) < 0.5 ? "even" : fmtDelta(pg)}`, lw = textW(lbl), right = px + 12 + lw < R;
+      // Top of the plot unless that covers a label, then the bottom
+      const lx0 = right ? px + 8 : px - 8 - lw, ly = [top + 11, bot - 4].find((y) => free({ x0: lx0, x1: lx0 + lw, y0: y - 11, y1: y + 3 })) ?? top + 11;
       svg.append(el("line", { x1: px, x2: px, y1: top, y2: bot, stroke: "var(--text)", "stroke-opacity": 0.55, "stroke-dasharray": "2 3", "pointer-events": "none" }),
         el("rect", { x: px - 4, y: py - 4, width: 8, height: 8, fill: "var(--text)", "pointer-events": "none" }),
-        el("text", { x: right ? px + 8 : px - 8, y: top + 11, "text-anchor": right ? "start" : "end", fill: "var(--text)", "pointer-events": "none" }, lbl));
+        el("text", { x: right ? px + 8 : px - 8, y: ly, "text-anchor": right ? "start" : "end", fill: "var(--text)", "pointer-events": "none" }, lbl));
     }
 
     // Moments list goes under the graph
@@ -439,13 +580,16 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
     const span = el("g", { "pointer-events": "none" });
     svg.insertBefore(span, g.nextSibling);
     svg.append(guide, dot, hit);
-    const showSpan = (hit: { m: Moment; pc: string } | undefined) => {
+    const showSpan = (hit: { m: Moment; pc: string; ends: boolean } | undefined) => {
       span.replaceChildren();
       if (!hit || hit.m.b <= hit.m.a) return;
       const xa = X(Math.max(hit.m.a, x0)), xb = X(Math.min(hit.m.b, x1));
       span.append(el("rect", { x: xa, y: top, width: Math.max(1, xb - xa), height: bot - top, fill: hit.pc, "fill-opacity": 0.12 }),
-        el("line", { x1: xa, x2: xa, y1: top, y2: bot, stroke: hit.pc, "stroke-opacity": 0.6 }), el("line", { x1: xb, x2: xb, y1: top, y2: bot, stroke: hit.pc, "stroke-opacity": 0.6 }),
-        el("text", { x: xa - 4, y: bot - 4, "text-anchor": "end", fill: hit.pc }, clock(hit.m.a)), el("text", { x: xb + 4, y: bot - 4, fill: hit.pc }, clock(hit.m.b)));
+        el("line", { x1: xa, x2: xa, y1: top, y2: bot, stroke: hit.pc, "stroke-opacity": 0.6 }), el("line", { x1: xb, x2: xb, y1: top, y2: bot, stroke: hit.pc, "stroke-opacity": 0.6 }));
+      if (hit.ends) return;
+      const ta = clock(hit.m.a), tb = clock(hit.m.b), wa = textW(ta), wb = textW(tb);
+      if (free({ x0: xa - 4 - wa, x1: xa - 4, y0: bot - 15, y1: bot - 1 })) span.append(el("text", { x: xa - 4, y: bot - 4, "text-anchor": "end", fill: hit.pc }, ta));
+      if (free({ x0: xb + 4, x1: xb + 4 + wb, y0: bot - 15, y1: bot - 1 })) span.append(el("text", { x: xb + 4, y: bot - 4, fill: hit.pc }, tb));
     };
     showAt = (sec) => { const x = X(sec); guide.setAttribute("x1", String(x)); guide.setAttribute("x2", String(x)); guide.setAttribute("visibility", "visible"); dot.setAttribute("x", String(x - 3.5)); dot.setAttribute("y", String(Y(gapAt(sec)) - 3.5)); dot.setAttribute("visibility", "visible"); };
     hideCursor = () => { showSpan(undefined); guide.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); tip.hidden = true; };
@@ -493,8 +637,8 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
   const phaseView = (phase: string | null) => {
     const b = bands.find((x) => x.phase === phase);
     if (!b) return { x0: 0, x1: xMax };
-    // Both players in this phase, each on their own clock
-    const lo = Math.min(b.you0, b.them0), hi = Math.max(b.you1, b.them1), pad = (hi - lo) * 0.06 + 2;
+    // Both players in this phase, each on their own clock: their splits and all their steps in it
+    const lo = Math.min(b.you0, b.them0, b.themFrom), hi = Math.max(b.you1, b.them1, b.themTo), pad = (hi - lo) * 0.06 + 2;
     return { x0: Math.max(0, lo - pad), x1: Math.min(xMax, hi + pad) };
   };
 
@@ -514,6 +658,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
   }, { signal: life.signal });
   drawSwitches(); drawPills(); drawStatus();
   new ResizeObserver(() => paint()).observe(svg);
+  void document.fonts?.ready.then(() => { if (!life.signal.aborted) paint(); });
   addEventListener("stratas-theme", () => paint(), { signal: life.signal });
   return wrap;
 }

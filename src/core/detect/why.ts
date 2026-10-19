@@ -212,7 +212,7 @@ function stepsWhy(Y: Side, T: Side, ys: [number, number], ts: [number, number], 
   const texts = (s: Side, sp: [number, number], k: string) => {
     const n = new Map<string, number>();
     for (const x of s.steps) if (x.kind === k && x.t0 >= sp[0] && x.t0 < sp[1]) n.set(lc(x.text), (n.get(lc(x.text)) ?? 0) + 1);
-    return [...n].slice(0, 2).map(([t, c]) => (c < 2 ? t : t.replace(/^built an? (lava )?portal\b/, `built ${c} $1portals`).replace(/^(?!built \d)(.*)$/, `$1 ×${c}`))).join(", ");
+    return [...n].slice(0, 2).map(([t, c]) => (c < 2 ? t : t.replace(/^built an? ((?:lava|blind) )?portal\b/, `built ${c} $1portals`).replace(/^(?!built \d)(.*)$/, `$1 ×${c}`))).join(", ");
   };
   return [...new Set([...Object.keys(y), ...Object.keys(t)])].map((k) => {
     if (k === "nether") {
@@ -220,8 +220,7 @@ function stepsWhy(Y: Side, T: Side, ys: [number, number], ts: [number, number], 
         const ts2 = s.run.slice(sp[0], sp[1]).filter((p) => p.w === 1);
         if (!ts2.length) return "";
         const a = ts2[0].t, b = ts2.at(-1)!.t;
-        let rods = 0;
-        for (let x = a, prev = s.run.invAt(a).get("blaze_rod") ?? 0; x <= b; x += 5) { const n = s.run.invAt(x).get("blaze_rod") ?? 0; if (n > prev) rods += n - prev; prev = n; }
+        const rods = s.run.rodsIn(a, b);
         return ` (${at(a)}–${at(b)}${rods ? `, got ${plural(rods, "more rod")}` : ""})`;
       };
       const firstNether = (s: Side, sp: [number, number]) => s.run.slice(sp[0], sp[1]).find((p) => p.w === 1)?.t;
@@ -240,8 +239,9 @@ function stepsWhy(Y: Side, T: Side, ys: [number, number], ts: [number, number], 
  * milestones with the step diffs inside. Only when you both hit them in the same order */
 function fortressWhy(Y: Side, T: Side, ys: [number, number], ts: [number, number]): Part[] | null {
   const ms = (s: Side, sp: [number, number]) => {
-    const r6 = s.run.rodsAt(6), eye = s.run.mark("eye");
-    if (r6 === null || eye === undefined || !(sp[0] < r6 && r6 < eye && eye <= sp[1])) return null;
+    const r6 = s.run.rodsAt(6), eye = s.run.mark("eye"), bl = s.run.mark("blind");
+    // Blinding before 6 rods means the rods came on a second trip, so blind is when the fortress ended
+    if (r6 === null || eye === undefined || !(sp[0] < r6 && r6 < eye && eye <= sp[1]) || (bl !== undefined && bl < r6)) return null;
     return [sp[0], r6, eye];
   };
   const msEarlyBlind = (s: Side, sp: [number, number]) => {

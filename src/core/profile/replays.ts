@@ -98,37 +98,15 @@ const MECHANIC_MATCHERS: MechanicMatcher[] = [
     match: (t) => /^gold blocks mined\b|\bmined gold block\b|\bacquired \d+ gold block/i.test(t),
   },
   {
-    key: "bastion_craft_overlap",
-    label: "Crafting after trades",
-    phases: ["Bastion"],
-    match: (t) => /^crafting after trades\b|\bbastion crafting:/i.test(t),
-  },
-  {
     key: "pearl_hangs",
     label: "Pearl hang",
     match: (t) => /^pearl hang:/i.test(t),
-  },
-  {
-    key: "fortress_blazes",
-    label: "First blaze kill",
-    phases: ["Fortress", "Fortress to stronghold"],
-    match: (t) => /^first blaze killed\b/i.test(t),
   },
   {
     key: "stronghold_nav",
     label: "Stronghold navigation",
     phases: ["Stronghold", "Fortress to stronghold"],
     match: (t) => /^inside stronghold:/i.test(t) || /\binside stronghold:/i.test(t),
-  },
-  {
-    key: "pie_chart",
-    label: "Pie chart usage",
-    match: (t) => /^pie chart:/i.test(t),
-  },
-  {
-    key: "fire_res",
-    label: "Fire resistance",
-    match: (t) => /^fire resistance\b|^no fire resistance\b/i.test(t),
   },
   // Phase notes from src/core/detect/findings.ts
   {

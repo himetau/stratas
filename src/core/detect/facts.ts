@@ -26,7 +26,8 @@ export class Facts {
   /** Gold dropped at your feet with stack size */
   readonly goldThrown: { t: number; count: number }[] = [];
   readonly kills: Kill[] = [];
-  readonly explosions: { t: number; w: number; power: number }[] = [];
+  /** Where it went off and whether you were within 16 blocks (so likely yours, lit TNT goes off a way off) */
+  readonly explosions: { t: number; w: number; power: number; pos?: [number, number, number]; near: boolean }[] = [];
   readonly eyes: Eye[] = [];
   readonly buckets: BucketOp[] = [];
   /** Blocks you placed in an End portal frame */
@@ -115,7 +116,11 @@ export class Facts {
           break;
         }
         case "STATS": if (e.health !== undefined && this.health.at(-1)?.hp !== e.health) this.health.push({ t: e.t, hp: e.health }); break;
-        case "EXPLOSION": this.explosions.push({ t: e.t, w: e.world!, power: e.power! }); break;
+        case "EXPLOSION": {
+          const p = r.posAt(e.t), at = e.pos as [number, number, number] | undefined;
+          this.explosions.push({ t: e.t, w: e.world!, power: e.power!, pos: at, near: !!at && p.w === e.world && Math.hypot(at[0] - p.x, at[1] - p.y, at[2] - p.z) <= 16 });
+          break;
+        }
         case "EFFECT": if (e.effect === "fire_resistance" && (e.duration ?? 0) > 0) this.fireRes.push(e.t); break;
       }
     }
