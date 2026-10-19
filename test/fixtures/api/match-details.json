@@ -1,0 +1,119 @@
+[
+  {
+    "id": 14235001,
+    "type": 2,
+    "season": 12,
+    "date": 1792241000,
+    "seedType": "VILLAGE",
+    "bastionType": "STABLES",
+    "seed": { "id": "s10", "overworld": "VILLAGE", "nether": "STABLES", "variations": ["biome:structure:savanna"] },
+    "players": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "nickname": "Chavron", "eloRate": 1362, "eloRank": 1758, "roleType": 0 }
+    ],
+    "changes": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1266, "change": 22 },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "eloRate": 1384, "change": -22 }
+    ],
+    "completions": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 665000 },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 698000 }
+    ],
+    "result": { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 665000 },
+    "forfeited": false,
+    "replayExists": 1,
+    "timelines": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 95000, "type": "story.enter_the_nether" },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 102000, "type": "story.enter_the_nether" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 145000, "type": "nether.find_bastion" },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 160000, "type": "nether.find_bastion" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 310000, "type": "nether.find_fortress" },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 340000, "type": "nether.find_fortress" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 360000, "type": "nether.obtain_blaze_rod" },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 395000, "type": "nether.obtain_blaze_rod" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 450000, "type": "projectelo.timeline.blind_travel" },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 490000, "type": "projectelo.timeline.blind_travel" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 455000, "type": "projectelo.timeline.death_spawnpoint" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 520000, "type": "story.follow_ender_eye" },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 555000, "type": "story.follow_ender_eye" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 575000, "type": "story.enter_the_end" },
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 605000, "type": "story.enter_the_end" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 665000, "type": "projectelo.timeline.dragon_death" }
+    ]
+  },
+  {
+    "id": 14234900,
+    "type": 2,
+    "season": 12,
+    "date": 1792240100,
+    "seedType": "SHIPWRECK",
+    "bastionType": "HOUSING",
+    "seed": { "id": "s9", "overworld": "SHIPWRECK", "nether": "HOUSING", "variations": [] },
+    "players": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "nickname": "_RUPER", "eloRate": 1310, "eloRank": 2100, "roleType": 1 }
+    ],
+    "changes": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1246, "change": 20 },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "eloRate": 1330, "change": -20 }
+    ],
+    "completions": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 710000 }
+    ],
+    "result": { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 710000 },
+    "forfeited": false,
+    "replayExists": 1,
+    "timelines": [
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 110000, "type": "story.enter_the_nether" },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "time": 105000, "type": "story.enter_the_nether" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 175000, "type": "nether.find_bastion" },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "time": 168000, "type": "nether.find_bastion" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 350000, "type": "nether.find_fortress" },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "time": 370000, "type": "nether.find_fortress" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 490000, "type": "projectelo.timeline.blind_travel" },
+      { "uuid": "eb4fc9846c3644709091b177a5f18c28", "time": 520000, "type": "projectelo.timeline.blind_travel" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 560000, "type": "story.follow_ender_eye" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 610000, "type": "story.enter_the_end" },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "time": 710000, "type": "projectelo.timeline.dragon_death" }
+    ]
+  },
+  {
+    "id": 14182329,
+    "type": 2,
+    "season": 12,
+    "date": 1792056173,
+    "seedType": "VILLAGE",
+    "bastionType": "STABLES",
+    "seed": { "id": "mtf47ykgzske7num", "overworld": "VILLAGE", "nether": "STABLES", "variations": ["biome:structure:savanna"] },
+    "players": [
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "nickname": "Chavron", "eloRate": 1362, "eloRank": 1758, "roleType": 0 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "nickname": "cyoshi", "eloRate": 1288, "eloRank": 2538, "roleType": 2 }
+    ],
+    "changes": [
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "eloRate": 1371, "change": 19 },
+      { "uuid": "fba98cacdc6a495eba271ee046dcbba9", "eloRate": 1271, "change": -19 }
+    ],
+    "completions": [
+      { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 785002 }
+    ],
+    "result": { "uuid": "e1b919fe90b044b484ff93979e8308a4", "time": 785002 },
+    "forfeited": false,
+    "replayExists": 1,
+    "timelines": [
+      { "time": 775021, "type": "projectelo.timeline.dragon_death", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 630076, "type": "projectelo.timeline.blind_travel", "uuid": "fba98cacdc6a495eba271ee046dcbba9" },
+      { "time": 622809, "type": "story.enter_the_end", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 589302, "type": "story.follow_ender_eye", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 560936, "type": "nether.obtain_blaze_rod", "uuid": "fba98cacdc6a495eba271ee046dcbba9" },
+      { "time": 526050, "type": "projectelo.timeline.blind_travel", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 519750, "type": "nether.find_fortress", "uuid": "fba98cacdc6a495eba271ee046dcbba9" },
+      { "time": 441951, "type": "nether.obtain_blaze_rod", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 407525, "type": "projectelo.timeline.death", "uuid": "fba98cacdc6a495eba271ee046dcbba9" },
+      { "time": 351046, "type": "nether.find_fortress", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 172044, "type": "nether.find_bastion", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 161944, "type": "nether.find_bastion", "uuid": "fba98cacdc6a495eba271ee046dcbba9" },
+      { "time": 150971, "type": "story.enter_the_nether", "uuid": "e1b919fe90b044b484ff93979e8308a4" },
+      { "time": 144332, "type": "story.enter_the_nether", "uuid": "fba98cacdc6a495eba271ee046dcbba9" }
+    ]
+  }
+]

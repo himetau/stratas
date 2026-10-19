@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Starts Stratas, rebuilds first if sources changed. --background starts in the tray
+set -e
+DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+cd "$DIR"
+[ -d node_modules ] || npm install --silent
+stamp=dist/.build-stamp
+if [ ! -f "$stamp" ] || [ -n "$(find src electron data scripts package.json vite.config.ts -newer "$stamp" -print -quit)" ]; then
+  npm run --silent build >/dev/null && touch "$stamp"
+  pkill -f "$DIR/node_modules/electron/dist/electron" 2>/dev/null || true
+  sleep 0.2
+fi
+exec ./node_modules/.bin/electron . "$@"

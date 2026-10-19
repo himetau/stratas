@@ -1,0 +1,1703 @@
+{
+  "generatedAt": "2026-10-17T18:33:38.374Z",
+  "fileCount": 11,
+  "runCount": 22,
+  "files": [
+    {
+      "file": "14182329.rrf",
+      "matchId": 14182329,
+      "overworldSeed": "-3566570342730286256",
+      "netherSeed": "198406064683359",
+      "seedType": "VILLAGE",
+      "bastionType": "STABLES",
+      "players": [
+        {
+          "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+          "name": "cyoshi",
+          "elo": 1328,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold"
+          ]
+        },
+        {
+          "uuid": "e1b919fe90b044b484ff93979e8308a4",
+          "name": "Chavron",
+          "elo": 1390,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "14232012.rrf",
+      "matchId": 14232012,
+      "overworldSeed": "1765446266840308892",
+      "netherSeed": "64769806193602",
+      "seedType": "DESERT_TEMPLE",
+      "bastionType": "TREASURE",
+      "players": [
+        {
+          "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+          "name": "cyoshi",
+          "elo": 1310,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        },
+        {
+          "uuid": "16a45c3e54c84de3ac259b960342062b",
+          "name": "nei1019",
+          "elo": 1334,
+          "finished": false,
+          "quit": true,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "14234287.rrf",
+      "matchId": 14234287,
+      "overworldSeed": "4035379095225239698",
+      "netherSeed": "255828259433728",
+      "seedType": "RUINED_PORTAL",
+      "bastionType": "STABLES",
+      "players": [
+        {
+          "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+          "name": "cyoshi",
+          "elo": 1246,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        },
+        {
+          "uuid": "6174765b71584d18af894692b2704ae8",
+          "name": "OliverSR",
+          "elo": 1258,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "vs-karlo585.rrf",
+      "matchId": 14242545,
+      "overworldSeed": "3841840502301904394",
+      "netherSeed": "23647124425144",
+      "seedType": "VILLAGE",
+      "bastionType": "TREASURE",
+      "players": [
+        {
+          "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+          "name": "cyoshi",
+          "elo": 1227,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold"
+          ]
+        },
+        {
+          "uuid": "9082a76b973d4407a23691c388b36530",
+          "name": "Karlo585",
+          "elo": 1384,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "vs-ruper.rrf",
+      "matchId": 14243132,
+      "overworldSeed": "2409474146041484823",
+      "netherSeed": "213823752744632",
+      "seedType": "SHIPWRECK",
+      "bastionType": "HOUSING",
+      "players": [
+        {
+          "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+          "name": "cyoshi",
+          "elo": 1227,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        },
+        {
+          "uuid": "eb4fc9846c3644709091b177a5f18c28",
+          "name": "_RUPER",
+          "elo": 1672,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ref-ammy-14215217.rrf",
+      "matchId": 14215217,
+      "overworldSeed": "7944471953184209025",
+      "netherSeed": "274833858221026",
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "players": [
+        {
+          "uuid": "e0007fa8bc5f419bb88a5fc6566309bd",
+          "name": "seedoose",
+          "elo": 1408,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold"
+          ]
+        },
+        {
+          "uuid": "6504ac9e57c14216871a5b220bac7a21",
+          "name": "Captain_Ammy",
+          "elo": 1443,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ref-vaering-14227308.rrf",
+      "matchId": 14227308,
+      "overworldSeed": "1603527828977030754",
+      "netherSeed": "87126341288319",
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "players": [
+        {
+          "uuid": "9f580ddcfa914701bac2d855572831b4",
+          "name": "Vaering",
+          "elo": 1504,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        },
+        {
+          "uuid": "3c1477b2a8c346cbbb0cfccee40a3456",
+          "name": "losercore",
+          "elo": 1497,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ref-nixisawesome-14227496.rrf",
+      "matchId": 14227496,
+      "overworldSeed": "499929202168218796",
+      "netherSeed": "220002604912663",
+      "seedType": "RUINED_PORTAL",
+      "bastionType": "TREASURE",
+      "players": [
+        {
+          "uuid": "955e23e23c4b4416a13586e41e9b6744",
+          "name": "xEevee",
+          "elo": 1432,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        },
+        {
+          "uuid": "65a2ccd474cd4ecea84a434ce2451281",
+          "name": "nixisawesome",
+          "elo": 1460,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ref-xeevee-14227759.rrf",
+      "matchId": 14227759,
+      "overworldSeed": "6431151391797816012",
+      "netherSeed": "177200134143257",
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "players": [
+        {
+          "uuid": "955e23e23c4b4416a13586e41e9b6744",
+          "name": "xEevee",
+          "elo": 1451,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        },
+        {
+          "uuid": "1aed7635006a472795d9811ddf543a41",
+          "name": "Nawnave",
+          "elo": 1377,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ref-ruper-14240580.rrf",
+      "matchId": 14240580,
+      "overworldSeed": "2409474146041484823",
+      "netherSeed": "213823752744632",
+      "seedType": "SHIPWRECK",
+      "bastionType": "HOUSING",
+      "players": [
+        {
+          "uuid": "7b088c82e25249bfae8e82d24ed3cd92",
+          "name": "sportsguyyyy",
+          "elo": 1649,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold"
+          ]
+        },
+        {
+          "uuid": "eb4fc9846c3644709091b177a5f18c28",
+          "name": "_RUPER",
+          "elo": 1672,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ref-karlo585-14241309.rrf",
+      "matchId": 14241309,
+      "overworldSeed": "3841840502301904394",
+      "netherSeed": "23647124425144",
+      "seedType": "VILLAGE",
+      "bastionType": "TREASURE",
+      "players": [
+        {
+          "uuid": "28d82cca533648b0a91ba60007bd8800",
+          "name": "Fysix0",
+          "elo": 1328,
+          "finished": false,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        },
+        {
+          "uuid": "9082a76b973d4407a23691c388b36530",
+          "name": "Karlo585",
+          "elo": 1384,
+          "finished": true,
+          "quit": false,
+          "phases": [
+            "Overworld",
+            "Nether travel",
+            "Bastion",
+            "Bastion to fortress",
+            "Fortress to stronghold",
+            "End"
+          ]
+        }
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "file": "14182329.rrf",
+      "matchId": 14182329,
+      "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+      "name": "cyoshi",
+      "elo": 1328,
+      "seedType": "VILLAGE",
+      "bastionType": "STABLES",
+      "finished": false,
+      "quit": false,
+      "endTicks": 15602,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2887
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3239
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 7859
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 10395
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 12602
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold"
+      ]
+    },
+    {
+      "file": "14182329.rrf",
+      "matchId": 14182329,
+      "uuid": "e1b919fe90b044b484ff93979e8308a4",
+      "name": "Chavron",
+      "elo": 1390,
+      "seedType": "VILLAGE",
+      "bastionType": "STABLES",
+      "finished": true,
+      "quit": false,
+      "endTicks": 15500,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3019
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3441
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6760
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7021
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10521
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 11786
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 12456
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 15500
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "14232012.rrf",
+      "matchId": 14232012,
+      "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+      "name": "cyoshi",
+      "elo": 1310,
+      "seedType": "DESERT_TEMPLE",
+      "bastionType": "TREASURE",
+      "finished": true,
+      "quit": false,
+      "endTicks": 17626,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2238
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3158
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6882
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7058
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 8932
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 12281
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 15330
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 17498
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "14232012.rrf",
+      "matchId": 14232012,
+      "uuid": "16a45c3e54c84de3ac259b960342062b",
+      "name": "nei1019",
+      "elo": 1334,
+      "seedType": "DESERT_TEMPLE",
+      "bastionType": "TREASURE",
+      "finished": false,
+      "quit": true,
+      "endTicks": 8671,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2652
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3626
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6800
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7365
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold"
+      ]
+    },
+    {
+      "file": "14234287.rrf",
+      "matchId": 14234287,
+      "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+      "name": "cyoshi",
+      "elo": 1246,
+      "seedType": "RUINED_PORTAL",
+      "bastionType": "STABLES",
+      "finished": false,
+      "quit": false,
+      "endTicks": 18827,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 1516
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 2711
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6838
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7571
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 8722
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 13347
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 15329
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "14234287.rrf",
+      "matchId": 14234287,
+      "uuid": "6174765b71584d18af894692b2704ae8",
+      "name": "OliverSR",
+      "elo": 1258,
+      "seedType": "RUINED_PORTAL",
+      "bastionType": "STABLES",
+      "finished": true,
+      "quit": false,
+      "endTicks": 18921,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 1615
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 2796
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 7057
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7606
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 9484
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 16406
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 16995
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 18724
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "vs-karlo585.rrf",
+      "matchId": 14242545,
+      "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+      "name": "cyoshi",
+      "elo": 1227,
+      "seedType": "VILLAGE",
+      "bastionType": "TREASURE",
+      "finished": false,
+      "quit": false,
+      "endTicks": 10988,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3240
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3611
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6142
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 6511
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 9315
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold"
+      ]
+    },
+    {
+      "file": "vs-karlo585.rrf",
+      "matchId": 14242545,
+      "uuid": "9082a76b973d4407a23691c388b36530",
+      "name": "Karlo585",
+      "elo": 1384,
+      "seedType": "VILLAGE",
+      "bastionType": "TREASURE",
+      "finished": true,
+      "quit": false,
+      "endTicks": 15687,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3882
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 4215
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 7040
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7192
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10659
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 12641
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 13148
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 15560
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "vs-ruper.rrf",
+      "matchId": 14243132,
+      "uuid": "fba98cacdc6a495eba271ee046dcbba9",
+      "name": "cyoshi",
+      "elo": 1227,
+      "seedType": "SHIPWRECK",
+      "bastionType": "HOUSING",
+      "finished": true,
+      "quit": false,
+      "endTicks": 16989,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3047
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3312
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6087
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 6852
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 9257
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 11046
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 11627
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 16939
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "vs-ruper.rrf",
+      "matchId": 14243132,
+      "uuid": "eb4fc9846c3644709091b177a5f18c28",
+      "name": "_RUPER",
+      "elo": 1672,
+      "seedType": "SHIPWRECK",
+      "bastionType": "HOUSING",
+      "finished": true,
+      "quit": false,
+      "endTicks": 13773,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3441
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3715
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6475
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7140
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 9677
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 12333
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 12680
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 13623
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-ammy-14215217.rrf",
+      "matchId": 14215217,
+      "uuid": "e0007fa8bc5f419bb88a5fc6566309bd",
+      "name": "seedoose",
+      "elo": 1408,
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "finished": false,
+      "quit": false,
+      "endTicks": 14469,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2220
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3075
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6964
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7625
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10205
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 13147
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold"
+      ]
+    },
+    {
+      "file": "ref-ammy-14215217.rrf",
+      "matchId": 14215217,
+      "uuid": "6504ac9e57c14216871a5b220bac7a21",
+      "name": "Captain_Ammy",
+      "elo": 1443,
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "finished": true,
+      "quit": false,
+      "endTicks": 14436,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2644
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3746
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 8240
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 8966
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 11203
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 12340
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 13450
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 14360
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-vaering-14227308.rrf",
+      "matchId": 14227308,
+      "uuid": "9f580ddcfa914701bac2d855572831b4",
+      "name": "Vaering",
+      "elo": 1504,
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "finished": true,
+      "quit": false,
+      "endTicks": 15158,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 4276
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 4873
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 8199
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 9308
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10158
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 13366
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 14197
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 15003
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-vaering-14227308.rrf",
+      "matchId": 14227308,
+      "uuid": "3c1477b2a8c346cbbb0cfccee40a3456",
+      "name": "losercore",
+      "elo": 1497,
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "finished": false,
+      "quit": false,
+      "endTicks": 15106,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2840
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3326
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6575
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7706
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 9645
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 11355
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 12565
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-nixisawesome-14227496.rrf",
+      "matchId": 14227496,
+      "uuid": "955e23e23c4b4416a13586e41e9b6744",
+      "name": "xEevee",
+      "elo": 1432,
+      "seedType": "RUINED_PORTAL",
+      "bastionType": "TREASURE",
+      "finished": false,
+      "quit": false,
+      "endTicks": 15196,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 1987
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 2921
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6913
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7844
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 9754
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 12504
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 13318
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-nixisawesome-14227496.rrf",
+      "matchId": 14227496,
+      "uuid": "65a2ccd474cd4ecea84a434ce2451281",
+      "name": "nixisawesome",
+      "elo": 1460,
+      "seedType": "RUINED_PORTAL",
+      "bastionType": "TREASURE",
+      "finished": true,
+      "quit": false,
+      "endTicks": 15141,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 1962
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 2615
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 5995
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 6615
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 8159
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 10587
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 11134
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 15002
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-xeevee-14227759.rrf",
+      "matchId": 14227759,
+      "uuid": "955e23e23c4b4416a13586e41e9b6744",
+      "name": "xEevee",
+      "elo": 1451,
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "finished": true,
+      "quit": false,
+      "endTicks": 15074,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2512
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 4212
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 7553
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 8532
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10830
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 13128
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 14025
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 14952
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-xeevee-14227759.rrf",
+      "matchId": 14227759,
+      "uuid": "1aed7635006a472795d9811ddf543a41",
+      "name": "Nawnave",
+      "elo": 1377,
+      "seedType": "BURIED_TREASURE",
+      "bastionType": "STABLES",
+      "finished": false,
+      "quit": false,
+      "endTicks": 15146,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2535
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3255
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6566
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7595
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10209
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 13629
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 14684
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-ruper-14240580.rrf",
+      "matchId": 14240580,
+      "uuid": "7b088c82e25249bfae8e82d24ed3cd92",
+      "name": "sportsguyyyy",
+      "elo": 1649,
+      "seedType": "SHIPWRECK",
+      "bastionType": "HOUSING",
+      "finished": false,
+      "quit": false,
+      "endTicks": 13782,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 2319
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 2579
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 3384
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 8502
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 12261
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold"
+      ]
+    },
+    {
+      "file": "ref-ruper-14240580.rrf",
+      "matchId": 14240580,
+      "uuid": "eb4fc9846c3644709091b177a5f18c28",
+      "name": "_RUPER",
+      "elo": 1672,
+      "seedType": "SHIPWRECK",
+      "bastionType": "HOUSING",
+      "finished": true,
+      "quit": false,
+      "endTicks": 13773,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3441
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3715
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6475
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7140
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 9677
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 12333
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 12680
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 13623
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-karlo585-14241309.rrf",
+      "matchId": 14241309,
+      "uuid": "28d82cca533648b0a91ba60007bd8800",
+      "name": "Fysix0",
+      "elo": 1328,
+      "seedType": "VILLAGE",
+      "bastionType": "TREASURE",
+      "finished": false,
+      "quit": false,
+      "endTicks": 15669,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3446
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 3792
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 6732
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 6893
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10960
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 13215
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 15599
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    },
+    {
+      "file": "ref-karlo585-14241309.rrf",
+      "matchId": 14241309,
+      "uuid": "9082a76b973d4407a23691c388b36530",
+      "name": "Karlo585",
+      "elo": 1384,
+      "seedType": "VILLAGE",
+      "bastionType": "TREASURE",
+      "finished": true,
+      "quit": false,
+      "endTicks": 15687,
+      "marks": [
+        {
+          "key": "nether",
+          "label": "Entered the Nether",
+          "t": 3882
+        },
+        {
+          "key": "bastion",
+          "label": "Entered Bastion",
+          "t": 4215
+        },
+        {
+          "key": "bastion_left",
+          "label": "Left the Bastion",
+          "t": 7040
+        },
+        {
+          "key": "fortress",
+          "label": "Entered Fortress",
+          "t": 7192
+        },
+        {
+          "key": "blind",
+          "label": "Blind Travelled",
+          "t": 10659
+        },
+        {
+          "key": "eye",
+          "label": "Eye Spy",
+          "t": 12641
+        },
+        {
+          "key": "end",
+          "label": "Entered the End",
+          "t": 13148
+        },
+        {
+          "key": "finish",
+          "label": "Defeated the Dragon",
+          "t": 15560
+        }
+      ],
+      "phases": [
+        "Overworld",
+        "Nether travel",
+        "Bastion",
+        "Bastion to fortress",
+        "Fortress to stronghold",
+        "End"
+      ]
+    }
+  ]
+}
