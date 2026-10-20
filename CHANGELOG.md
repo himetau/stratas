@@ -2,6 +2,12 @@
 
 What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
 
+## 1.3.0
+
+- A welcome screen the first time you open Stratas: what it looks at and what stays on your computer, your Minecraft name, and a few settings. Same on the website.
+- Your name is only what you type. Stratas doesn't guess it from your replays anymore unless you click "Find it in my replays".
+- Settings, System, Help: report a problem (copies your version and activity log for a GitHub issue) and suggest a feature.
+
 ## 1.2.0
 
 - Pick runs from one player: type their Minecraft name on the Find page and it finds their recent wins, at any Elo.

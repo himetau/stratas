@@ -35,12 +35,15 @@ export interface Settings {
   notify: boolean;
   /** Everything else on the settings page */
   prefs: Prefs;
+  /** Went through the welcome screen. Your name is only ever what you typed there or in Settings */
+  onboarded: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   nickname: null, uuid: null, instancePath: null, autoRace: true, notify: true,
   pick: { mode: "auto", seedType: null, bastionType: null, maxTime: null, minElo: undefined, maxElo: undefined, lockTier: null },
   prefs: DEFAULT_PREFS,
+  onboarded: false,
 };
 
 export type GateState = { version: string | null; status: "ok" | "unverified" | "failed"; detail: string };
@@ -270,6 +273,8 @@ export class Service extends EventEmitter {
     const out = { ...DEFAULT_SETTINGS, pick: { ...DEFAULT_SETTINGS.pick, ...(s.pick ?? {}) }, prefs: mergePrefs(s.prefs) };
     // Only keep keys we still have, old ones (apiKey, autoDownload...) just get dropped
     for (const k of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) if (k !== "pick" && k !== "prefs" && s[k] !== undefined) (out as Record<string, unknown>)[k] = s[k];
+    // From before the welcome screen. Already set up if there's a name
+    if (s.onboarded === undefined) out.onboarded = !!s.nickname;
     return out;
   }
 
@@ -349,7 +354,7 @@ export class Service extends EventEmitter {
 
   private async refreshYou() {
     const s = this.settings();
-    const name = s.nickname ?? this.guessNickname();
+    const name = s.nickname;
     if (!name) return;
     try {
       const u = await this.api.user(name);
@@ -359,12 +364,20 @@ export class Service extends EventEmitter {
     } catch (e) { this.log(`Couldn't look up ${name}: ${(e as Error).message}`); }
   }
 
-  /** Whoever shows up in the most local replays is almost certainly you */
-  private guessNickname(): string | null {
+  /** Whoever shows up in the most local replays is almost certainly you. Only when you ask for it on the welcome screen */
+  suggestName(): string | null {
     const count = new Map<string, number>();
     for (const r of this.store.runs()) for (const p of JSON.parse(r.players) as { nickname: string }[]) count.set(p.nickname, (count.get(p.nickname) ?? 0) + 1);
     const best = [...count].sort((a, b) => b[1] - a[1])[0];
     return best && best[1] >= 2 ? best[0] : null;
+  }
+
+  /** Checks a name on Ranked before you save it */
+  async lookupPlayer(name: string): Promise<{ nickname: string; uuid: string; elo: number | null; rank: number | null } | null> {
+    try {
+      const u = await this.api.user(name.trim());
+      return { nickname: u.nickname, uuid: u.uuid, elo: u.eloRate ?? null, rank: u.eloRank ?? null };
+    } catch { return null; }
   }
 
   // ---- background api scan
@@ -784,7 +797,7 @@ export class Service extends EventEmitter {
 
   async profile(season?: number, pool = 50): Promise<ProfileData> {
     const s = this.settings();
-    const nameOrUuid = s.uuid ?? s.nickname ?? this.guessNickname();
+    const nameOrUuid = s.uuid ?? s.nickname;
     let raw = loadCachedProfileRaw(this.store, season);
 
     if (!raw && !this.opts.offline && nameOrUuid) {
@@ -1025,7 +1038,7 @@ export class Service extends EventEmitter {
 
   async profileRefresh(season?: number, pool = 50): Promise<ProfileData> {
     const s = this.settings();
-    const nameOrUuid = s.uuid ?? s.nickname ?? this.guessNickname();
+    const nameOrUuid = s.uuid ?? s.nickname;
     if (nameOrUuid) {
       const raw = await fetchProfile(this.store, this.api, nameOrUuid, season, { offline: this.opts.offline });
       if (raw.user) {

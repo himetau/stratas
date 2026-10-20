@@ -77,6 +77,8 @@ export async function installMock() {
     onNewGame: () => {},
     profile: async () => structuredClone(snap.profile ?? null),
     profileMatch: async (id: number) => structuredClone(snap.matchDetails?.[id] ?? null),
+    suggestName: async () => "Feinberg",
+    lookupPlayer: async (name: string) => ({ nickname: name, uuid: "9a8e24df4c8549d696a6951da84fa5c4", elo: 2242, rank: 16 }),
     matchElo: async () => ({ elo: 1836, change: 17 }),
     profileRefresh: async () => structuredClone(snap.profile ?? null),
   };
