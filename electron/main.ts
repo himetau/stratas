@@ -4,12 +4,14 @@ import { execFile, execFileSync, spawn } from "node:child_process";
 import { copyFileSync, existsSync, readdirSync, readFileSync, renameSync, rmdirSync, statSync, watch, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
+import { autoUpdater } from "electron-updater";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { Service } from "../src/core/service";
 import { rankedArt, rankedAssets, rankIcons } from "../src/core/ranks";
 import { cachedOldArt, fetchOldArt, oldArtData } from "../src/core/oldart";
 import { skinPng, type SkinOwner } from "../src/core/skins";
 import type { Pick } from "../src/core/seeds/picker";
+import type { UpdateState } from "../src/core/update";
 
 const linux = process.platform === "linux", win = process.platform === "win32";
 // XDG folders on Linux, %APPDATA%\stratas on Windows
@@ -209,6 +211,34 @@ async function openInMinecraft(file: string): Promise<{ ok: boolean; message: st
   return { ok: false, message: `Replay name copied. Start Ranked yourself, then: ${steps}` };
 }
 
+// Updates from GitHub releases. Checked at start and every few hours, downloaded and installed when you click update.
+// Running from the code (or a Linux build that isn't the AppImage) can't update itself
+let update: UpdateState = { status: "off", current: app.getVersion() };
+function setUpdate(patch: Partial<UpdateState>) {
+  update = { ...update, ...patch };
+  for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send("update", update);
+}
+const checkUpdate = () => { if (update.status !== "off" && update.status !== "downloading" && update.status !== "ready") void autoUpdater.checkForUpdates().catch(() => {}); };
+function setupUpdates() {
+  if (!app.isPackaged || (linux && !process.env.APPIMAGE)) return;
+  update.status = "idle";
+  autoUpdater.autoDownload = false;
+  autoUpdater.logger = null;
+  autoUpdater.on("checking-for-update", () => setUpdate({ status: "checking", error: undefined }));
+  autoUpdater.on("update-available", (i) => setUpdate({ status: "available", version: i.version }));
+  autoUpdater.on("update-not-available", () => setUpdate({ status: "none" }));
+  autoUpdater.on("download-progress", (p) => setUpdate({ status: "downloading", percent: p.percent }));
+  // You asked for it, so restart into the new version straight away
+  autoUpdater.on("update-downloaded", (i) => { setUpdate({ status: "ready", version: i.version }); setTimeout(() => autoUpdater.quitAndInstall(true, true), 800); });
+  autoUpdater.on("error", (e) => setUpdate({ status: update.status === "downloading" ? "available" : "error", error: e.message }));
+  setTimeout(checkUpdate, 10_000);
+  setInterval(checkUpdate, 6 * 3600_000);
+}
+function installUpdate() {
+  if (update.status === "available") { setUpdate({ status: "downloading", percent: 0 }); void autoUpdater.downloadUpdate().catch(() => {}); }
+  else if (update.status === "ready") autoUpdater.quitAndInstall(true, true);
+}
+
 // Background work (scans, downloads) changes state in bursts so those get batched. User actions go out
 // right away. Unchanged state isn't sent so the page doesn't redraw
 let pending: NodeJS.Timeout | null = null, lastSent = "";
@@ -251,6 +281,10 @@ app.whenReady().then(() => {
       t = setTimeout(() => { readTheme(); for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send("theme", themeCss); }, 120);
     });
   } catch { /* No folder, use fallback palette */ }
+  ipcMain.handle("update", () => update);
+  ipcMain.handle("update:check", () => checkUpdate());
+  ipcMain.handle("update:install", () => installUpdate());
+  setupUpdates();
   ipcMain.handle("theme", () => ({ css: themeCss, file: themeFile, found: !!themeCss }));
   ipcMain.handle("state", () => service.state());
   ipcMain.handle("settings", now(async (patch) => {
@@ -344,7 +378,11 @@ app.whenReady().then(() => {
     main.webContents.once("did-finish-load", () => setTimeout(async () => {
       try {
         const chars = Number(await main!.webContents.executeJavaScript("document.body.innerText.length"));
-        report(chars > 0, `page has ${chars} characters, ${service.state().races.length} races, instance ${service.state().instance?.root ?? "none"}`);
+        // Check for an update too and say what came back (doesn't fail the check, a new version can legitimately be out)
+        checkUpdate();
+        for (let i = 0; i < 40 && (update.status === "idle" || update.status === "checking"); i++) await new Promise((r) => setTimeout(r, 500));
+        const upd = update.status === "off" ? "updates off" : `update ${update.status}${update.version ? ` ${update.version}` : ""}${update.error ? ` (${update.error.split("\n")[0]})` : ""}`;
+        report(chars > 0, `page has ${chars} characters, ${service.state().races.length} races, instance ${service.state().instance?.root ?? "none"}, version ${update.current}, ${upd}`);
       } catch (e) { report(false, String(e)); }
     }, 3000));
   }

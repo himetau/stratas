@@ -99,7 +99,7 @@ You need MCSR Ranked set up in a launcher. Stratas finds Prism, MultiMC, Modrint
 1. Download **[Stratas.AppImage](https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage)**.
 2. Right click it → Properties → allow it to run as a program (or `chmod +x Stratas.AppImage`), then open it.
 
-Older versions and what changed are on the [releases page](https://github.com/himetau/stratas/releases).
+Stratas checks for new versions by itself. When there's one, a green update button shows up at the bottom left, click it and it updates and restarts. Older versions and what changed are on the [releases page](https://github.com/himetau/stratas/releases).
 
 Code signing for the Windows installer is going to come from the [SignPath Foundation](https://signpath.org), for free. It's applied for and not active yet, see the code signing policy at the bottom.
 

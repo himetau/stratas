@@ -5,6 +5,9 @@ import type { Pick, PickOptions } from "../core/seeds/picker";
 import type { QueueRow, RaceRow } from "../core/store";
 import type { MatchDetail, ProfileData } from "../core/profile/types";
 import type { OldArt } from "../core/oldart";
+import type { UpdateState } from "../core/update";
+
+export type { UpdateState };
 
 export interface Bridge {
   state(): Promise<AppState>;
@@ -43,6 +46,11 @@ export interface Bridge {
   openInMinecraft(file: string): Promise<{ ok: boolean; message: string }>;
   theme(): Promise<{ css: string; file: string; found: boolean }>;
   onTheme(fn: (css: string) => void): void;
+  update(): Promise<UpdateState>;
+  updateCheck(): Promise<void>;
+  /** Downloads the new version, then restarts into it */
+  updateInstall(): Promise<void>;
+  onUpdate(fn: (u: UpdateState) => void): void;
   onState(fn: (s: AppState) => void): void;
   onCompanionRace(fn: (id: number | null) => void): void;
   onOpenRace(fn: (id: number) => void): void;

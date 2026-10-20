@@ -17,6 +17,7 @@ import { patternsView } from "./views/patterns";
 import { profileView, forgetProfile } from "./views/profile";
 import { setThemeInfo, settingsView } from "./views/settings";
 import { companionInit, companionView, setCompanionRace } from "./views/companion";
+import { updateRailBtn, watchUpdates } from "./update";
 
 // Browser preview only (npm run ui:dev), not in the Electron build
 if (import.meta.env.DEV && !(window as unknown as { stratas?: unknown }).stratas) await (await import("./dev/mock")).installMock();
@@ -90,6 +91,7 @@ function render() {
       navBtn("patterns", "Patterns", icons.patterns),
       navBtn("profile", "Profile", icons.profile),
       h("div", { class: "spacer" }),
+      updateRailBtn(),
       h("button", { class: "rail-btn support", title: "Support Stratas on Ko-fi", "aria-label": "Support Stratas on Ko-fi", onclick: openKofi }, icons.heart()),
       navBtn("settings", "Settings", icons.settings),
       name ? h("button", { class: "me", title: `${name}, ${s.you.elo ?? "unrated"}`, onclick: () => go({ page: "profile" }) },
@@ -122,6 +124,7 @@ addEventListener("keydown", (e) => {
   }
 });
 
+if (!isCompanion) watchUpdates(() => render());
 g.onState((s) => {
   const races = JSON.stringify(s.races.map((r) => [r.id, r.createdAt, r.error]));
   if (races !== lastRaces) { forgetRace(); forgetProfile(); lastRaces = races; }

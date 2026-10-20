@@ -1,6 +1,6 @@
 {
   "name": "stratas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Mix your MCSR Ranked private room replays with a player at any Elo you pick, then watch them side by side.",
   "type": "module",
@@ -20,6 +20,7 @@
     "dist": "npm run build && electron-builder --publish never"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "fflate": "^0.8.3"
   },
   "devDependencies": {
@@ -86,7 +87,14 @@
         }
       },
       "syncDesktopName": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "himetau",
+        "repo": "stratas"
+      }
+    ]
   },
   "allowScripts": {
     "esbuild": true,
