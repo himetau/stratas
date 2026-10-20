@@ -33,7 +33,7 @@ jobs:
 
       # Only the AppImage gets started below on Linux, so it's always built. The Windows installer only on tags
       - name: Package
-        run: npx electron-builder --publish never ${{ (runner.os == 'Linux' || startsWith(github.ref, 'refs/tags/v')) && '' || '--dir' }}
+        run: npx electron-builder --publish never ${{ (runner.os != 'Linux' && !startsWith(github.ref, 'refs/tags/v')) && '--dir' || '' }}
 
       # Ubuntu blocks the sandbox Electron normally uses, like a user's machine would, so this catches the AppImage not starting there
       - name: Start the built app
