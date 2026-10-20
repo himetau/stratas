@@ -6,6 +6,7 @@ import { rankOf } from "../../core/tiers";
 import { g, type AppState } from "../bridge";
 import { h, toast } from "../dom";
 import { artUrl, celebrate, prefs, rankColor, savePrefs, themeColors } from "../prefs";
+import { reportProblem, suggestFeature } from "../problem";
 import { openKofi } from "../support";
 import { updateSetting } from "../update";
 import { isWeb, pickReplays } from "../web";
@@ -215,6 +216,10 @@ export function settingsView(s: AppState, rerender: () => void) {
   const system = [
     group("Updates", [
       (() => { const u = updateSetting((label, fn) => btn(label, fn)); return row("Stratas", u.control, { hint: u.hint }); })(),
+    ]),
+    group("Help", [
+      row("Something broken?", btn("report a problem", () => void reportProblem(s)), { hint: "copies your version and activity log, then opens a GitHub issue to paste them in" }),
+      row("Missing something?", btn("suggest a feature", suggestFeature), { hint: "opens a GitHub issue" }),
     ]),
     group("Support", [
       row("Support Stratas", h("button", { class: "sx-btn sx-kofi", onclick: openKofi }, "☕ Ko-fi"), { hint: "it's free and made by one person, tips keep it going" }),

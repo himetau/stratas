@@ -1,0 +1,35 @@
+name: Something's broken
+description: Stratas crashed, can't find something, or got something wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead. Screenshots help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details from the app
+      description: In Stratas go to Settings, System, report a problem. It copies these for you, then paste them here. If the app won't open, write your version, Windows or Linux, and your launcher.
+      placeholder: Paste here
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Windows app
+        - Linux app
+        - Browser version (stratas.lol/app)
+        - Running from the code
+    validations:
+      required: true
+  - type: input
+    id: launcher
+    attributes:
+      label: Launcher
+      placeholder: Prism, MultiMC, Modrinth, CurseForge, Minecraft Launcher...

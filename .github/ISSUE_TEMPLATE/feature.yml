@@ -1,0 +1,11 @@
+name: I'd like something
+description: An idea for something Stratas should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like?
+      description: What you want to do, and how you'd use it in practice. Doesn't need to be worked out.
+    validations:
+      required: true

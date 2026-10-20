@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 // Stratas in the browser: the app's Service and pages, with replays you add by hand instead of a watched Ranked folder
 import "../shims/process";
+import "./flag";
 import "../../src/ui/styles.css";
 import "./web.css";
 import initSqlJs from "sql.js";
@@ -31,8 +32,7 @@ service.on("changed", soon);
 onFilesChanged(soon);
 addEventListener("pagehide", persist);
 
-(window as unknown as { stratas: unknown; stratasWeb: boolean }).stratas = webBridge(service, pkg.version);
-(window as unknown as { stratasWeb: boolean }).stratasWeb = true;
+(window as unknown as { stratas: unknown }).stratas = webBridge(service, pkg.version);
 service.start();
 document.body.classList.add("web");
 document.body.prepend(banner());
