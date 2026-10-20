@@ -1,9 +1,13 @@
 // Race graph, gap to the opponent over your run time. Hover a phase for details, click to zoom (Esc to zoom out)
-// Layers and moment display mode are saved
+// Layers, how moments show and the rest of the look come from settings
 import { buildDeltaModel } from "../core/detect/segments";
 import type { RaceAnalysis } from "./bridge";
 import { fmtDelta, h } from "./dom";
 import { phaseIconKey, phaseIconKeys, structIcon } from "./ranked";
+import { prefs, savePrefs, still } from "./prefs";
+import type { Prefs } from "../core/prefs";
+import type { CraftScreen } from "../core/detect/stats";
+import { listItems } from "../core/detect/steps";
 
 const NS = "http://www.w3.org/2000/svg";
 const PAD_L = 64, PAD_R = 14, PLOT_H = 210, RAIL_H = 74;
@@ -83,29 +87,26 @@ export function callLabel(label: string, v: number): string {
 }
 const SHORT: Record<string, string> = { "Nether travel": "Nether", "Bastion to fortress": "To fortress", "Fortress to stronghold": "To stronghold", "Bastion to blind": "To blind", "After the bastion": "After bastion" };
 const SPLIT_SHORT: Record<string, string> = { "Entered the Nether": "Nether", "Entered Bastion": "Bastion", "Left the Bastion": "Left bastion", "Entered Fortress": "Fortress", "6 Blaze Rods": "6 rods", "Blind Travelled": "Blind", "Eye Spy": "Eye Spy", "Entered the End": "End", "Defeated the Dragon": "Dragon" };
-/** "2 beds", "1 bed 1 tnt", "3 tnt" */
+/** "2 beds", "1 bed, 1 TNT", "3 TNT" */
 const blastsText = (bs: { what: "bed" | "tnt" }[]) => {
   const beds = bs.filter((b) => b.what === "bed").length, tnt = bs.length - beds;
-  return [beds ? `${beds} bed${beds > 1 ? "s" : ""}` : "", tnt ? `${tnt} tnt` : ""].filter(Boolean).join(" ");
+  return [beds ? `${beds} bed${beds > 1 ? "s" : ""}` : "", tnt ? `${tnt} TNT` : ""].filter(Boolean).join(", ");
 };
 /** When room on the curve is short, the extras get placed after everything else (which goes in time order) */
-const PLACE_FIRST: Record<string, number> = { pearls: 1, blast: 1, kit: 2, craft: 2 };
+const PLACE_FIRST: Record<string, number> = { pearls: 1, blast: 1, kit: 2, craft: 2, owcraft: 2 };
 /** What you picked up from trades: these go in the trade line's label, the rest only in its detail */
-const PICKED_LABEL: [string, string][] = [["ender_pearl", "pearls"], ["obsidian", "obby"], ["string", "string"]];
+const PICKED_LABEL: [string, string][] = [["ender_pearl", "pearls"], ["obsidian", "obsidian"], ["string", "string"]];
 const PICKED_NAME: Record<string, string> = { ender_pearl: "pearls", obsidian: "obsidian", string: "string", crying_obsidian: "crying obsidian", fire_res: "fire res", fire_charge: "fire charges", glowstone_dust: "glowstone dust" };
 /** Precraft items worth naming on the line */
 const PRECRAFT_NAME: Record<string, string> = { respawn_anchor: "anchor", bow: "bow", iron_axe: "iron axe", iron_sword: "iron sword", golden_pickaxe: "gold pick", ender_eye: "eye" };
-const PRECRAFT_SHORT: Record<string, string> = { bastion: "bastion precraft", fort: "fort precraft", stronghold: "stronghold precraft" };
-const MOMENT_COLOR: Record<string, string> = { kit: "var(--warn)", craft: "var(--accent)", blast: "var(--bad)", pearls: "color-mix(in srgb, var(--them) 50%, var(--you))", perch: "var(--warn)", zero: "var(--warn)", kill: "var(--good)", done: "var(--text)", trade: "var(--warn)", dead: "var(--bad)", blaze: "color-mix(in srgb, var(--warn) 60%, var(--bad))", portal: "color-mix(in srgb, var(--accent) 55%, var(--them))", eyes: "var(--them)" };
+const PRECRAFT_SHORT: Record<string, string> = { bastion: "bastion precraft", fort: "fortress precraft", stronghold: "stronghold precraft" };
+/** Setting that turns each kind of moment on or off */
+const KIND_PREF: Record<string, keyof Prefs> = { owcraft: "mOwCraft", trade: "mTrade", kit: "mKit", pearls: "mPearls", blaze: "mBlaze", blast: "mBlast", craft: "mCraft",
+  portal: "mPortal", eyes: "mEyes", zero: "mZero", perch: "mPerch", kill: "mKill", done: "mDone", dead: "mDead" };
+const MOMENT_COLOR: Record<string, string> = { owcraft: "color-mix(in srgb, var(--accent) 60%, var(--text))", kit: "var(--warn)", craft: "var(--accent)", blast: "var(--bad)", pearls: "color-mix(in srgb, var(--them) 50%, var(--you))", perch: "var(--warn)", zero: "var(--warn)", kill: "var(--good)", done: "var(--text)", trade: "var(--warn)", dead: "var(--bad)", blaze: "color-mix(in srgb, var(--warn) 60%, var(--bad))", portal: "color-mix(in srgb, var(--accent) 55%, var(--them))", eyes: "var(--them)" };
 
-type Layers = { splits: boolean; times: boolean; lead: boolean };
-type Mode = "curve" | "rail" | "list" | "off";
-const LAYER_LABEL: Record<keyof Layers, string> = { splits: "Splits", times: "Phase times", lead: "Lead" };
-const MODES: [Mode, string][] = [["curve", "On the curve"], ["rail", "Labels"], ["list", "List"], ["off", "Off"]];
-const load = <T>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? { ...d, ...JSON.parse(v) } : d; } catch { return d; } };
-const save = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* Fine */ } };
-let layers: Layers = load("gap.layers", { splits: true, times: true, lead: false });
-let mode: Mode = load<{ m: Mode }>("gap.mode", { m: "curve" }).m;
+type Layer = "splits" | "times" | "lead";
+const LAYER_LABEL: Record<Layer, string> = { splits: "Splits", times: "Phase times", lead: "Lead" };
 
 function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>, text?: string): SVGElementTagNameMap[K] {
   const e = document.createElementNS(NS, tag);
@@ -185,7 +186,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
     // What you left the bastion with
     const kit = st?.trades?.leftWith, leftAt = split(/left the bastion/i);
     if (kit && leftAt !== null) {
-      const parts = [["ender_pearl", "pearls"], ["obsidian", "obby"], ["string", "string"]].filter(([k]) => (kit[k as keyof typeof kit] ?? 0) > 0).map(([k, name]) => `${kit[k as keyof typeof kit]} ${name}`);
+      const parts = [["ender_pearl", "pearls"], ["obsidian", "obsidian"], ["string", "string"]].filter(([k]) => (kit[k as keyof typeof kit] ?? 0) > 0).map(([k, name]) => `${kit[k as keyof typeof kit]} ${name}`);
       // On the split, so it belongs to the phase after the bastion
       if (parts.length) add("kit", `left on ${parts.join(", ")}`, leftAt / 20, leftAt / 20);
     }
@@ -228,6 +229,19 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
         .map(([it, n]) => { const name = PRECRAFT_NAME[it] ?? "bed"; return n === 1 ? name : `${n} ${name}s`; });
       add("craft", `${PRECRAFT_SHORT[p.kind]} ${Math.round(p.secs)} s${made.length ? `: ${made.join(", ")}` : ""}`, p.t0 / 20, p.t1 / 20, items);
     }
+    // Overworld crafting, screens under 20 s apart as one, named by what they made
+    const groups: CraftScreen[][] = [];
+    for (const c of st?.owCrafts ?? []) { const g = groups.at(-1); if (g && c.t0 - g.at(-1)!.t1 <= 400) g.push(c); else groups.push([c]); }
+    for (const g of groups) {
+      // In the order they were made, planks and sticks only if that's all there was
+      const items = new Map<string, number>();
+      for (const c of g) for (const [it, n] of Object.entries(c.items)) items.set(it, (items.get(it) ?? 0) + n);
+      const real = [...items].filter(([it]) => !/_planks$|^stick$/.test(it)), shown = real.length ? real : [...items];
+      const names = shown.map(([it, n]) => listItems({ [it]: n }, 1, false));
+      const secs = g.reduce((n, c) => n + c.secs, 0), smelt = g.every((c) => c.smelt);
+      add("owcraft", `${smelt ? "smelted" : "crafted"} ${names.slice(0, 3).join(", ")}${names.length > 3 ? ` +${names.length - 3} more` : ""}, ${Math.round(secs)} s`, g[0].t0 / 20, g.at(-1)!.t1 / 20,
+        g.map((c) => `${clock(c.t0 / 20)} ${listItems(c.items, 4, false)} (${Math.round(c.secs)} s)`).join(", "));
+    }
     for (const s of L.filter((x) => x.kind === "portal")) add("portal", /blind/.test(s.text) ? "blind" : /stronghold/.test(s.text) ? "to stronghold" : /lava/.test(s.text) ? "built a lava portal" : "built a portal", s.t1 / 20, s.t1 / 20, s.detail);
     for (const s of L.filter((x) => x.kind === "eyes")) add("eyes", s.text.replace("Threw ", "threw "), s.t0 / 20, s.t0 / 20, s.detail);
     // Dragon fight: zero cycle or attempt, each perch, free the End, finish
@@ -238,8 +252,8 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
       f.perches.forEach((p, i) => add("perch", `perch ${i + 1}: ${p.beds ? `${p.beds} bed${p.beds === 1 ? "" : "s"}` : "no beds"}, ${p.killed ? "killed it" : `flew off at ${p.hp1} HP`}`, p.t0 / 20, p.t1 / 20));
       // Free the End and finish close together count as one
       const close = f.kill !== null && f.done !== null && f.done - f.kill < 60;
-      if (f.kill !== null) add("kill", close ? `Free the End, completed ${clock(f.done! / 20)}` : "Free the End", f.kill / 20, f.kill / 20);
-      if (f.done !== null && !close) add("done", `completed ${clock(f.done / 20)}`, f.done / 20, f.done / 20);
+      if (f.kill !== null) add("kill", close ? `Free the End, finished ${clock(f.done! / 20)}` : "Free the End", f.kill / 20, f.kill / 20);
+      if (f.done !== null && !close) add("done", `finished ${clock(f.done / 20)}`, f.done / 20, f.done / 20);
     }
     return out.sort((p, q) => p.a - q.a);
   };
@@ -247,10 +261,9 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
 
   // ---- controls around the graph
   const status = h("div", { class: "gap-status" });
-  // View controls on their own line above the graph, stackable layers then the moment display mode
+  // Layer toggles on their own line above the graph, how moments show is in settings
   const layerBox = h("div", { class: "gap-seg multi", role: "group", "aria-label": "Show" });
-  const modeBox = h("div", { class: "gap-seg", role: "radiogroup", "aria-label": "What you did" });
-  const tools = h("div", { class: "gap-tools" }, h("div", { class: "gap-tool" }, h("span", { class: "lbl" }, "Show"), layerBox), h("div", { class: "gap-tool" }, h("span", { class: "lbl" }, "What you did"), modeBox));
+  const tools = h("div", { class: "gap-tools" }, h("div", { class: "gap-tool" }, h("span", { class: "lbl" }, "Show"), layerBox));
   const pills = h("div", { class: "gap-pills" });
   // Refit when the row or a pill resizes (pixel font loads late and widens the pills)
   const pillSizes = new ResizeObserver(() => fitPills());
@@ -264,10 +277,9 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
   const pick = (phase: string | null) => { const next = phase === selected && zoomed ? null : phase; wrap.select(next); opts.onSelect?.(next); };
 
   function drawSwitches() {
-    layerBox.replaceChildren(...(Object.keys(LAYER_LABEL) as (keyof Layers)[]).map((k) => h("button", { class: layers[k] ? "on" : "", "aria-pressed": String(layers[k]),
-      onclick: () => { layers = { ...layers, [k]: !layers[k] }; save("gap.layers", layers); drawSwitches(); paint(); } }, LAYER_LABEL[k])));
-    modeBox.replaceChildren(...MODES.map(([m, label]) => h("button", { class: mode === m ? "on" : "", role: "radio", "aria-checked": String(mode === m),
-      onclick: () => { mode = m; save("gap.mode", { m }); drawSwitches(); paint(); } }, label)));
+    const p = prefs();
+    layerBox.replaceChildren(...(Object.keys(LAYER_LABEL) as Layer[]).map((k) => h("button", { class: p[k] ? "on" : "", "aria-pressed": String(p[k]),
+      onclick: () => savePrefs({ [k]: !p[k] }) }, LAYER_LABEL[k])));
   }
   function drawPills() {
     const shortName = (s: (typeof segments)[number]) => ({ "To fort": "To fortress", "To bastion": "To bastion" })[sentence(s.segShort)] ?? sentence(s.segShort);
@@ -325,9 +337,11 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
 
   function paint() {
     const W = Math.round(svg.getBoundingClientRect().width);
-    if (!W) return;
+    // Not laid out yet, or too narrow to draw a plot in
+    if (W < PAD_L + PAD_R + 40) return;
     const L = PAD_L, R = W - PAD_R;
     const { x0, x1 } = view;
+    const layers = prefs(), mode = layers.moments, curveW = layers.curveWidth;
     const plotH = PLOT_H, top = layers.splits ? 26 : 8, bot = top + plotH;
     const railY = bot + 10, railH = mode === "rail" ? RAIL_H : 0, phY = railY + railH + 6, phH = layers.times ? 58 : 30, H = phY + phH + 22;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -393,19 +407,19 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
         if (s1 < x0 || s0 > x1) continue;
         const c = v1 > v0 + 0.05 ? "var(--bad)" : v1 < v0 - 0.05 ? "var(--good)" : "var(--text-dim)";
         g.appendChild(el("path", { d: `M${X(s0)} ${Y(0)}L${X(s0)} ${Y(v0)}L${X(s1)} ${Y(v1)}L${X(s1)} ${Y(0)}Z`, fill: c, "fill-opacity": 0.2, class: "keep" }));
-        g.appendChild(el("line", { x1: X(s0), y1: Y(v0), x2: X(s1), y2: Y(v1), stroke: c, "stroke-width": 2, class: "keep" }));
+        g.appendChild(el("line", { x1: X(s0), y1: Y(v0), x2: X(s1), y2: Y(v1), stroke: c, "stroke-width": curveW, class: "keep" }));
       }
     } else {
       const area = `${line}L${X(curve.at(-1)![0])} ${Y(0)}L${X(curve[0][0])} ${Y(0)}Z`;
       for (const [part, c, o] of [["up", "var(--bad)", 0.15], ["dn", "var(--good)", 0.2]] as const) {
         const gg = el("g", { "clip-path": `url(#${id}${part})` });
         gg.appendChild(el("path", { d: area, fill: c, "fill-opacity": o, class: "keep" }));
-        gg.appendChild(el("path", { d: line, fill: "none", stroke: c, "stroke-width": 2, "stroke-linejoin": "round", class: "keep" }));
+        gg.appendChild(el("path", { d: line, fill: "none", stroke: c, "stroke-width": curveW, "stroke-linejoin": "round", class: "keep" }));
         g.appendChild(gg);
       }
     }
     // Biggest costs in one line under the pills, hover one to find it on the curve
-    const shownCosts = calls.filter((c) => c.t >= x0 && c.t <= x1 && (!focus || inFocus(c.t, c.t))).slice(0, 3);
+    const shownCosts = calls.filter((c) => c.t >= x0 && c.t <= x1 && (!focus || inFocus(c.t, c.t))).slice(0, layers.costs);
     costs.replaceChildren(...(shownCosts.length ? [h("span", { class: "dim" }, focus ? `Biggest costs in ${focus.phase.toLowerCase()}:` : "Biggest costs:"),
       ...shownCosts.map((c, i) => h("button", { class: "cost", title: c.sub,
         onmouseenter: () => showAt(c.t), onmouseleave: () => hideCursor(),
@@ -415,7 +429,9 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
     for (let x = L; x <= R; x += 6) { const y = Y(gapAt(x0 + ((x - L) / (R - L)) * (x1 - x0))); boxes.push({ x0: x - 3, x1: x + 3, y0: y - 3, y1: y + 3 }); }
     const labelled: { m: Moment; box: Box; pc: string; ends: boolean }[] = [], called: { box: Box; text: string }[] = [];
     const tipText = (m: Moment) => `${m.who === "you" ? "You" : them}, ${m.b > m.a ? `${clock(m.a)} to ${clock(m.b)}` : `at ${clock(m.a)}`}: ${cap(m.label)}${m.detail ? `, ${m.detail}` : ""}`;
-    const worth = (m: Moment) => !(m.b - m.a > 0 && m.b - m.a < 15 && !["dead", "zero", "perch", "craft", "pearls"].includes(m.kind));
+    // Picked in settings: which kinds and whose, then short ones skipped (deaths, crafts and the End always count)
+    const picked = (m: Moment) => layers[KIND_PREF[m.kind]] !== false && (layers.momentsOf === "both" || layers.momentsOf === m.who);
+    const worth = (m: Moment) => picked(m) && !(m.b - m.a > 0 && m.b - m.a < layers.minMoment && !["dead", "zero", "perch", "craft", "owcraft", "pearls"].includes(m.kind));
     if (mode === "curve") {
       // Dot at the start, line for the duration. Yours sits above the curve, theirs along the bottom
       // since the curve is your gap not their position
@@ -429,10 +445,10 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
         const xa = X(Math.max(m.a, x0)), xb = X(Math.min(m.b, x1)), span = xb - xa > 4;
         // Diff vs their matching moment (same kind, same index)
         const mine = MOM[who].filter((q) => q.kind === m.kind), other = MOM[up ? "them" : "you"].filter((q) => q.kind === m.kind)[mine.indexOf(m)];
-        const diff = other && m.b > m.a && other.b > other.a && !up && !["perch", "zero", "craft"].includes(m.kind) ? Math.floor(m.b - m.a) - Math.floor(other.b - other.a) : 0; // Whole seconds to match the labels
+        const diff = other && m.b > m.a && other.b > other.a && !up && !["perch", "zero", "craft", "owcraft"].includes(m.kind) ? Math.floor(m.b - m.a) - Math.floor(other.b - other.a) : 0; // Whole seconds to match the labels
         const label = fitText(`${up ? "You" : them}: ${m.label}${Math.abs(diff) >= 1 ? `, ${Math.round(Math.abs(diff))} s ${diff < 0 ? "quicker" : "slower"}` : ""}`, R - L - 8), w = textW(label);
         // Start/end times at each end of the line, only if they fit in the plot
-        const tA = clock(m.a), tB = clock(m.b), ends = span && (zoomed || xb - xa > 90) && xa - textW(tA) - 12 >= L && xb + textW(tB) + 12 <= R;
+        const tA = clock(m.a), tB = clock(m.b), ends = layers.lineTimes && span && (zoomed || xb - xa > 90) && xa - textW(tA) - 12 >= L && xb + textW(tB) + 12 <= R;
         const padA = ends ? textW(tA) + 8 : 0, padB = ends ? textW(tB) + 8 : 0;
         const ys = curve.filter((p) => p[0] >= m.a && p[0] <= m.b).map((p) => Y(p[1])).concat([Y(gapAt(m.a)), Y(gapAt(m.b))]);
         // Theirs sit between the curve and the phase labels, which can take a few rows to clear
@@ -485,7 +501,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
         }
       }
       // Zoomed in, label what cost or saved time on the curve where it happened
-      if (zoomed && focus) for (const c of calls.filter((q) => q.t >= x0 && q.t <= x1 && inFocus(q.t, q.t)).slice(0, 8)) {
+      if (zoomed && focus) for (const c of calls.filter((q) => q.t >= x0 && q.t <= x1 && inFocus(q.t, q.t)).slice(0, layers.callouts)) {
         const xc = X(c.t), yc = Y(gapAt(c.t)), num = fmtDelta(c.v), name = `${fitText(c.label.toLowerCase(), R - L - textW(num) - 6)} `, w = textW(name + num);
         for (let k = 0; k < 8; k++) {
           const up = k % 2 === 0, d = 18 + Math.floor(k / 2) * 15, ly = up ? yc - d : yc + d + 10, lx = Math.max(L, Math.min(xc - w / 2, R - w));
@@ -525,7 +541,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
     }
     // Phase labels with both players' times
     const maxDur = Math.max(...bands.map((b) => Math.max(b.you ?? 0, b.them ?? 0)), 1);
-    for (const b of bands) {
+    for (const b of layers.phaseNames ? bands : []) {
       const xa = Math.max(X(b.you0), L), xb = Math.min(X(b.you1), R), w = xb - xa;
       if (w < 30) continue;
       // Icons only if the name still fits after them, name then short name then cut, all inside the band
@@ -563,7 +579,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
     // Moments list goes under the graph
     list.hidden = mode !== "list";
     if (mode === "list") {
-      const all = [...MOM.you, ...MOM.them].filter((m) => m.b >= x0 && m.a <= x1).sort((p, q) => p.a - q.a);
+      const all = [...MOM.you, ...MOM.them].filter((m) => picked(m) && m.b >= x0 && m.a <= x1).sort((p, q) => p.a - q.a);
       list.replaceChildren(h("div", { class: "h" }, h("span", null, "When"), h("span", { class: "you" }, "You"), h("span", { class: "them" }, them)),
         ...all.map((m) => {
           const cell = [h("i", { style: `background:${MOMENT_COLOR[m.kind]}` }), cap(m.label), h("small", null, `${clock(m.own)}${m.detail ? `, ${m.detail}` : ""}`)];
@@ -647,7 +663,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
   wrap.select = (phase) => {
     selected = phase; zoomed = phase !== null; hovered = null;
     drawPills(); drawStatus();
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { view = phaseView(phase); paint(); } else animateTo(phaseView(phase));
+    if (still() || !prefs().zoomAnim) { view = phaseView(phase); paint(); } else animateTo(phaseView(phase));
   };
   // The chart is reused when you come back to the race so these stay until dispose(), not until detach
   const life = new AbortController();
@@ -660,6 +676,7 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
   new ResizeObserver(() => paint()).observe(svg);
   void document.fonts?.ready.then(() => { if (!life.signal.aborted) paint(); });
   addEventListener("stratas-theme", () => paint(), { signal: life.signal });
+  addEventListener("stratas-prefs", () => { drawSwitches(); paint(); }, { signal: life.signal });
   return wrap;
 }
 
@@ -707,7 +724,7 @@ export function gapStrip(a: RaceAnalysis, opts: { seedType?: string | null; sele
 
   function draw() {
     W = Math.round(svg.getBoundingClientRect().width);
-    if (!W) return;
+    if (W < PAD_L + PAD_R + 40) { W = 0; return; }
     const L = PAD_L, R = W - PAD_R;
     X = (s: number) => L + (s / xMax) * (R - L);
     svg.setAttribute("viewBox", `0 0 ${W} ${STRIP_H}`);

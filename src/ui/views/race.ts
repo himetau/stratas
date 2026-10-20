@@ -2,14 +2,19 @@
 // Opening a phase shows what each player did in it side by side
 import { g, type RaceAnalysis, type RaceRow } from "../bridge";
 import { buildDeltaModel } from "../../core/detect/segments";
-import { kitText, TRADE_ITEMS, TRADE_NAME } from "../../core/detect/stats";
-import { clockSec, deltaClass, fmtClock, fmtDelta, h } from "../dom";
+import { kitText, TRADE_ITEMS, TRADE_NAME, type CraftScreen } from "../../core/detect/stats";
+import { itemName, listItems } from "../../core/detect/steps";
+import { clockSec, deltaClass, fmtClock, fmtDelta, fmtDur, h } from "../dom";
 import { callLabel, gapChart, gapStrip, STRIP_H } from "../gap";
 import { bindKey, copyField, head, openInMinecraft, panel, rank } from "../parts";
 import { phaseIconKeys, structIcon } from "../ranked";
 import { playByPlay } from "./report";
+import { celebrate, prefs, still } from "../prefs";
+import { noteRaceOpened } from "../support";
+import type { Prefs } from "../../core/prefs";
 import { day, seedText } from "./races";
 
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const cache = new Map<number, { row: RaceRow; analysis: RaceAnalysis | null }>();
 export async function loadRace(id: number) {
   const hit = cache.get(id);
@@ -20,6 +25,7 @@ export async function loadRace(id: number) {
 }
 // Races that came back empty, so the page says so instead of asking again forever
 const gone = new Set<number>();
+const cheered = new Set<number>();
 /** The race if it's already loaded, without waiting */
 export const cachedRace = (id: number) => cache.get(id) ?? null;
 export function forgetRace(id?: number) { if (id === undefined) cache.clear(); else cache.delete(id); }
@@ -64,11 +70,11 @@ function tradesTable(a: RaceAnalysis, theirName: string) {
   if (!y && !t) return null;
   const n = (v: number | undefined) => (v ? String(v) : "");
   const rows = TRADE_ITEMS.filter((k) => [y?.got, y?.left, t?.got, t?.left].some((d) => (d?.[k] ?? 0) > 0)).map((k) =>
-    h("tr", null, h("td", null, TRADE_NAME[k]), h("td", null, n(y?.got[k])), h("td", { class: "dim" }, n(y?.left[k])), h("td", null, n(t?.got[k])), h("td", { class: "dim" }, n(t?.left[k]))));
+    h("tr", null, h("td", null, cap(TRADE_NAME[k])), h("td", null, n(y?.got[k])), h("td", { class: "dim" }, n(y?.left[k])), h("td", null, n(t?.got[k])), h("td", { class: "dim" }, n(t?.left[k]))));
   const need = (s: typeof y) => (!s ? "—" : s.noneNeeded ? "none" : s.needed ? `${s.needed.n} of ${s.n} (${fmtClock(s.needed.t)})` : `? of ${s.n}`);
   const both = (label: string, f: (s: NonNullable<typeof y>) => string, first = false) => h("tr", { class: first ? "sum first" : "sum" }, h("td", null, label), h("td", { colspan: 2 }, y ? f(y) : "—"), h("td", { colspan: 2 }, t ? f(t) : "—"));
   return h("table", { class: "plain trades-t" },
-    h("tr", null, h("th", null, "Trades"), h("th", { class: "you" }, "You got"), h("th", null, "left"), h("th", { class: "them" }, `${theirName} got`), h("th", null, "left")),
+    h("tr", null, h("th", null, "Trades"), h("th", { class: "you" }, "You got"), h("th", null, "Left"), h("th", { class: "them" }, `${theirName} got`), h("th", null, "Left")),
     rows,
     both("Trades", (s) => String(s.n), true),
     both("Left on", (s) => kitText(s.leftWith)),
@@ -76,35 +82,78 @@ function tradesTable(a: RaceAnalysis, theirName: string) {
     h("tr", { class: "sum" }, h("td", null, "Needed"), h("td", { colspan: 2 }, need(y)), h("td", { colspan: 2 }, need(t))));
 }
 
+/** Overworld crafting side by side: each thing made with how many and when, then screens, time in them and the slowest */
+function craftsTable(a: RaceAnalysis, theirName: string) {
+  const y = a.stats?.you.owCrafts, t = a.stats?.them.owCrafts;
+  if (!y?.length && !t?.length) return null;
+  // First time each item was made, and how many in all
+  const byItem = (xs: CraftScreen[] | undefined) => {
+    const m = new Map<string, { n: number; t: number }>();
+    for (const x of xs ?? []) for (const [it, n] of Object.entries(x.items)) { const c = m.get(it); if (c) c.n += n; else m.set(it, { n, t: x.t0 }); }
+    return m;
+  };
+  const my = byItem(y), mt = byItem(t);
+  const items = [...new Set([...my.keys(), ...mt.keys()])].sort((p, q) => Math.min(my.get(p)?.t ?? Infinity, mt.get(p)?.t ?? Infinity) - Math.min(my.get(q)?.t ?? Infinity, mt.get(q)?.t ?? Infinity));
+  const cell = (c: { n: number; t: number } | undefined) => (c ? [h("td", null, c.n > 1 ? String(c.n) : "✓"), h("td", { class: "dim" }, fmtClock(c.t))] : [h("td", { class: "dim" }, "—"), h("td")]);
+  const smelt = (xs: CraftScreen[] | undefined) => new Set((xs ?? []).filter((x) => x.smelt).flatMap((x) => Object.keys(x.items)));
+  const smelted = new Set([...smelt(y), ...smelt(t)]);
+  const slow = (xs: CraftScreen[] | undefined) => {
+    const s = (xs ?? []).reduce<CraftScreen | null>((m, x) => (!m || x.secs > m.secs ? x : m), null);
+    return s ? `${fmtDur(s.secs)} at ${fmtClock(s.t0)}, ${listItems(s.items, 3, false)}` : "—";
+  };
+  const both = (label: string, f: (xs: CraftScreen[] | undefined) => string, first = false) =>
+    h("tr", { class: first ? "sum first" : "sum" }, h("td", null, label), h("td", { colspan: 2 }, f(y)), h("td", { colspan: 2 }, f(t)));
+  return h("table", { class: "plain trades-t crafts-t" },
+    h("tr", null, h("th", null, "Crafted"), h("th", { class: "you" }, "You"), h("th", null, "at"), h("th", { class: "them" }, theirName), h("th", null, "at")),
+    items.map((it) => h("tr", null, h("td", null, cap(itemName(it)) + (smelted.has(it) ? " (smelted)" : "")), ...cell(my.get(it)), ...cell(mt.get(it)))),
+    both("Screens", (xs) => String(xs?.length ?? 0), true),
+    both("Slowest", slow));
+}
+
+/** Which settings switch a phase note falls under, from how it starts */
+function noteKind(text: string): keyof Prefs {
+  if (/\bdied\b|^death (reset|warp)|death reset|death warp/i.test(text)) return "nDeaths";
+  if (/precraft/i.test(text)) return "nPrecraft";
+  if (/^(trades|trades used|left on the ground|while trading|gold blocks|could have left)\b|extra trades|piglins angry/i.test(text)) return "nTrading";
+  if (/^(wood|lava portal|ruined portal|buried treasure|shipwreck|iron golem|temple chests|iron pickaxe)\b|\bvillage\b/i.test(text)) return "nOverworld";
+  if (/^(pearls to the fortress|blocks placed|pearl hang|blinded with|6 rods|blaze bed)\b/i.test(text)) return "nNether";
+  if (/^(eyes|in the stronghold|dragon|free the end|finished|first bed|last setup block)\b|^[^:]+: perch\b|\bin the stronghold:/i.test(text)) return "nEnd";
+  return "nOther";
+}
+
 /** What each player did in one phase */
 function facts(p: Report, theirName: string, a: RaceAnalysis) {
-  const trades = p.phase === "Bastion" ? tradesTable(a, theirName) : null;
+  const P = prefs();
+  const trades = p.phase === "Bastion" && P.tradesTable ? tradesTable(a, theirName) : p.phase === "Overworld" && P.craftsTable ? craftsTable(a, theirName) : null;
   const rows: HTMLElement[] = [];
-  for (const w of p.why ?? []) {
+  for (const w of P.costRows ? p.why ?? [] : []) {
     const [first, ...rest] = w.text.split(" · ");
     const v = versus(first);
     rows.push(h("tr", { class: "f-main" },
       h("td", null, callLabel(w.label, w.seconds)), h("td", null, v ? v.you : ""), h("td", null, v ? v.them : ""),
       h("td", { class: changeCls(w.seconds) }, Math.abs(w.seconds) < 0.5 ? "" : fmtDelta(w.seconds)),
       h("td", { class: "dim" }, watch(w.at, theirName))));
-    if (!v && first) rows.push(h("tr", { class: "f-sub" }, h("td"), h("td", { colspan: 4 }, first)));
+    // Lines that aren't "you vs them" read as a note under the row, from the left
+    const note = (t: string) => h("tr", { class: "f-sub f-note" }, h("td", { colspan: 5 }, cap(t)));
+    if (!P.costDetail) continue;
+    if (!v && first) rows.push(note(first));
     for (const part of rest) {
       const pv = versus(part);
       rows.push(pv ? h("tr", { class: "f-sub" }, h("td", null, pv.what), h("td", null, pv.you), h("td", null, pv.them), h("td"), h("td"))
-        : h("tr", { class: "f-sub" }, h("td"), h("td", { colspan: 4 }, part)));
+        : note(part));
     }
   }
   // The trades table already shows these
-  const notes = (p.notes ?? []).filter((n) => !/^could have/i.test(n.text) && !(trades && /^(Trades:|Left on the ground:)/.test(n.text)));
+  const notes = (p.notes ?? []).filter((n) => !/^could have/i.test(n.text) && !(trades && /^(Trades:|Left on the ground:)/.test(n.text)) && P[noteKind(n.text)]);
   return h("div", { class: "facts" },
     p.unfinished ? h("div", { class: "dim" }, "Your run ended in this phase.") : null,
     p.theirsEnded ? h("div", { class: "dim" }, `${theirName}'s run ended in this phase.`) : null,
-    rows.length ? h("table", { class: "plain facts-t" },
+    rows.length ? h("table", { class: `plain facts-t ${P.colWatch ? "" : "no-watch"}` },
       h("tr", null, h("th", null, ""), h("th", { class: "you" }, "You"), h("th", { class: "them" }, theirName), h("th", null, "Cost"), h("th", null, "Watch at")),
       rows) : null,
     trades,
     notes.length ? h("ul", { class: "facts-notes" }, notes.map((n) => h("li", null, h("span", null, n.text.replace(/ · /g, ", ")), h("span", { class: "dim" }, watch(n.at, theirName))))) : null,
-    playByPlay(p, theirName));
+    P.playByPlay === "hidden" ? null : playByPlay(p, theirName));
 }
 
 function splitsTable(a: RaceAnalysis, id: number, seedType: string | null, selected: string | null, select: (phase: string | null) => void) {
@@ -119,6 +168,7 @@ function splitsTable(a: RaceAnalysis, id: number, seedType: string | null, selec
   const used = new Set(segments.map((s) => s.splitName));
   const unreached = a.splits.filter((s) => !used.has(s.name) && (s.you === null || s.them === null));
   const t = (ticks: number | null) => (ticks === null ? "—" : fmtClock(ticks));
+  const P = prefs();
 
   const body: HTMLElement[] = [];
   for (const grp of groups) {
@@ -127,8 +177,10 @@ function splitsTable(a: RaceAnalysis, id: number, seedType: string | null, selec
     body.push(h("tr", { class: `grp ${on ? "on" : ""}`, "data-grp": grp.phase, "data-t": grp.segs[0].you0, "data-name": grp.phase, onclick: () => select(on ? null : grp.phase) },
       h("td", null, h("span", { class: "grp-name" }, h("span", { class: "caret" }, on ? "▾" : "▸"), ...phaseIconKeys(grp.phase, seedType).map((k) => structIcon(k)), grp.phase)),
       h("td", { class: "dim" }, p?.you != null ? clockSec(p.you) : ""), h("td", { class: "dim" }, p?.them != null ? clockSec(p.them) : ""),
-      h("td", { class: changeCls(p?.change ?? null) }, p?.change != null && grp.segs.length > 1 ? signed(p.change) : ""), h("td")));
-    for (const s of grp.segs) {
+      h("td", { class: changeCls(p?.change ?? null) }, p?.change != null && (grp.segs.length > 1 || !P.splitRows) ? signed(p.change) : ""),
+      // Without split rows the gap at the end of the phase goes on the phase row
+      P.splitRows ? h("td") : h("td", { class: changeCls(grp.segs.at(-1)!.gap1) }, signed(grp.segs.at(-1)!.gap1))));
+    for (const s of P.splitRows ? grp.segs : []) {
       const sp = byName.get(s.splitName);
       if (!sp) continue;
       body.push(h("tr", { class: "split", "data-t": (sp.you ?? sp.them ?? 0) / 20, "data-name": s.splitName },
@@ -137,11 +189,11 @@ function splitsTable(a: RaceAnalysis, id: number, seedType: string | null, selec
     }
     if (on && p) body.push(h("tr", { class: "facts-row" }, h("td", { colspan: 5 }, facts(p, a.them.name, a))));
   }
-  if (unreached.length) {
+  if (unreached.length && P.unreached) {
     body.push(h("tr", { class: "grp off" }, h("td", { colspan: 5 }, unreached.every((x) => x.you !== null) ? "Only you reached" : unreached.every((x) => x.them !== null) ? `Only ${a.them.name} reached` : "Only one of you reached")));
     for (const sp of unreached) body.push(h("tr", { class: "split off", "data-t": (sp.you ?? sp.them ?? 0) / 20 }, h("td", null, sp.name), h("td", null, t(sp.you)), h("td", null, t(sp.them)), h("td"), h("td")));
   }
-  return h("table", { class: "plain splits2", "data-race": id },
+  return h("table", { class: `plain splits2 ${P.colDelta ? "" : "no-delta"} ${P.colGap ? "" : "no-gap"}`, "data-race": id },
     h("tr", null, h("th", null, "Split"), h("th", { class: "you" }, "You"), h("th", { class: "them" }, a.them.name), h("th", { title: "Time lost (+) or gained (−) on this split" }, "±"), h("th", { title: "Total lead (−) or deficit (+)" }, "Gap")),
     body);
 }
@@ -152,16 +204,17 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
   if (!r) { void loadRace(id).then(rerender); return h("div", { class: "page" }, h("div", { class: "empty" }, "Loading race")); }
   const { row, analysis: a } = r;
   const isRace = row.your_file !== row.their_file;
-  // All actions are behind ⋯, M and C still work as shortcuts
+  // All actions are behind ⋯, the keys from settings still work as shortcuts
   const watchIt = () => void openInMinecraft(row.race_file!), companion = () => g.companion(id);
-  if (row.race_file) bindKey("m", watchIt);
-  bindKey("c", companion);
+  const keys = prefs();
+  if (row.race_file && keys.keyWatch) bindKey(keys.keyWatch, watchIt);
+  if (keys.keyCompanion) bindKey(keys.keyCompanion, companion);
   const item = (label: string, fn: () => void, key?: string, cls = "") =>
     h("button", { class: cls, onclick: (e: Event) => { (e.currentTarget as HTMLElement).closest("details")!.open = false; fn(); } }, label, key ? h("span", { class: "kbd" }, key) : null);
   const actions = h("details", { class: "menu" }, h("summary", { class: "btn ghost", title: "Watch, companion, file" }, "⋯"),
     h("div", { class: "menu-list" },
-      row.race_file ? item("Watch in Ranked", watchIt, "M") : null,
-      item("Companion", companion, "C"),
+      row.race_file ? item("Watch in Ranked", watchIt, keys.keyWatch.toUpperCase() || undefined) : null,
+      item("Companion", companion, keys.keyCompanion.toUpperCase() || undefined),
       row.race_file ? item("Show file", () => g.reveal(row.race_file!)) : null,
       item("Remove", async () => {
         if (!confirm(`Remove the race vs ${row.their_name}? The replay files stay.`)) return;
@@ -172,6 +225,12 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
   if (!a) return h("div", { class: "page" }, h("div", { class: "race-head" }, h("span", { class: "dim" }, where), actions), h("div", { class: "notice bad" }, row.error ?? "This race couldn't be analysed."));
 
   if (open?.race !== id) {
+    noteRaceOpened();
+    // Opening a race you won, once per race
+    if (a.finalGap < -0.5 && !cheered.has(id)) {
+      cheered.add(id);
+      requestAnimationFrame(() => celebrate());
+    }
     const worst = [...(a.report ?? [])].filter((p) => p.change !== null && !p.unfinished).sort((x, y) => y.change! - x.change!)[0];
     open = { race: id, phase: worst && worst.change! > 0 ? worst.phase : null };
   }
@@ -217,7 +276,6 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
       h("div", { class: "p-head" }, h("h2", null, "Seed")),
       h("div", { class: "seeds" }, copyField("World", String(a.seed.overworld)), a.seed.nether ? copyField("Nether", String(a.seed.nether)) : null)) : null);
   const plot = chart.querySelector<HTMLElement>(".gap-plot")!;
-  const still = matchMedia("(prefers-reduced-motion: reduce)");
   let L = { travel: 0, plotTop: 0, plotH: 1, stripTop: 0 }, k = 0, hovered: number | null = null;
   // Spring state: m chases scroll progress, v is its speed, t is where the playhead is drawn
   let m = 0, v = 0, t: number | null = null, tTo: number | null = null, note = "", raf = 0, last = 0;
@@ -272,7 +330,7 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
     raf = springDone && glideDone ? 0 : requestAnimationFrame(frame);
   };
   const kick = () => {
-    if (still.matches) { m = k; t = tTo; apply(); strip.at(t, note); return; }
+    if (still()) { m = k; t = tTo; apply(); strip.at(t, note); return; }
     if (!raf) { last = 0; raf = requestAnimationFrame(frame); }
   };
   const aim = (sec: number | null, what = "") => {
@@ -314,7 +372,7 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
     if (!main || !rows.length) return;
     const tr = rows.reduce((best, x) => (Math.abs(Number(x.dataset.t) - sec) < Math.abs(Number(best.dataset.t) - sec) ? x : best), rows[0]);
     const below = L.stripTop + STRIP_H + 10 + 6; // Strip height once pinned
-    main.scrollBy({ top: tr.getBoundingClientRect().top - main.getBoundingClientRect().top - below, behavior: still.matches ? "auto" : "smooth" });
+    main.scrollBy({ top: tr.getBoundingClientRect().top - main.getBoundingClientRect().top - below, behavior: still() ? "auto" : "smooth" });
     tr.classList.remove("flash");
     void tr.offsetWidth;
     tr.classList.add("flash");

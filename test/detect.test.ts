@@ -61,9 +61,9 @@ describe("phase report", () => {
     const b = phase("Bastion");
     expect(Math.abs(b.why.reduce((s, w) => s + w.seconds, 0) - b.change!)).toBeLessThan(2);
     expect(b.why.map((w) => w.key).sort()).toEqual(["after", "pre", "trading"]);
-    expect(why("Bastion", "trading")?.text).toBe("3:04 vs 2:19 · 5 vs 9 piglins at once · 7 piglins stuck on gold 3:45–5:29 · no piglin trading 33 s vs 1:13 · 123 vs 102 trades (obsidian from chests or mining 4 vs 14)");
+    expect(why("Bastion", "trading")?.text).toBe("3:04 vs 2:19 · 5 vs 9 piglins at once · 7 piglins stuck on gold 3:45–5:29 · 33 s vs 1:13 no piglin trading · 123 vs 102 trades · 4 vs 14 obsidian from chests or mining");
     expect(why("Bastion", "trading")!.seconds).toBeCloseTo(45, 0);
-    expect(why("Bastion", "after")?.text).toMatch(/^19 s vs 11 s · yours: moving 12 s/);
+    expect(why("Bastion", "after")?.text).toMatch(/^19 s vs 11 s · your 19 s: moving 12 s/);
     expect(note("Bastion", /^While trading/)).toMatch(/^While trading: moving 1:06 · waiting 44 s/);
     // Same gold throws and barters, every piglin there trading
     expect(note("Bastion", /^Could have left/)).toMatch(/^Could have left: ~5:\d\d with all 12 piglins trading · ~4:\d\d plus Chavron's chest \(10 obsidian\) \(you left 6:33\)$/);
@@ -71,7 +71,7 @@ describe("phase report", () => {
   });
   it("treats the fortress and the way to the stronghold as one stretch", () => {
     expect(a.report.map((p) => p.phase)).toContain("Fortress to stronghold");
-    expect(note("Fortress to stronghold", /^Blinded/)).toBe("Blinded with 4 vs 8 rods (8 vs 14 eyes) · back in the nether 11:04–12:27");
+    expect(note("Fortress to stronghold", /^Blinded/)).toBe("Blinded with 4 vs 8 rods (8 vs 14 eyes) · back in the Nether 11:04–12:27");
   });
   it("says what a death cost", () => {
     expect(note("Bastion to fortress", /^Died/)).toBe("Died (fell 16 blocks) · lost 128 string, 46 fire charges, 27 pearls, 24 crying obsidian · back 1:16 later");

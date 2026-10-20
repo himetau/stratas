@@ -14,7 +14,7 @@ const PRECRAFT = /_bed$|_wool$|^respawn_anchor$|^glowstone$|^iron_(axe|sword)$|^
 /** Needs one of these to count as a precraft, not just eyes or blocks */
 const PRECRAFT_KEY = /_bed$|_wool$|^respawn_anchor$|^glowstone$|^iron_(axe|sword)$|^bow$/;
 export type PrecraftKind = "bastion" | "fort" | "stronghold";
-export const PRECRAFT_LABEL: Record<PrecraftKind, string> = { bastion: "Bastion precraft", fort: "Fort precraft", stronghold: "Stronghold precraft" };
+export const PRECRAFT_LABEL: Record<PrecraftKind, string> = { bastion: "Bastion precraft", fort: "Fortress precraft", stronghold: "Stronghold precraft" };
 export interface Precraft { kind: PrecraftKind; t0: number; t1: number; /** Seconds in crafting screens */ secs: number; items: Record<string, number> }
 
 /** Crafting screen sessions after the bastion that made run items, grouped when under 20 s apart. Bastion precraft is
@@ -41,6 +41,22 @@ export function precrafts(s: Side): Precraft[] {
     } else out.push({ kind, t0: c.t0, t1: c.t1, secs: (c.t1 - c.t0) / 20, items });
   }
   return out.filter((p) => Object.keys(p.items).some((it) => PRECRAFT_KEY.test(it)));
+}
+
+// ---- overworld crafting
+
+export interface CraftScreen { t0: number; t1: number; /** Seconds the screen was open */ secs: number; items: Record<string, number>; smelt: boolean }
+
+/** Each crafting or furnace screen before the Nether and what it made (net, so planks turned into a table count as the table) */
+export function overworldCrafts(s: Side): CraftScreen[] {
+  const end = s.run.mark("nether") ?? s.run.end;
+  return s.steps.filter((x) => x.kind === "craft" && x.t0 < end && /^(Crafted|Smelted)/.test(x.text)).map((x) => {
+    const all = Object.entries(craftedItems(s.run, x.t0, x.t1)).filter(([, n]) => n > 0);
+    // Leftover planks and sticks are by-products of the real craft, unless that's all the screen made
+    const real = all.filter(([it]) => !/_planks$|^stick$/.test(it));
+    const items = Object.fromEntries(real.length ? real : all);
+    return { t0: x.t0, t1: x.t1, secs: (x.t1 - x.t0) / 20, items, smelt: x.text.startsWith("Smelted") };
+  }).filter((c) => Object.keys(c.items).length);
 }
 
 /** What a crafting screen made: inventory gains minus what you picked up while it was open */
@@ -106,10 +122,10 @@ export function blazeBedBlasts(s: Side): Blast[] {
     .map((x) => ({ t: x.t, what: x.power === 5 ? "bed" : "tnt" }));
 }
 
-/** "2 beds", "1 bed 1 tnt", "3 tnt" */
+/** "2 beds", "1 bed, 1 TNT", "3 TNT" */
 export function blastText(bs: Blast[]): string {
   const beds = bs.filter((b) => b.what === "bed").length, tnt = bs.length - beds;
-  return [beds ? `${beds} bed${beds > 1 ? "s" : ""}` : "", tnt ? `${tnt} tnt` : ""].filter(Boolean).join(" ") || "none";
+  return [beds ? `${beds} bed${beds > 1 ? "s" : ""}` : "", tnt ? `${tnt} TNT` : ""].filter(Boolean).join(", ") || "none";
 }
 
 // ---- zero cycle setup

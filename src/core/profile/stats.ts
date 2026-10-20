@@ -656,8 +656,8 @@ export function analyzeRanked(
   const breakdowns: TypeBreakdown[] = [
     buildTypeBreakdown(
       "overworld",
-      "Overworld Seed Type",
-      "Nether Enter",
+      "Overworld seed type",
+      "Entered the Nether",
       OVERWORLD_TYPES,
       "story.enter_the_nether",
       (m) => m.seedType ?? m.seed?.overworld,
@@ -668,8 +668,8 @@ export function analyzeRanked(
     ),
     buildTypeBreakdown(
       "bastion",
-      "Bastion Type",
-      "Bastion Enter",
+      "Bastion type",
+      "Entered Bastion",
       BASTION_TYPES,
       "nether.find_bastion",
       (m) => m.bastionType ?? m.seed?.nether,

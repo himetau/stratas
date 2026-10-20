@@ -23,3 +23,17 @@ export function rankedAssets(modJar: string | null): { background: string | null
     return { background: url("background_blur.png"), structures: url("structure_icons.png") };
   } catch { return none; }
 }
+
+/** Ranked's current menu background, blurred or sharp. Older releases' ones come from oldart.ts */
+export const RANKED_ART: Record<string, string> = { menu: "background_blur.png", menu_sharp: "background.png" };
+
+/** One of those backgrounds as a data URL, null if the jar doesn't have it */
+export function rankedArt(modJar: string | null, key: string): string | null {
+  const file = RANKED_ART[key];
+  if (!modJar || !file) return null;
+  try {
+    const name = `assets/mcsrranked/textures/gui/${file}`;
+    const got = unzipSync(new Uint8Array(readFileSync(modJar)), { filter: (f) => f.name === name })[name];
+    return got ? `data:image/png;base64,${Buffer.from(got).toString("base64")}` : null;
+  } catch { return null; }
+}

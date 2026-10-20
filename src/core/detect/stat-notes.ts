@@ -45,7 +45,7 @@ export function statNotes(phase: string, Y: Side, T: Side, ys: Span, ts: Span): 
     const fy = ys ? dragonFight(Y, ys) : null, ft = ts ? dragonFight(T, ts) : null;
     const y = zeroSetup(Y, fy), t = zeroSetup(T, ft);
     if (y || t) {
-      out.push({ text: `First bed: you ${y ? zeroText(y) : "—"} · ${N} ${t ? zeroText(t) : "—"}`, seconds: null, at: { you: y?.first, them: t?.first } });
+      out.push({ text: `First bed: ${y ? zeroText(y) : "—"} vs ${t ? zeroText(t) : "—"}`, seconds: null, at: { you: y?.first, them: t?.first } });
       const gap = (z: typeof y) => (z && z.setupDone !== null ? dur(z.first - z.setupDone) : "—");
       out.push({ text: `Last setup block to first bed: ${gap(y)} vs ${gap(t)}`, seconds: null, at: { you: y?.setupDone ?? undefined, them: t?.setupDone ?? undefined } });
     }

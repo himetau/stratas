@@ -9,7 +9,8 @@ import { outsideBarters, split, SPLIT_LABEL, tradesDone, type SplitKey } from ".
 import { enoughAt, type LeaveGoals, type Side, type Span } from "./findings";
 import { fmtDur, fmtTime } from "./names";
 import { dragonFight, endParts } from "./end";
-import { itemName, STEP_LABEL, type StepKind } from "./steps";
+import { itemName, listItems, STEP_LABEL, type StepKind } from "./steps";
+import { overworldCrafts } from "./stats";
 
 /** Where to look in the replay, your time and theirs */
 export interface At { you?: number; them?: number }
@@ -97,8 +98,8 @@ function bastionWhy(Y: Side, T: Side, goals: LeaveGoals): Part[] | null {
   let st = `${sec(ty)} vs ${sec(tt)} · ${y.usual} vs ${t.usual} piglins at once`;
   if (y.stuck) st += ` · ${y.stuck.n} piglins stuck on gold ${at(y.stuck.t0)}–${at(y.stuck.t1)}`;
   if (Math.abs(y.stall - t.stall) >= 5) {
-    const why = [y.stallWhy.angry >= 3 ? `angry ${sec(y.stallWhy.angry)}` : "", y.stallWhy.noGold >= 3 ? `no gold down ${sec(y.stallWhy.noGold)}` : ""].filter(Boolean).join(", ");
-    st += ` · no piglin trading ${sec(y.stall)} vs ${sec(t.stall)}${why && y.stall > t.stall ? ` (${why})` : ""}`;
+    const why = [y.stallWhy.angry >= 3 ? `piglins angry ${sec(y.stallWhy.angry)}` : "", y.stallWhy.noGold >= 3 ? `no gold on the ground ${sec(y.stallWhy.noGold)}` : ""].filter(Boolean).join(", ");
+    st += ` · ${sec(y.stall)} vs ${sec(t.stall)} no piglin trading${why && y.stall > t.stall ? ` · your wait: ${why}` : ""}`;
   }
   if (y.barters !== t.barters) {
     // Same trades in same order for everyone on a seed, so a different count comes from chests
@@ -106,7 +107,7 @@ function bastionWhy(Y: Side, T: Side, goals: LeaveGoals): Part[] | null {
     const it = y.decider;
     if (it) {
       const oy = outsideBarters(Y.run, it, y.done), ot = outsideBarters(T.run, it, t.done);
-      st += ` (${itemName(it)} from chests or mining ${oy.by} vs ${ot.by}${oy.later.length ? `, ${oy.later.map((c) => `${c.n} ${c.how} after at ${at(c.t)}`).join(", ")}` : ""})`;
+      st += ` · ${oy.by} vs ${ot.by} ${itemName(it)} from chests or mining${oy.later.length ? ` · you ${oy.later.map((c) => `${c.how} ${c.n} more at ${at(c.t)}`).join(", ")}` : ""}`;
     }
   }
   const where = y.stuck?.t0 ?? (y.stall - t.stall >= 5 ? y.longestStall ?? y.first : y.first);
@@ -118,7 +119,7 @@ function bastionWhy(Y: Side, T: Side, goals: LeaveGoals): Part[] | null {
   const ay = (y.l - y.done) / 20, af = (t.l - t.done) / 20;
   const dy = doing(y, Y);
   parts.push({ key: "after", label: "After trading", seconds: ay - af, at: { you: y.done, them: t.done },
-    text: `${sec(ay)} vs ${sec(af)}${dy ? ` · yours: ${dy}` : ""}` });
+    text: `${sec(ay)} vs ${sec(af)}${dy ? ` · your ${sec(ay)}: ${dy}` : ""}` });
   return parts;
 }
 
@@ -205,6 +206,22 @@ const BY_ACTIVITY: Record<string, StepKind> = {
   paused: "pause", standing: "still",
 };
 
+/** Under Overworld crafting: how many screens, the longest each, and what your slowest one made */
+function craftBreakdown(Y: Side, T: Side): string {
+  const y = overworldCrafts(Y), t = overworldCrafts(T);
+  if (!y.length && !t.length) return "";
+  const longest = (xs: typeof y) => xs.reduce<(typeof y)[number] | null>((m, x) => (!m || x.secs > m.secs ? x : m), null);
+  const ly = longest(y), lt = longest(t);
+  const out = [`${y.length} vs ${t.length} screens`];
+  if (ly || lt) out.push(`${ly ? sec(ly.secs) : "—"} vs ${lt ? sec(lt.secs) : "—"} longest screen`);
+  // Per item made, crafting screens only (smelting is waiting on the furnace)
+  const made = (xs: typeof y) => xs.filter((x) => !x.smelt).reduce((n, x) => n + Object.keys(x.items).length, 0);
+  const cy = y.filter((x) => !x.smelt).reduce((n, x) => n + x.secs, 0), ct = t.filter((x) => !x.smelt).reduce((n, x) => n + x.secs, 0);
+  if (made(y) && made(t)) out.push(`${(cy / made(y)).toFixed(1)} s vs ${(ct / made(t)).toFixed(1)} s per item`);
+  if (ly && lt && ly.secs - lt.secs >= 3) out.push(`your slowest made ${listItems(ly.items, 4, false)} at ${at(ly.t0)}`);
+  return ` · ${out.join(" · ")}`;
+}
+
 function stepsWhy(Y: Side, T: Side, ys: [number, number], ts: [number, number], phase: string): Part[] {
   const back = phase === "Stronghold" || phase === "End";
   const sy = stepTime(Y, ys, back), st = stepTime(T, ts, back), y = sy.secs, t = st.secs;
@@ -224,14 +241,14 @@ function stepsWhy(Y: Side, T: Side, ys: [number, number], ts: [number, number], 
         return ` (${at(a)}–${at(b)}${rods ? `, got ${plural(rods, "more rod")}` : ""})`;
       };
       const firstNether = (s: Side, sp: [number, number]) => s.run.slice(sp[0], sp[1]).find((p) => p.w === 1)?.t;
-      return { key: "back", label: "Back in the nether after blind", at: { you: firstNether(Y, ys), them: firstNether(T, ts) }, seconds: (y.nether ?? 0) - (t.nether ?? 0),
+      return { key: "back", label: "Back in the Nether after blind", at: { you: firstNether(Y, ys), them: firstNether(T, ts) }, seconds: (y.nether ?? 0) - (t.nether ?? 0),
         text: `${sec(y.nether ?? 0)}${trip(Y, ys)} vs ${sec(t.nether ?? 0)}${trip(T, ts)}` };
     }
     // Time outside known steps is named by what you were doing (aiming, in a portal etc)
     const label = k.startsWith("act:") ? ACTIVITY_LABEL[k.slice(4) as keyof typeof ACTIVITY_LABEL] : STEP_LABEL[k as StepKind];
     const wy = texts(Y, ys, k);
     return { key: `step:${k}`, label, seconds: (y[k] ?? 0) - (t[k] ?? 0), at: { you: sy.at[k], them: st.at[k] },
-      text: `${sec(y[k] ?? 0)} vs ${sec(t[k] ?? 0)}${k === "portal" && wy ? ` · ${wy.replace(/built (the|a) portal: /g, "")}` : ""}` };
+      text: `${sec(y[k] ?? 0)} vs ${sec(t[k] ?? 0)}${k === "portal" && wy ? ` · ${wy.replace(/built (the|a) portal: /g, "")}` : ""}${k === "craft" && phase === "Overworld" ? craftBreakdown(Y, T) : ""}` };
   });
 }
 

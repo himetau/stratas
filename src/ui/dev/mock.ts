@@ -44,6 +44,9 @@ export async function installMock() {
     refresh: async () => {},
     rankIcons: async () => (await ranked).icons,
     rankedAssets: async () => { const r = await ranked; return { background: r.background, structures: r.structures }; },
+    oldArt: async () => (await fetch("/__dev/oldart")).json(),
+    fetchOldArt: async () => (await fetch("/__dev/oldart?fetch=1")).json(),
+    rankedArt: async (key: string) => { const r = await fetch(`/__dev/art?key=${encodeURIComponent(key)}`); return r.ok ? r.text() : null; },
     skin: async (who: { uuid?: string | null; name?: string | null }) => {
       const r = await fetch(`/__dev/skin?uuid=${encodeURIComponent(who.uuid ?? "")}&name=${encodeURIComponent(who.name ?? "")}`);
       if (!r.ok) return null;

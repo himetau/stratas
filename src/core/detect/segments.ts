@@ -31,12 +31,12 @@ export interface DeltaEventMarker {
 function shortSplitName(name: string): string {
   if (name === "Entered the Nether") return "Nether";
   if (name === "Entered Bastion") return "Bastion";
-  if (name === "Left the Bastion") return "Left Bast";
+  if (name === "Left the Bastion") return "Left bastion";
   if (name === "Entered Fortress") return "Fortress";
-  if (/Blaze Rods/i.test(name)) return "6 Rods";
+  if (/Blaze Rods/i.test(name)) return "6 rods";
   if (name === "Blind Travelled") return "Blind";
   if (name === "Eye Spy") return "Stronghold";
-  if (name === "Entered the End") return "End Enter";
+  if (name === "Entered the End") return "End";
   if (name === "Defeated the Dragon") return "Finish";
   return name;
 }
@@ -45,29 +45,29 @@ function segmentNaming(prevSplit: string, curSplit: string): { label: string; sh
   if (curSplit === "Entered the Nether") return { label: "Overworld", short: "Overworld", fallbackPhase: "Overworld" };
   if (curSplit === "Entered Bastion") {
     return prevSplit === "Entered Fortress" || /Blaze Rods/i.test(prevSplit)
-      ? { label: "Fort → Bastion", short: "To Bastion", fallbackPhase: "Fortress" }
-      : { label: "Nether Travel", short: "Nether", fallbackPhase: "Nether travel" };
+      ? { label: "Fortress to bastion", short: "To bastion", fallbackPhase: "Fortress" }
+      : { label: "Nether travel", short: "Nether", fallbackPhase: "Nether travel" };
   }
   if (curSplit === "Left the Bastion") return { label: "Bastion", short: "Bastion", fallbackPhase: "Bastion" };
   if (curSplit === "Entered Fortress") {
     return prevSplit === "Left the Bastion"
-      ? { label: "Bastion → Fortress", short: "To Fort", fallbackPhase: "Bastion to fortress" }
-      : { label: "To Fortress", short: "To Fort", fallbackPhase: "Nether travel" };
+      ? { label: "Bastion to fortress", short: "To fort", fallbackPhase: "Bastion to fortress" }
+      : { label: "To fortress", short: "To fort", fallbackPhase: "Nether travel" };
   }
   // Fortress then blind, whichever of 6 rods or blind travel comes first
   if (/Blaze Rods/i.test(curSplit)) {
     return prevSplit === "Blind Travelled"
-      ? { label: "Blind → 6 Rods", short: "Blind", fallbackPhase: "Fortress to stronghold" }
-      : { label: "Fortress (Rods)", short: "Fortress", fallbackPhase: "Fortress to stronghold" };
+      ? { label: "Blind to 6 rods", short: "Blind", fallbackPhase: "Fortress to stronghold" }
+      : { label: "Fortress (rods)", short: "Fortress", fallbackPhase: "Fortress to stronghold" };
   }
   if (curSplit === "Blind Travelled") {
     return prevSplit === "Entered Fortress"
-      ? { label: "Fortress → Blind", short: "Fortress", fallbackPhase: "Fortress to stronghold" }
+      ? { label: "Fortress to blind", short: "Fortress", fallbackPhase: "Fortress to stronghold" }
       : prevSplit === "Left the Bastion"
-        ? { label: "Bastion → Blind", short: "Blind", fallbackPhase: "Bastion to blind" }
-        : { label: "Exit Fortress", short: "Blind", fallbackPhase: "Fortress to stronghold" };
+        ? { label: "Bastion to blind", short: "Blind", fallbackPhase: "Bastion to blind" }
+        : { label: "Out of the fortress", short: "Blind", fallbackPhase: "Fortress to stronghold" };
   }
-  if (curSplit === "Eye Spy") return { label: "Blind → Stronghold", short: "To stronghold", fallbackPhase: "Fortress to stronghold" };
+  if (curSplit === "Eye Spy") return { label: "Blind to stronghold", short: "To stronghold", fallbackPhase: "Fortress to stronghold" };
   if (curSplit === "Entered the End") return { label: "Stronghold", short: "Stronghold", fallbackPhase: "Stronghold" };
   // "Finish" is the end of your run when they didn't kill the dragon, same stretch
   if (curSplit === "Defeated the Dragon" || curSplit === "Finish") return { label: "The End", short: "End", fallbackPhase: "End" };
@@ -129,7 +129,7 @@ export function buildDeltaModel(a: RaceAnalysis): {
   if (!hasFinishSplit && runEndSec > anchors.at(-1)!.youSec + 2) {
     const endGap = Number.isFinite(a.finalGap) ? a.finalGap : (a.curve.at(-1)?.[1] ?? anchors.at(-1)!.gapSec);
     anchors.push({
-      splitName: a.you?.finished ? "Finish" : "Run End",
+      splitName: a.you?.finished ? "Finish" : "Run end",
       youSec: runEndSec,
       themSec: Math.max(anchors.at(-1)!.themSec, runEndSec - endGap),
       gapSec: endGap,
@@ -138,7 +138,7 @@ export function buildDeltaModel(a: RaceAnalysis): {
     const fallbackX = Math.max(60, runEndSec);
     const endGap = Number.isFinite(a.finalGap) ? a.finalGap : 0;
     anchors.push({
-      splitName: "Run End",
+      splitName: "Run end",
       youSec: fallbackX,
       themSec: Math.max(0, fallbackX - endGap),
       gapSec: endGap,

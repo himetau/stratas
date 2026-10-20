@@ -22,6 +22,7 @@ import { analyzeSplitsProfile, buildScorecard } from "./profile/splits";
 import { analyzeRanked, eloWinChance } from "./profile/stats";
 import type { MatchDetail, ProfileData, ProfileMatch, ProfileUser, SeasonResultEntry } from "./profile/types";
 import { rankOf } from "./tiers";
+import { DEFAULT_PREFS, mergePrefs, type Prefs } from "./prefs";
 
 export interface Settings {
   nickname: string | null;
@@ -31,11 +32,14 @@ export interface Settings {
   pick: Omit<PickOptions, "count">;
   /** Desktop notification when one of your new games gets analysed */
   notify: boolean;
+  /** Everything else on the settings page */
+  prefs: Prefs;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   nickname: null, uuid: null, instancePath: null, autoRace: true, notify: true,
   pick: { mode: "auto", seedType: null, bastionType: null, maxTime: null, minElo: undefined, maxElo: undefined, lockTier: null },
+  prefs: DEFAULT_PREFS,
 };
 
 export type GateState = { version: string | null; status: "ok" | "unverified" | "failed"; detail: string };
@@ -259,15 +263,15 @@ export class Service extends EventEmitter {
 
   settings(): Settings {
     const s = this.store.get<Partial<Settings>>("settings", {});
-    const out = { ...DEFAULT_SETTINGS, pick: { ...DEFAULT_SETTINGS.pick, ...(s.pick ?? {}) } };
+    const out = { ...DEFAULT_SETTINGS, pick: { ...DEFAULT_SETTINGS.pick, ...(s.pick ?? {}) }, prefs: mergePrefs(s.prefs) };
     // Only keep keys we still have, old ones (apiKey, autoDownload...) just get dropped
-    for (const k of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) if (k !== "pick" && s[k] !== undefined) (out as Record<string, unknown>)[k] = s[k];
+    for (const k of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) if (k !== "pick" && k !== "prefs" && s[k] !== undefined) (out as Record<string, unknown>)[k] = s[k];
     return out;
   }
 
   async updateSettings(patch: Partial<Settings>) {
     const cur = this.settings();
-    const next = { ...cur, ...patch, pick: { ...cur.pick, ...(patch.pick ?? {}) } };
+    const next = { ...cur, ...patch, pick: { ...cur.pick, ...(patch.pick ?? {}) }, prefs: mergePrefs({ ...cur.prefs, ...(patch.prefs ?? {}) }) };
     if (patch.nickname !== undefined && patch.nickname !== cur.nickname) { next.uuid = null; this.forgetAccount(); }
     this.store.set("settings", next);
     if (patch.instancePath !== undefined) { this.locateInstance(); this.rescanLibrary(); }
@@ -571,8 +575,15 @@ export class Service extends EventEmitter {
     }
   }
 
+  /** What counts as done trading, from settings */
+  private leaveGoals() {
+    const p = this.settings().prefs;
+    return { ender_pearl: p.leavePearls, obsidian: p.leaveObsidian, string: p.leaveString };
+  }
+
   private announce(raceId: number) {
-    if (!this.settings().notify) return;
+    const s = this.settings();
+    if (!s.notify) return;
     const r = this.race(raceId);
     if (!r?.analysis) return;
     const a = r.analysis;
@@ -605,7 +616,7 @@ export class Service extends EventEmitter {
       decodeRrf(yb); decodeRrf(tb);
       const merged = mergeRunners([{ bytes: yb, uuid: me }, { bytes: tb, uuid: them.uuid }]);
       const replay = decodeRrf(merged.bytes);
-      const analysis = analyzeRace(replay, me, them.uuid);
+      const analysis = analyzeRace(replay, me, them.uuid, { leave: this.leaveGoals() });
       const d = new Date(run.mtime);
       const name = `vs ${them.nickname} ${d.toISOString().slice(0, 10)} ${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}.rrf`;
       const out = join(myReplaysDir(this.instance!), name);
@@ -629,7 +640,7 @@ export class Service extends EventEmitter {
       their_elo: them.eloRate, tier: null, race_file: run.file, created_at: run.date ?? run.mtime, seed_type: this.seedTypeOf(run) };
     try {
       const replay = decodeRrf(new Uint8Array(readFileSync(run.file)));
-      const analysis = analyzeRace(replay, me, them.uuid);
+      const analysis = analyzeRace(replay, me, them.uuid, { leave: this.leaveGoals() });
       this.store.putRace({ ...base, final_gap: analysis.finalGap, analysis: JSON.stringify(analysis), error: null });
       if (run.mtime > (this.instance?.modTime ?? 0)) this.setGate("ok", "Replays from this version decode completely");
     } catch (e) {

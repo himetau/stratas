@@ -33,10 +33,10 @@ export interface Insights {
 
 /** Causes that count as a habit. Anything not here (aiming a bow, idle etc) isn't one */
 const HABITS: Record<string, { phase: string; title: string }> = {
-  "Overworld|step:travel": { phase: "Overworld", title: "Slower through the overworld" },
+  "Overworld|step:travel": { phase: "Overworld", title: "Slower through the Overworld" },
   "Overworld|step:craft": { phase: "Overworld", title: "Crafting takes longer" },
   "Overworld|step:mine": { phase: "Overworld", title: "Mining takes longer" },
-  "Overworld|step:portal": { phase: "Overworld", title: "Building the nether portal" },
+  "Overworld|step:portal": { phase: "Overworld", title: "Building the Nether portal" },
   "Nether travel|route": { phase: "Nether", title: "Longer way to the bastion" },
   "Nether travel|speed": { phase: "Nether", title: "Slower way to the bastion" },
   "Bastion|pre": { phase: "Bastion", title: "Slow to start trading" },
@@ -59,7 +59,7 @@ const median = (xs: number[]) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 /** Race page phase names with the fortress parts and similar folded together */
-const SHORT: Record<string, string> = { "To Fort": "To fortress", "To Bastion": "To bastion", "Run End": "" };
+const SHORT: Record<string, string> = { "To fort": "To fortress", "To bastion": "To bastion", "Run end": "" };
 const phaseName = (segShort: string) => SHORT[segShort] ?? segShort.charAt(0).toUpperCase() + segShort.slice(1).toLowerCase();
 
 export function buildInsights(all: InsightRace[]): Insights {

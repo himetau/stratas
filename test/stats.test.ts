@@ -19,7 +19,7 @@ describe("run stats (you vs nei1019)", () => {
   it("counts pearls on the way to the fortress and the TNT set off for the blaze bed", () => {
     expect(you.pearlsToFort).toHaveLength(2);
     expect(you.blasts.map((b) => b.what)).toEqual(["tnt", "tnt", "tnt"]);
-    expect(notes("Fortress to stronghold")).toContain("Blaze bed: 3 tnt vs 4 tnt");
+    expect(notes("Fortress to stronghold")).toContain("Blaze bed: 3 TNT vs 4 TNT");
   });
 
   it("counts barter drops picked up, including merged stacks and a stack taken in part", () => {

@@ -21,12 +21,12 @@ import type {
 } from "./types";
 
 const SEGMENT_LABELS: Record<SplitSegmentKey, string> = {
-  nether: "Entered Nether",
+  nether: "Entered the Nether",
   bastion: "Bastion",
   fortress: "Fortress",
   blind: "Blind",
   eye: "Stronghold",
-  end: "Entered End",
+  end: "Entered the End",
   finish: "Finish",
 };
 
@@ -397,14 +397,14 @@ export function buildScorecard(
       dimension: "form",
       label: "Form",
       score: clamp100(stats.recentWinRate),
-      detail: `${stats.recentWinRate}% over last ${stats.recentSample}`,
+      detail: `${stats.recentWinRate}% over the last ${stats.recentSample}`,
       sample: stats.recentSample,
     },
     {
       dimension: "finishing",
       label: "Finishing",
       score: clamp100(100 - stats.forfeitRate),
-      detail: `forfeited ${stats.forfeitRate}% of games`,
+      detail: `Forfeited ${stats.forfeitRate}% of games`,
       sample: stats.windowWins + stats.windowLosses,
     },
     {
@@ -413,8 +413,8 @@ export function buildScorecard(
       score: clamp100(splits.speedScore ?? 50),
       detail:
         splits.speedScore != null
-          ? `faster than ~${splits.speedScore}% of runs`
-          : "no split baseline yet",
+          ? `Faster than ~${splits.speedScore}% of runs`
+          : "No split baseline yet",
       sample: splits.analyzedMatches,
     },
     {

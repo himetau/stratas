@@ -24,7 +24,7 @@ export const strongholdNavigationMechanic: Mechanic = {
         t0: eye,
         t1: end,
         value: duration,
-        text: `${fmtTime(eye)} Inside stronghold: ${dur(duration)} (${distance} blocks)${toEye !== null ? ` · first eye to stronghold ${dur(toEye)}` : ""}`,
+        text: `${fmtTime(eye)} in the stronghold: ${dur(duration)} (${distance} blocks)${toEye !== null ? ` · first eye to stronghold ${dur(toEye)}` : ""}`,
         meta: {
           eye,
           end,
@@ -46,7 +46,7 @@ export const strongholdNavigationMechanic: Mechanic = {
     const tDist = Math.round(Number(to.meta?.distance ?? 0));
     if (Math.abs(yTicks - tTicks) < 80 && Math.abs(yDist - tDist) < 20) return null;
     return {
-      text: `Inside stronghold: ${dur(yTicks)} (${yDist} blocks) vs ${dur(tTicks)} (${tDist} blocks)`,
+      text: `In the stronghold: ${dur(yTicks)} (${yDist} blocks) vs ${dur(tTicks)} (${tDist} blocks)`,
       seconds: null,
       at: { you: yo.t0, them: to.t0 },
     };

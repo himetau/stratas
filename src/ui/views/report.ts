@@ -1,4 +1,5 @@
 // One phase: facts, where the time went for both players, and the play by play side by side
+import { prefs } from "../prefs";
 import type { PhaseReport } from "../../core/detect/analyze";
 import { clockSec as clock, deltaClass, fmtClock, fmtDelta, fmtDur as secs, h } from "../dom";
 import { fold } from "../parts";
@@ -45,7 +46,7 @@ export function playByPlay(p: PhaseReport, theirName: string) {
     steps.length ? steps.map((s) => h("div", { class: `step k-${s.kind} ${KEY.has(s.kind) || s.t1 - s.t0 >= 200 ? "key" : "minor"}` },
       h("span", { class: "t" }, fmtClock(s.t0)), h("span", { class: "d" }, s.t1 - s.t0 >= 20 ? secs((s.t1 - s.t0) / 20) : ""), h("span", null, s.text, s.detail ? h("small", null, s.detail) : null)))
       : h("div", { class: "meta" }, "nothing recorded"));
-  return h("details", { class: "pbp-fold" },
+  return h("details", { class: "pbp-fold", open: prefs().playByPlay === "open" },
     h("summary", null, h("span", { class: "label" }, "Play by play"), h("span", { class: "meta" }, `${p.steps.you.length} steps for you, ${p.steps.them.length} for ${theirName}`)),
     h("div", { class: "pbp-cols" }, col("you", "You", p.steps.you), col("them", theirName, p.steps.them)));
 }

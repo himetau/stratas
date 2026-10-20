@@ -116,10 +116,13 @@ export class Run {
       const spots = this.actions.filter((a) => a.t0 >= fb && a.t0 < next && ["chest", "barter", "mine"].includes(a.kind)).map((a) => this.posAt(a.t0)).filter((p) => p.w === w);
       const med = (xs: number[]) => xs.sort((a, b) => a - b)[xs.length >> 1];
       const c = spots.length >= 3 ? { x: med(spots.map((p) => p.x)), z: med(spots.map((p) => p.z)) } : this.posAt(fb + 20);
-      // You've left once you're away (other dim or past the radius) for 15 s straight, or you die
+      // You've left once you're away (other dim or past the radius) for 15 s straight, or you die. Except you
+      // haven't left while you still come back to trade or loot: big bastions put piglins and gold past the radius,
+      // and a death you run back from to keep trading doesn't end it either
+      const near = (a: Action) => a.w === w && (() => { const p = this.posAt(a.t0); return Math.hypot(p.x - c.x, p.z - c.z) <= BASTION_RADIUS * 2; })();
+      const lastWork = this.actions.filter((a) => (a.kind === "barter" || a.kind === "chest") && a.t0 > fb && a.t0 < next && near(a)).at(-1)?.t0 ?? fb;
       const rawDeath = this.actions.find((a) => a.kind === "death" && a.t0 > fb && a.t0 < next)?.t0 ?? Infinity;
-      const returnedToTrade = rawDeath < next && this.actions.some((a) => a.kind === "barter" && a.t0 > rawDeath && a.t0 < next);
-      const death = returnedToTrade ? Infinity : rawDeath;
+      const death = rawDeath < lastWork ? Infinity : rawDeath;
       let left = fb, awaySince: number | null = null;
       // Ranked only records position when you move, so standing at the trade spot leaves a gap. You were there till the next record
       let wasInside = false;
@@ -128,7 +131,7 @@ export class Run {
         if (inside) { left = p.t; awaySince = null; }
         else {
           if (wasInside) left = Math.max(left, p.t - 1);
-          if (returnedToTrade && p.t < this.actions.filter((a) => a.kind === "barter" && a.t0 < next).at(-1)!.t0) continue;
+          if (p.t < lastWork) continue;
           if (awaySince === null) awaySince = p.t;
           else if (p.t - awaySince >= 300) break;
         }

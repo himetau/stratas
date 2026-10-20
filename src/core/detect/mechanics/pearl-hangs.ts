@@ -23,7 +23,7 @@ export const pearlHangsMechanic: Mechanic = {
     if (!y[0] && !t[0]) return null;
     const one = (h: Occurrence | undefined) => (h ? `${dur(h.t1 - h.t0)} at ${fmtTime(h.t0)}` : "none");
     return {
-      text: `Pearl hang: you ${one(y[0])}, them ${one(t[0])}`,
+      text: `Pearl hang: ${one(y[0])} vs ${one(t[0])}`,
       seconds: null,
       at: { you: y[0]?.t0, them: t[0]?.t0 },
     };
