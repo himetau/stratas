@@ -91,8 +91,11 @@ You need MCSR Ranked set up in a launcher. Stratas finds Prism, MultiMC, Modrint
 
 **Windows**
 
-1. Download **[Stratas-Setup.exe](https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe)** and open it. It installs and starts by itself.
-2. If Windows says "Windows protected your PC", click **More info** → **Run anyway**. That shows up for any app that isn't paid to be signed.
+> [!WARNING]
+> The Windows installer isn't signed yet, so Windows will show a blue "Windows protected your PC" popup when you open it. Click **More info** → **Run anyway**. It's safe, it just means Windows doesn't know who made it yet. Signing is applied for through the free [SignPath Foundation](https://signpath.org) and the popup goes away once that's done.
+
+1. Download **[Stratas-Setup.exe](https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe)** and open it.
+2. Click past the popup (**More info** → **Run anyway**). It installs and starts by itself.
 
 **Linux**
 
@@ -100,9 +103,6 @@ You need MCSR Ranked set up in a launcher. Stratas finds Prism, MultiMC, Modrint
 2. Right click it → Properties → allow it to run as a program (or `chmod +x Stratas.AppImage`), then open it.
 
 Stratas checks for new versions by itself. When there's one, a green update button shows up at the bottom left, click it and it updates and restarts. Older versions and what changed are on the [releases page](https://github.com/himetau/stratas/releases).
-
-Code signing for the Windows installer is going to come from the [SignPath Foundation](https://signpath.org), for free. It's applied for and not active yet, see the code signing policy at the bottom.
-
 <details>
 <summary><b>Build it yourself</b></summary>
 
