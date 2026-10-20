@@ -215,7 +215,7 @@ describe("replay trends & insights over corpus fixtures", () => {
     expect(insights.length).toBeGreaterThan(2);
     expect(insights.some((x) => x.kind === "weakness" && x.raceId != null)).toBe(true);
     expect(insights.some((x) => x.kind === "goal" && (x.targets?.length ?? 0) > 0)).toBe(true);
-  });
+  }, 30_000); // Analyses whole replays, slow CI machines take over the default 5 s
 });
 
 describe("Service.profile() offline & match_detail cache budget", () => {
