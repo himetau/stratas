@@ -139,7 +139,7 @@ Notes on the replay format are in `docs/replay-format.md`.
 <p align="center"><img src="docs/readme/card-donut.png" width="80%" alt="Can I have a donut?"></p>
 
 <p align="center">
-Stratas is free and made by one person. If it's helped you find a few seconds,<br>
+Stratas is free and made by one person. Any support is highly appreciated.<br>
 a donut keeps it going 🍩
 </p>
 
