@@ -29,7 +29,6 @@ const NAME: Record<string, string> = { nether: "Nether", bastion: "Bastion", for
 const ICON: Record<string, string> = { nether: "nether", bastion: "bastion", fortress: "fortress", blind: "portal", eye: "stronghold", end: "end", finish: "dragon" };
 const clock = (ms: number | null) => { if (ms === null) return "—"; const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 const gap = (a: number | null, b: number | null) => (a === null || b === null ? null : (a - b) / 1000);
-const median = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
 interface Row { key: string; label: string; icon: string; you: number | null; range: number | null; next: number | null; pct: number | null; npct: number | null }
 
@@ -163,7 +162,7 @@ function lastPanel(d: ProfileData) {
       num("Record", `${wins} W, ${losses} L`),
       num("Win rate", wins + losses ? `${Math.round((wins / (wins + losses)) * 100)}%` : "—"),
       num("Elo", `${elo > 0 ? "+" : ""}${elo}`, elo > 0 ? "good" : elo < 0 ? "bad" : ""),
-      num("Median win", clock(median(clean))),
+      num("Average win", clock(clean.length ? clean.reduce((t, x) => t + x, 0) / clean.length : null)),
       num("Best", clock(clean.length ? Math.min(...clean) : null))),
     eloLine(points));
 }
