@@ -142,4 +142,14 @@ a donut keeps it going 🍩
 
 <br>
 
-<p align="center"><sub>made with 🩷 by cyoshi · not affiliated with MCSR Ranked or Mojang</sub></p>
+<details>
+<summary><b>Code signing policy</b></summary>
+
+The Windows installer is going to be signed for free through SignPath: free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). This is applied for and not active yet, so for now the installer isn't signed.
+
+- Author, reviewer and approver: [cyoshi](https://github.com/himetau). Every release is built from this repo by GitHub Actions and approved by hand before it gets signed.
+- Privacy: Stratas only talks to the MCSR Ranked API (public match data), Mojang (player skins) and, if you ask it to, Modrinth (old Ranked menu backgrounds). Your replays and settings stay on your computer and are never uploaded.
+
+</details>
+
+<p align="center"><sub>made with 🩷 by cyoshi · <a href="LICENSE">GPL-3.0</a> · not affiliated with MCSR Ranked or Mojang</sub></p>
