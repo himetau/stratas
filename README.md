@@ -3,6 +3,7 @@
 <p align="center"><img src="docs/readme/hero.svg" width="100%" alt="Stratas: replay mixer and analysis for MCSR Ranked"></p>
 
 <p align="center">
+  <a href="https://stratas.lol"><b>stratas.lol</b></a> ·
   <a href="#why-stratas"><b>Why</b></a> ·
   <a href="#what-does-it-do"><b>What it does</b></a> ·
   <a href="#why-its-different"><b>Why it's different</b></a> ·
@@ -87,7 +88,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
 
 ## Get it running
 
-Want to try it first? **[Stratas runs in your browser too](https://himetau.github.io/stratas/app/)**: your profile and splits, Find runs, and full races from replays you add yourself. The app has all the features and does everything on its own, the browser version is just a taste.
+Want to try it first? **[Stratas runs in your browser too](https://stratas.lol/app/)**: your profile and splits, Find runs, and full races from replays you add yourself. The app has all the features and does everything on its own, the browser version is just a taste.
 
 You need MCSR Ranked set up in a launcher. Stratas finds Prism, MultiMC, Modrinth, CurseForge and normal Minecraft Launcher instances on its own. If it doesn't find yours, go to Settings → MCSR Ranked → pick folder.
 

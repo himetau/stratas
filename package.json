@@ -42,7 +42,7 @@
   },
   "author": "cyoshi",
   "license": "GPL-3.0-or-later",
-  "homepage": "https://github.com/himetau/stratas",
+  "homepage": "https://stratas.lol",
   "build": {
     "appId": "com.cyoshi.stratas",
     "productName": "Stratas",
