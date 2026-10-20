@@ -13,6 +13,7 @@ import { celebrate, prefs, still } from "../prefs";
 import { noteRaceOpened } from "../support";
 import type { Prefs } from "../../core/prefs";
 import { day, seedText } from "./races";
+import { isWeb } from "../web";
 
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const cache = new Map<number, { row: RaceRow; analysis: RaceAnalysis | null }>();
@@ -214,9 +215,9 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
     h("button", { class: cls, onclick: (e: Event) => { (e.currentTarget as HTMLElement).closest("details")!.open = false; fn(); } }, label, key ? h("span", { class: "kbd" }, key) : null);
   const actions = h("details", { class: "menu" }, h("summary", { class: "btn ghost", title: "Watch, companion, file" }, "⋯"),
     h("div", { class: "menu-list" },
-      row.race_file ? item("Watch in Ranked", watchIt, keys.keyWatch.toUpperCase() || undefined) : null,
-      item("Companion", companion, keys.keyCompanion.toUpperCase() || undefined),
-      row.race_file ? item("Show file", () => g.reveal(row.race_file!)) : null,
+      row.race_file ? item(isWeb ? "Download mixed replay" : "Watch in Ranked", watchIt, keys.keyWatch.toUpperCase() || undefined) : null,
+      isWeb ? null : item("Companion", companion, keys.keyCompanion.toUpperCase() || undefined),
+      row.race_file && !isWeb ? item("Show file", () => g.reveal(row.race_file!)) : null,
       item("Remove", async () => {
         if (!confirm(`Remove the game vs ${row.their_name}? The replay files stay.`)) return;
         forgetRace(id); gone.add(id);

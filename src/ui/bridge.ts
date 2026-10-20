@@ -51,6 +51,8 @@ export interface Bridge {
   /** Downloads the new version, then restarts into it */
   updateInstall(): Promise<void>;
   onUpdate(fn: (u: UpdateState) => void): void;
+  /** Browser version only: replay files you added, since it can't watch Ranked's folder */
+  addReplays?(files: { name: string; bytes: Uint8Array }[]): Promise<number>;
   onState(fn: (s: AppState) => void): void;
   onCompanionRace(fn: (id: number | null) => void): void;
   onOpenRace(fn: (id: number) => void): void;

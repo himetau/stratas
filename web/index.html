@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stratas</title>
+    <meta name="description" content="Practice MCSR Ranked seeds against a player at any Elo you pick, then watch both runs in one replay and see where you lost time." />
+    <link rel="icon" href="./favicon.png" />
+    <link rel="stylesheet" href="./landing.css" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="./"><img src="../packaging/icon-64.png" alt="" width="28" height="28" /> Stratas</a>
+      <nav>
+        <a href="#download">Download</a>
+        <a href="./app/">Try it in your browser</a>
+        <a href="https://github.com/himetau/stratas">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <img class="hero-art" src="../docs/readme/hero.svg" alt="Stratas: replay mixer and analysis for MCSR Ranked" />
+        <h1>Practice against any Elo you want, on the same seed.</h1>
+        <p class="lead">Stratas finds a run from a player at the Elo you pick. You play that seed in a private room, then it mixes both replays into one file, so you're both in the same world in Ranked's own replay viewer. No Elo on the line, as many tries as you like.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe">Download for Windows</a>
+          <a class="btn" href="https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage">Download for Linux</a>
+          <a class="btn ghost" href="./app/">Try it in your browser</a>
+        </div>
+        <p class="small">Free. Nothing gets uploaded, your replays stay on your computer.</p>
+      </section>
+
+      <section class="shots">
+        <figure><img src="../docs/readme/splits.png" alt="Every split against your opponent, and where the time went" loading="lazy" /><figcaption>Every split next to theirs, and where the time went</figcaption></figure>
+      </section>
+
+      <section class="grid">
+        <div><h2>The gap, phase by phase</h2><p>Where you gained and lost, on a graph you can zoom into.</p></div>
+        <div><h2>Why you lost time</h2><p>In plain words: "7 piglins stuck on gold", "longer way to the fortress", "15 s crafting".</p></div>
+        <div><h2>Every trade, craft, pearl and rod</h2><p>Side by side with theirs, item by item.</p></div>
+        <div><h2>Deaths and what they cost</h2><p>How long you were gone and what you dropped.</p></div>
+        <div><h2>The End</h2><p>Zero cycles, failed cycles, each perch and the dragon kill.</p></div>
+        <div><h2>Your habits</h2><p>After a few games, the things that keep losing you time.</p></div>
+      </section>
+
+      <section class="gallery">
+        <img src="../docs/readme/card-practice.png" alt="Picking opponents by Elo" loading="lazy" />
+        <img src="../docs/readme/card-race.png" alt="Your gap to them over the whole run" loading="lazy" />
+        <img src="../docs/readme/card-bastion.png" alt="Zoomed into the bastion" loading="lazy" />
+        <img src="../docs/readme/card-habits.png" alt="Habits that keep losing you time" loading="lazy" />
+      </section>
+
+      <section class="versions" id="download">
+        <div class="card">
+          <h2>The app</h2>
+          <p>Everything, automatically. It finds your Ranked folder, picks up new replays the moment Ranked saves them, mixes races straight into My replays and tells you when a game is ready. Plus the companion window over the game, quick splits right after a private room run, and updates with one click.</p>
+          <div class="cta">
+            <a class="btn primary" href="https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe">Windows</a>
+            <a class="btn" href="https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage">Linux</a>
+          </div>
+          <p class="small">The Windows installer isn't signed yet, so Windows shows a "Windows protected your PC" popup. Click More info, then Run anyway. Signing is applied for through the free <a href="https://signpath.org">SignPath Foundation</a>.</p>
+        </div>
+        <div class="card">
+          <h2>In your browser</h2>
+          <p>A taste, nothing to install. Your profile and splits, Find runs, and full races from replays you add yourself. You drop the .rrf files in, and download the mixed replay to put in Ranked's folder. Everything stays in your browser.</p>
+          <div class="cta"><a class="btn" href="./app/">Open it</a></div>
+          <p class="small">The app has all the features. The browser version can't see your Ranked folder, so it can't do anything on its own.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      made with 🩷 by cyoshi · <a href="https://github.com/himetau/stratas">GitHub</a> · <a href="https://github.com/himetau/stratas/blob/main/LICENSE">GPL-3.0</a> · <a href="https://ko-fi.com/cyoshi">Ko-fi</a> · not affiliated with MCSR Ranked or Mojang
+    </footer>
+  </body>
+</html>

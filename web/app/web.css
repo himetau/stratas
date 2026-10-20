@@ -1,0 +1,16 @@
+/* Browser version: a bar on top with what only the app does, and the drop overlay */
+body.web { display: flex; flex-direction: column; height: 100vh; }
+body.web #app { flex: 1; height: auto; min-height: 0; }
+.web-bar { flex-shrink: 0; padding: 8px 16px; background: var(--bg-deep); border-bottom: 1px solid var(--rule); font-size: 13px; }
+.web-bar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.web-bar b { color: var(--accent); font-weight: 400; }
+.web-bar-actions { display: flex; align-items: center; gap: 14px; }
+.web-link { border: 0; padding: 0; background: none; color: var(--text-dim); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.web-link:hover { color: var(--text); }
+.web-dl { padding: 4px 10px; border-radius: 6px; background: var(--accent); color: var(--on-accent); text-decoration: none; }
+.web-more { display: none; max-width: 820px; padding: 4px 0 6px; }
+.web-bar.open .web-more { display: block; }
+.web-more ul { margin: 6px 0; padding-left: 18px; }
+.web-more p { margin: 6px 0; }
+body.dropping::after { content: "Drop replays to add them"; position: fixed; inset: 12px; z-index: 50; display: grid; place-items: center;
+  border: 2px dashed var(--accent); border-radius: 12px; background: color-mix(in srgb, var(--bg) 80%, transparent); color: var(--accent); font-size: 18px; pointer-events: none; }
