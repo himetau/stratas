@@ -54,13 +54,13 @@ export function raceList(s: AppState, openId: number | null, open: (id: number) 
     h("span", { class: "s" }, [seedText(r.seedType), day(r.createdAt)].filter(Boolean).join(", ")));
   const waiting = (s.myGames ?? []).filter((x) => x.raceId === null && !x.private).length;
   return h("aside", { class: "list" },
-    h("div", { class: "list-head" }, h("h2", null, "Races"),
+    h("div", { class: "list-head" }, h("h2", null, "Games"),
       h("select", { id: "race-sort", class: "mini-select", onchange: (e: Event) => { sort = (e.target as HTMLSelectElement).value as Sort; try { localStorage.setItem("races.sort", sort); } catch { /* Fine */ } redraw(); } },
         SORTS.map(([k, label]) => h("option", { value: k, selected: sort === k }, label)))),
     h("div", { class: "list-tabs" }, FILTERS.map(([k, label]) => h("button", { class: filter === k ? "on" : "", onclick: () => { filter = k; redraw(); } }, label))),
     h("div", { class: "list-body" },
       races.length ? [h("div", { class: "list-grp" }, "Private rooms"), races.map(item)] : null,
       matches.length ? [h("div", { class: "list-grp" }, "Your ranked matches"), matches.map(item)] : null,
-      !races.length && !matches.length ? h("div", { class: "list-empty" }, filter === "match" ? "No analysed ranked matches yet." : "No races yet. Play a queued seed in a private room.") : null),
+      !races.length && !matches.length ? h("div", { class: "list-empty" }, filter === "match" ? "No analysed ranked matches yet." : "No games yet. Play a queued seed in a private room.") : null),
     waiting ? h("div", { class: "list-foot dim" }, `${waiting} more ranked ${waiting === 1 ? "match" : "matches"} waiting for a replay`) : null);
 }

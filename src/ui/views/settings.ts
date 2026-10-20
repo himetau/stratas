@@ -137,7 +137,7 @@ export function settingsView(s: AppState, rerender: () => void) {
     ]),
     group("Motion", [
       row("Animations", opt("motion", [["system", "system"], ["full", "full"], ["reduced", "reduced"]]), { key: "motion", hint: "system follows your desktop's setting" }),
-      row("Win celebration", opt("celebrate", [["confetti", "confetti"], ["sparks", "sparks"], ["off", "off"]]), { key: "celebrate", hint: "when you open a race you won",
+      row("Win celebration", opt("celebrate", [["confetti", "confetti"], ["sparks", "sparks"], ["off", "off"]]), { key: "celebrate", hint: "when you open a game you won",
         extra: btn("try", () => celebrate(p.celebrate === "off" ? "confetti" : p.celebrate)) }),
     ]),
   ];
@@ -195,16 +195,16 @@ export function settingsView(s: AppState, rerender: () => void) {
       row("Pearls", num("leavePearls", 0, 64, 2, plain), { key: "leavePearls" }),
       row("Obsidian", num("leaveObsidian", 0, 64, 2, plain), { key: "leaveObsidian" }),
       row("String", num("leaveString", 0, 128, 4, plain), { key: "leaveString" }),
-      row("Apply to old races", btn("re-analyse", async () => { await g.reanalyze(); toast("Re-analysing"); }), { hint: "they keep the old numbers until then" }),
+      row("Apply to old games", btn("re-analyse", async () => { await g.reanalyze(); toast("Re-analysing"); }), { hint: "they keep the old numbers until then" }),
     ]),
   ];
 
   const companion = [
     group("Companion window", [
       row("Keep on top", ptog("companionOnTop"), { key: "companionOnTop", hint: "over Minecraft" }),
-      row("Open when a race is ready", ptog("companionAuto"), { key: "companionAuto" }),
+      row("Open when a game is ready", ptog("companionAuto"), { key: "companionAuto" }),
     ]),
-    group("Keys on a race", [
+    group("Keys in a game", [
       row("Watch in Ranked", key("keyWatch"), { key: "keyWatch" }),
       row("Open companion", key("keyCompanion"), { key: "keyCompanion" }),
     ]),
@@ -225,11 +225,11 @@ export function settingsView(s: AppState, rerender: () => void) {
         s.instances.map((i) => h("option", { value: i, selected: st.instancePath === i }, i.replace(/^.*instances\//, "").replace(/\/minecraft$/, "")))),
         { hint: s.instance ? undefined : "not found" }),
       row("Replay format", gate.status === "ok" ? dot("good", "ok") : gate.status === "failed" ? dot("bad", "changed") : dot("warn", "unchecked"), { hint: `MCSR Ranked ${gate.version ?? "?"}` }),
-      row("Build races on their own", tog(st.autoRace, (v) => g.settings({ autoRace: v }), "Build races on their own"), { hint: "when a replay shows up" }),
+      row("Mix replays on their own", tog(st.autoRace, (v) => g.settings({ autoRace: v }), "Mix replays on their own"), { hint: "when a replay shows up" }),
     ]),
     group("Data", [
       row("Replays", btn("rescan", async () => { await g.rescan(); toast("Rescanned"); }), { hint: `${s.library.practice} private, ${s.library.ranked} ranked, ${s.library.reference} reference` }),
-      row("Races", btn("re-analyse", async () => { await g.reanalyze(); toast("Re-analysing"); }), { hint: "after an update or changing analysis settings" }),
+      row("Games", btn("re-analyse", async () => { await g.reanalyze(); toast("Re-analysing"); }), { hint: "after an update or changing analysis settings" }),
       row("Match index", h("span", { class: "dim" }, `${s.index.matches.toLocaleString()} matches`), { hint: s.index.error ?? `${s.index.apiLeft} API calls left` }),
       h("details", { class: "sx-log", "data-q": "activity log" }, h("summary", null, "Activity"),
         h("pre", { class: "log" }, s.log.length ? s.log.slice().reverse().join("\n") : "Nothing yet.")),

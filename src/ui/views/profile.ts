@@ -170,7 +170,7 @@ function lastPanel(d: ProfileData) {
 
 function matchRow(m: ProfileMatch, openRace: (id: number) => void) {
   const res = m.won === true ? ["w", "Won"] : m.won === false ? ["l", "Lost"] : ["d", "Draw"];
-  return h("div", { class: `pf-match ${m.raceId !== null ? "click" : ""}`, onclick: m.raceId !== null ? () => openRace(m.raceId!) : undefined, title: m.raceId !== null ? "Open the race" : undefined },
+  return h("div", { class: `pf-match ${m.raceId !== null ? "click" : ""}`, onclick: m.raceId !== null ? () => openRace(m.raceId!) : undefined, title: m.raceId !== null ? "Open the game" : undefined },
     h("span", { class: `pf-res ${res[0]}` }, res[1]),
     head({ uuid: m.opponent.uuid, name: m.opponent.name }, 20),
     h("span", { class: "pf-opp" }, m.opponent.name, m.opponent.elo ? h("span", { class: "dim" }, ` ${m.opponent.elo}`) : null),

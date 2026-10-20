@@ -60,10 +60,10 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
     return h("div", { class: "page" },
       panel(null, null,
         h("div", { class: "p-head" }, h("h2", null, "Nothing in the queue")),
-        h("p", { class: "dim", style: "margin:0 0 12px" }, "Pick a few runs by stronger players to race on their seed."),
+        h("p", { class: "dim", style: "margin:0 0 12px" }, "Pick a few runs by stronger players to practice their seed."),
         btn("Find runs", go.find, { primary: true, key: "f" })),
       latest ? panel(null, null,
-        h("div", { class: "p-head" }, h("h2", null, "Last race")),
+        h("div", { class: "p-head" }, h("h2", null, "Last game")),
         h("div", { class: "last" }, head({ name: latest.theirName }, 24), h("span", null, `vs ${latest.theirName}`),
           h("b", { class: deltaClass(latest.finalGap) }, fmtDelta(latest.finalGap)), h("span", { class: "dim" }, day(latest.createdAt)),
           btn("Open", () => go.race(latest.id), { key: "o" }))) : null,
@@ -91,7 +91,7 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
         h("dt", null, "Time"), h("dd", null,
           // Hidden till clicked so their time doesn't set your pace
           h("button", { class: `spoiler ${shown ? "shown" : ""}`, onclick: () => { revealed.add(q.match_id); go.redraw(); } }, fmtMs(q.time)),
-          shown ? null : h("span", { class: "dim" }, "hidden until you race")))),
+          shown ? null : h("span", { class: "dim" }, "hidden until you play it")))),
     panel(null, null,
       h("div", { class: "p-head" }, h("h2", null, "Seeds"), ready ? null : h("span", { class: "dim" }, "waiting for the replay")),
       ready ? h("div", { class: "seeds" }, copyField("World", q.overworld_seed ?? "?", "w"), copyField("Nether", q.nether_seed ?? "?", "n"))

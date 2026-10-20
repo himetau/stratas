@@ -16,10 +16,10 @@ export function companionView(s: AppState, rerender: () => void) {
     h("select", { id: "race", style: "flex:1", onchange: (e: Event) => { current = Number((e.target as HTMLSelectElement).value); follow = false; rerender(); } },
       races.map((r) => h("option", { value: String(r.id), selected: r.id === current }, `vs ${r.theirName} ${fmtDelta(r.finalGap)}`))),
     h("label", { class: "hint" }, h("input", { type: "checkbox", class: "toggle", checked: follow, onchange: (e: Event) => { follow = (e.target as HTMLInputElement).checked; rerender(); } }), "latest"));
-  if (current === null) return h("div", { class: "comp" }, top, h("div", { class: "empty" }, "No races yet."));
+  if (current === null) return h("div", { class: "comp" }, top, h("div", { class: "empty" }, "No games yet."));
   const body = h("div", { class: "comp", style: "padding:0" }, h("div", { class: "empty" }, "Loading"));
   const fill = (r: Awaited<ReturnType<typeof loadRace>>) => {
-    if (!r?.analysis) { mount(body, h("div", { class: "notice bad" }, r?.row.error ?? "Couldn't load this race")); return; }
+    if (!r?.analysis) { mount(body, h("div", { class: "notice bad" }, r?.row.error ?? "Couldn't load this game")); return; }
     const a = r.analysis;
     mount(body,
       h("div", { class: "row", style: "align-items:baseline" }, h("span", { class: `readout sm ${deltaClass(a.finalGap)}` }, fmtDelta(a.finalGap)), h("span", { class: "meta" }, `vs ${a.them.name}`)),
