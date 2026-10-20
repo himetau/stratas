@@ -52,7 +52,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
     <td width="50%" valign="top">
       <p><b>Deaths and what they cost</b><br>how long you were gone and what you dropped</p>
       <p><b>The End</b><br>zero cycles, failed cycles, each perch and the dragon kill</p>
-      <p><b>Your habits</b><br>after a few games, the things that keep losing you time</p>
+      <p><b>What you should practice</b><br>after a few games, the things that keep losing you time</p>
     </td>
   </tr>
 </table>
@@ -63,7 +63,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
 
 - Ranked only lets you watch the people from your own match. Stratas puts **anyone's run on the same seed** into your replay, at whatever Elo you pick, so you can see exactly where you lost or gained time.
 - It doesn't just tell you that you lost 40 seconds in the bastion, it tells you **why**, like 7 piglins being stuck on gold.
-- After a few games it picks up on **the stuff that keeps losing you time**.
+- After a few games it tells you **what you should practice**, the stuff that keeps losing you time.
 - There's no mod and nothing to record. It just uses the replays Ranked already saves.
 - Everything stays on your computer. It reads Ranked's files and adds the mixed replays to My replays, that's it.
 
@@ -77,7 +77,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
     <td width="50%"><img src="docs/readme/card-breakdown.png" alt="Where the time went"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/readme/card-habits.png" alt="Habits that keep losing you time"></td>
+    <td width="50%"><img src="docs/readme/card-habits.png" alt="What you should practice"></td>
     <td width="50%"><img src="docs/readme/card-themes.png" alt="Themes and colours"></td>
   </tr>
 </table>
