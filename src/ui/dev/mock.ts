@@ -9,8 +9,14 @@ type Snap = {
 
 export async function installMock() {
   // Fetched rather than imported so the type check works without a snapshot (it isn't in git)
-  const snap = (await fetch(new URL("./snapshot.json", import.meta.url)).then((r) => r.json())) as Snap;
+  let text = await fetch(new URL("./snapshot.json", import.meta.url)).then((r) => r.text());
+  // ?cast renames everyone but you to Frieren and Fern, skins included, for screenshots
+  const cast = new URLSearchParams(location.search).has("cast");
+  if (cast) text = recast(text);
+  const snap = JSON.parse(text) as Snap;
   const listeners: ((s: unknown) => void)[] = [];
+  let update = { status: "available" as string, current: "1.0.0", version: "1.1.0", percent: undefined as number | undefined };
+  const updateListeners: ((u: typeof update) => void)[] = [];
   // Dev server reads these from your Ranked instance (vite.config.ts)
   const ranked: Promise<{ icons: Record<string, string>; background: string | null; structures: string | null }> = fetch("/__dev/ranked").then((r) => r.json()).catch(() => ({ icons: {}, background: null, structures: null }));
   const push = () => listeners.forEach((f) => f(structuredClone(snap.state)));
@@ -37,6 +43,14 @@ export async function installMock() {
     openDir: async () => {},
     pickInstance: async () => null,
     practicing: async () => {},
+    // Pretends a new version is out so the update button shows, and walks through the download
+    update: async () => update,
+    updateCheck: async () => {},
+    updateInstall: async () => {
+      for (let p = 0; p <= 100; p += 20) { update = { ...update, status: "downloading", percent: p }; updateListeners.forEach((f) => f(update)); await new Promise((r) => setTimeout(r, 300)); }
+      update = { ...update, status: "ready" }; updateListeners.forEach((f) => f(update));
+    },
+    onUpdate: (f: (u: typeof update) => void) => updateListeners.push(f),
     companion: async () => {},
     openInMinecraft: async () => ({ ok: true, message: "Replay name copied. In Ranked: My replays, paste the name into search, Watch." }),
     theme: async () => ({ css: "", file: "~/.config/stratas/colors.css", found: false }),
@@ -51,7 +65,11 @@ export async function installMock() {
     fetchOldArt: async () => (await fetch("/__dev/oldart?fetch=1")).json(),
     rankedArt: async (key: string) => { const r = await fetch(`/__dev/art?key=${encodeURIComponent(key)}`); return r.ok ? r.text() : null; },
     skin: async (who: { uuid?: string | null; name?: string | null }) => {
-      const r = await fetch(`/__dev/skin?uuid=${encodeURIComponent(who.uuid ?? "")}&name=${encodeURIComponent(who.name ?? "")}`);
+      const alias = cast && (who.name === "Frieren" || who.name === "Fern");
+      // Skins dropped in dev/cast (not in git) win, otherwise whoever owns the name on Mojang
+      const local = alias ? await fetch(new URL(`./cast/${who.name!.toLowerCase()}.png`, import.meta.url)).catch(() => null) : null;
+      const r = local?.ok && local.headers.get("content-type")?.startsWith("image/") ? local
+        : await fetch(`/__dev/skin?uuid=${encodeURIComponent(alias ? "" : who.uuid ?? "")}&name=${encodeURIComponent(who.name ?? "")}`);
       if (!r.ok) return null;
       const b = await r.blob();
       return await new Promise<string>((ok) => { const f = new FileReader(); f.onload = () => ok(String(f.result)); f.readAsDataURL(b); });
@@ -61,4 +79,22 @@ export async function installMock() {
     profileMatch: async (id: number) => structuredClone(snap.matchDetails?.[id] ?? null),
     profileRefresh: async () => structuredClone(snap.profile ?? null),
   };
+}
+
+function recast(text: string) {
+  const raw = JSON.parse(text) as Snap;
+  const me = (raw.state.settings as { nickname?: string }).nickname?.toLowerCase();
+  const others = new Set<string>();
+  (function walk(o: unknown) {
+    if (Array.isArray(o)) return o.forEach(walk);
+    if (!o || typeof o !== "object") return;
+    for (const [k, v] of Object.entries(o)) {
+      if (typeof v === "string" && /^(nickname|player_name|opponent_name|their_?name|winner_name|loser_name)$/i.test(k) && v.toLowerCase() !== me && v !== "someone") others.add(v);
+      else walk(v);
+    }
+  })(raw);
+  [...others].sort((a, b) => b.length - a.length).forEach((name, i) => {
+    text = text.replace(new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"), i % 2 ? "Fern" : "Frieren");
+  });
+  return text;
 }

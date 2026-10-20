@@ -1,6 +1,7 @@
 node_modules
 dist
 src/ui/dev/snapshot.json
+src/ui/dev/cast
 *.db
 *.db-*
 .claude

@@ -728,3 +728,8 @@ table.picks td .rank img { width: 16px; height: 16px; }
 .how-n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600;
   background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
 .how-step .warn { color: var(--warn); }
+
+/* Update button in the rail, only there while a new version is out */
+.rail-btn.update { color: var(--good); }
+.rail-btn.update .dot { position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+.rail-btn.update.downloading .count { background: var(--good); }

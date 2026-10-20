@@ -7,6 +7,7 @@ import { g, type AppState } from "../bridge";
 import { h, toast } from "../dom";
 import { artUrl, celebrate, prefs, rankColor, savePrefs, themeColors } from "../prefs";
 import { openKofi } from "../support";
+import { updateSetting } from "../update";
 
 export let themeInfo: { file: string; found: boolean } = { file: "~/.config/stratas/colors.css", found: false };
 export function setThemeInfo(t: { file: string; found: boolean }) { themeInfo = t; }
@@ -211,6 +212,9 @@ export function settingsView(s: AppState, rerender: () => void) {
   ];
 
   const system = [
+    group("Updates", [
+      (() => { const u = updateSetting((label, fn) => btn(label, fn)); return row("Stratas", u.control, { hint: u.hint }); })(),
+    ]),
     group("Support", [
       row("Support Stratas", h("button", { class: "sx-btn sx-kofi", onclick: openKofi }, "☕ Ko-fi"), { hint: "it's free and made by one person, tips keep it going" }),
     ]),
