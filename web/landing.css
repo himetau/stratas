@@ -37,14 +37,13 @@ h2 { font-size: 17px; font-weight: 400; color: var(--accent); margin: 0 0 6px; }
 .shots img, .gallery img { border-radius: 10px; border: 1px solid var(--rule); }
 figcaption { text-align: center; color: var(--text-dim); font-size: 13px; margin-top: 10px; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px 28px; }
-.grid p { margin: 0; color: var(--text-dim); }
-.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+/* The screenshots carry their own titles, two by two */
+.gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .gallery { grid-template-columns: 1fr; } }
+.get { text-align: center; padding-top: 8px; }
+.get h2 { font-size: 22px; }
+.get .small { max-width: 620px; margin: 8px auto 0; }
 
-.versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-.card { padding: 22px; border: 1px solid var(--rule); border-radius: 12px; background: var(--bg-raised); }
-.card p { color: var(--text-dim); }
-.card .cta { justify-content: flex-start; }
 
 footer { text-align: center; padding: 28px 24px 40px; color: var(--text-dim); font-size: 13px; border-top: 1px solid var(--rule); margin-top: 40px; }
 footer a { color: var(--text-dim); }
