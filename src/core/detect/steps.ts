@@ -25,7 +25,7 @@ const NAME: Record<string, string> = {
 };
 const USEFUL = /pearl|obsidian|^string$|gold_ingot|gold_block|iron_ingot|_pickaxe|_axe|_shovel|_sword|_helmet|_chestplate|_leggings|_boots|flint_and_steel|fire_charge|bucket|bread|cooked|golden_carrot|diamond|tnt|blaze|ender_eye|_bed$|wool|glowstone|respawn_anchor|potion|bow$|crossbow|boat|crafting_table|soul_sand|flint$/;
 export const itemName = (it: string) => NAME[it] ?? it.replace(/_/g, " ");
-const listItems = (d: Record<string, number>, k = 4, filter = true) => {
+export const listItems = (d: Record<string, number>, k = 4, filter = true) => {
   const xs = Object.entries(d).filter(([it, n]) => n > 0 && (!filter || USEFUL.test(it))).sort((a, b) => b[1] - a[1]).slice(0, k);
   return xs.map(([it, n]) => (n === 1 ? itemName(it).replace(/s$/, "") : `${n} ${itemName(it)}`)).join(", ");
 };

@@ -71,7 +71,7 @@ export function buildProfileInsights(input: {
       insights.push({
         kind: "weakness",
         label: `Worst phase: ${worstPhase.phase}`,
-        detail: `Lose ${Math.round(worstPhase.averageLostSeconds)}s/game across ${worstPhase.races} game${worstPhase.races === 1 ? "" : "s"}`,
+        detail: `Losing ${Math.round(worstPhase.averageLostSeconds)} s per game across ${worstPhase.races} game${worstPhase.races === 1 ? "" : "s"}`,
         raceId,
         matchId: matchIdForRace(matches, raceId, defaultMatchId),
       });
@@ -83,7 +83,7 @@ export function buildProfileInsights(input: {
       insights.push({
         kind: "strength",
         label: `Strongest phase: ${bestPhase.phase}`,
-        detail: `Gain ${Math.round(Math.abs(bestPhase.averageLostSeconds))}s/game across ${bestPhase.races} game${bestPhase.races === 1 ? "" : "s"}`,
+        detail: `Gaining ${Math.round(Math.abs(bestPhase.averageLostSeconds))} s per game across ${bestPhase.races} game${bestPhase.races === 1 ? "" : "s"}`,
         raceId,
         matchId: matchIdForRace(matches, raceId, defaultMatchId),
       });
@@ -96,7 +96,7 @@ export function buildProfileInsights(input: {
     insights.push({
       kind: "weakness",
       label: `${topCause.phase} · ${topCause.label}`,
-      detail: `${Math.round(topCause.totalSeconds)}s lost (${Math.round(topCause.averageSeconds)}s avg, ${topCause.occurrences}×, worst vs ${topCause.worstOpponent})`,
+      detail: `${Math.round(topCause.totalSeconds)} s lost (${Math.round(topCause.averageSeconds)} s on average, ${topCause.occurrences} time${topCause.occurrences === 1 ? "" : "s"}, worst vs ${topCause.worstOpponent})`,
       raceId,
       matchId: matchIdForRace(matches, raceId, defaultMatchId),
     });
@@ -111,7 +111,7 @@ export function buildProfileInsights(input: {
       insights.push({
         kind: "strength",
         label: `Improving: ${improvingTrend.phase} · ${improvingTrend.label}`,
-        detail: `Saving ${Math.round(Math.abs(improvingTrend.deltaSeconds))}s/game over last ${improvingTrend.samples.length} games`,
+        detail: `Saving ${Math.round(Math.abs(improvingTrend.deltaSeconds))} s per game over the last ${improvingTrend.samples.length} games`,
         raceId,
         matchId: matchIdForRace(matches, raceId, defaultMatchId),
       });
@@ -125,7 +125,7 @@ export function buildProfileInsights(input: {
       insights.push({
         kind: "weakness",
         label: `Worsening: ${worseningTrend.phase} · ${worseningTrend.label}`,
-        detail: `Losing ${Math.round(worseningTrend.deltaSeconds)}s/game over last ${worseningTrend.samples.length} games`,
+        detail: `Losing ${Math.round(worseningTrend.deltaSeconds)} s per game over the last ${worseningTrend.samples.length} games`,
         raceId,
         matchId: matchIdForRace(matches, raceId, defaultMatchId),
       });
@@ -197,7 +197,7 @@ export function buildProfileInsights(input: {
     insights.push({
       kind: "weakness",
       label: "Cold streak",
-      detail: `${last8Wins}-${last8Losses} last ${last8Wins + last8Losses}`,
+      detail: `${last8Wins} W, ${last8Losses} L in the last ${last8Wins + last8Losses}`,
       matchId: latestMatchId,
       raceId: latestRaceId,
     });
@@ -242,7 +242,7 @@ export function buildProfileInsights(input: {
     insights.push({
       kind: "weakness",
       label: "High forfeit rate",
-      detail: `${stats.forfeitRate}% of decided games (${stats.forfeits.yours} FF)`,
+      detail: `${stats.forfeitRate}% of decided games (${stats.forfeits.yours} forfeit${stats.forfeits.yours === 1 ? "" : "s"})`,
       matchId,
       raceId: ffMatch?.raceId ?? raceIdForMatch(matches, matchId, defaultRaceId),
     });
@@ -252,7 +252,7 @@ export function buildProfileInsights(input: {
     insights.push({
       kind: "weakness",
       label: "Dies too often",
-      detail: `${stats.deaths.total} deaths in ${stats.deaths.matches} games (${stats.deaths.perMatch.toFixed(2)}/game)`,
+      detail: `${stats.deaths.total} deaths in ${stats.deaths.matches} games (${stats.deaths.perMatch.toFixed(2)} per game)`,
       matchId: defaultMatchId,
       raceId: defaultRaceId,
     });
@@ -325,7 +325,7 @@ export function buildProfileInsights(input: {
     insights.push({
       kind: "goal",
       label: `${splits.nextRankName ?? "Next tier"}${splits.nextBand ? ` (${splits.nextBand[0]}–${splits.nextBand[1]} Elo)` : ""}`,
-      detail: `Cut ${biggest.secondsToCut}s by ${biggest.label} (${targets.map((t) => `${t.label} −${t.secondsToCut}s`).join(" · ")})`,
+      detail: `Cut ${biggest.secondsToCut} s from ${biggest.label} (${targets.map((t) => `${t.label} −${t.secondsToCut} s`).join(", ")})`,
       secondsToCut,
       targets,
       raceId: goalRaceId,

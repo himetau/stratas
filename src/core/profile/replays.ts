@@ -106,7 +106,7 @@ const MECHANIC_MATCHERS: MechanicMatcher[] = [
     key: "stronghold_nav",
     label: "Stronghold navigation",
     phases: ["Stronghold", "Fortress to stronghold"],
-    match: (t) => /^inside stronghold:/i.test(t) || /\binside stronghold:/i.test(t),
+    match: (t) => /\bin the stronghold:/i.test(t),
   },
   // Phase notes from src/core/detect/findings.ts
   {
@@ -153,13 +153,13 @@ const MECHANIC_MATCHERS: MechanicMatcher[] = [
     key: "stronghold_eyes",
     label: "Eyes thrown / broken",
     phases: ["Stronghold", "Fortress to stronghold"],
-    match: (t) => /^eyes thrown\b/i.test(t),
+    match: (t) => /^eyes:/i.test(t),
   },
   {
     key: "end_beds",
     label: "End beds used",
     phases: ["End"],
-    match: (t) => /^beds \d+/i.test(t),
+    match: (t) => /^dragon:/i.test(t),
   },
 ];
 
@@ -257,7 +257,7 @@ function classifyWhyMechanic(phase: string, w: Part): { key: string; label: stri
   if (w.key === "back" && w.seconds > 0) {
     return {
       key: "stronghold_backtrack",
-      label: "Back in the nether after blind",
+      label: "Back in the Nether after blind",
       seconds: w.seconds,
       text: w.text,
     };

@@ -6,6 +6,8 @@ import { icons } from "./icons";
 import { commitKeys, handleKey, head, rank, setRankIcons } from "./parts";
 import { setStructures } from "./ranked";
 import { startRain } from "./rain";
+import { setPrefs } from "./prefs";
+import { openKofi, trackUsage } from "./support";
 import logo from "./logo.png";
 import { homeView, queueList } from "./views/home";
 import { findView } from "./views/find";
@@ -63,7 +65,7 @@ function render() {
       : h("div", { class: "page" }, h("div", { class: "empty" }, "No races yet. Queue a run on Practice, then play it in a private room.")))
     : route.page === "patterns" ? patternsView(s, openRace)
     : route.page === "profile" ? profileView(s, openRace, render)
-    : settingsView(s);
+    : settingsView(s, render);
   const notice = s.gate.status === "failed" ? h("div", { class: "notice bad" }, `Ranked ${s.gate.version} changed its replay format (${s.gate.detail}).`)
     : !s.instance ? h("div", { class: "notice" }, "No MCSR Ranked instance found. Pick it in Settings.")
     : !s.settings.nickname ? h("div", { class: "notice" }, "Set your Minecraft name in Settings.") : null;
@@ -88,6 +90,7 @@ function render() {
       navBtn("patterns", "Patterns", icons.patterns),
       navBtn("profile", "Profile", icons.profile),
       h("div", { class: "spacer" }),
+      h("button", { class: "rail-btn support", title: "Support Stratas on Ko-fi", "aria-label": "Support Stratas on Ko-fi", onclick: openKofi }, icons.heart()),
       navBtn("settings", "Settings", icons.settings),
       name ? h("button", { class: "me", title: `${name}, ${s.you.elo ?? "unrated"}`, onclick: () => go({ page: "profile" }) },
         head({ uuid: s.settings.uuid, name }, 32), rank(s.you.elo, "me-rank")) : null),
@@ -123,6 +126,7 @@ g.onState((s) => {
   const races = JSON.stringify(s.races.map((r) => [r.id, r.createdAt, r.error]));
   if (races !== lastRaces) { forgetRace(); forgetProfile(); lastRaces = races; }
   state = s;
+  setPrefs(s.settings.prefs, s.you.elo);
   // Don't redraw while a field is focused
   const a = document.activeElement;
   if (!isCompanion && a && a.closest("input, select")) { behind = true; return; }
@@ -150,9 +154,8 @@ if (isCompanion) {
 startRain();
 void g.theme().then((t) => { setThemeInfo(t); if (t.css) applyTheme(t.css); });
 void g.rankIcons().then((x) => { setRankIcons(x); render(); }).catch(() => {});
-// Ranked's blurred menu background behind the pages
+// Ranked's structure icons (the background art loads from settings)
 void g.rankedAssets().then((x) => {
-  if (x.background) document.documentElement.style.setProperty("--ranked-bg", `url("${x.background}")`);
   if (x.structures) { setStructures(x.structures); render(); }
 }).catch(() => {});
-void g.state().then((s) => { state = s; lastRaces = JSON.stringify(s.races.map((r) => [r.id, r.createdAt, r.error])); render(); });
+void g.state().then((s) => { state = s; setPrefs(s.settings.prefs, s.you.elo); if (!isCompanion) trackUsage(); lastRaces = JSON.stringify(s.races.map((r) => [r.id, r.createdAt, r.error])); render(); });

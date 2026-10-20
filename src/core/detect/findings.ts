@@ -153,7 +153,7 @@ function blindNote(Y: Side, T: Side): Note[] {
   };
   const y = m(Y), t = m(T);
   if (!y) return [];
-  return [{ text: `Blinded with ${y.rods} vs ${t?.rods ?? "—"} rods (${y.eyes} vs ${t?.eyes ?? "—"} eyes)${y.back ? ` · back in the nether ${at(y.back[0])}–${at(y.back[1])}` : ""}`, seconds: null, at: { you: y.b, them: t?.b } }];
+  return [{ text: `Blinded with ${y.rods} vs ${t?.rods ?? "—"} rods (${y.eyes} vs ${t?.eyes ?? "—"} eyes)${y.back ? ` · back in the Nether ${at(y.back[0])}–${at(y.back[1])}` : ""}`, seconds: null, at: { you: y.b, them: t?.b } }];
 }
 
 function strongholdNote(Y: Side, T: Side, ys: Span, ts: Span): Note[] {
@@ -165,20 +165,19 @@ function strongholdNote(Y: Side, T: Side, ys: Span, ts: Span): Note[] {
   };
   const a = m(Y, ys), b = m(T, ts);
   if (!a || (!a.thrown && !a.filled)) return [];
-  return [{ text: `Eyes thrown ${a.thrown} vs ${b?.thrown ?? "—"} · broke ${a.broke} vs ${b?.broke ?? "—"}`, seconds: null }];
+  return [{ text: `Eyes: ${a.thrown} vs ${b?.thrown ?? "—"} thrown · ${a.broke} vs ${b?.broke ?? "—"} broke`, seconds: null }];
 }
 
-const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 function endNote(Y: Side, T: Side, ys: Span, ts: Span, N: string): Note[] {
   const a = dragonFight(Y, ys), b = dragonFight(T, ts);
   if (!a) return [];
-  const out: Note[] = [{ text: `${cap(cycleName(a))} vs ${b ? cycleName(b) : "—"} · beds ${a.beds.length} vs ${b?.beds.length ?? "—"} · crystals shot ${a.crystals} vs ${b?.crystals ?? "—"}`, seconds: null }];
+  const out: Note[] = [{ text: `Dragon: ${cycleName(a)} vs ${b ? cycleName(b) : "—"} · ${a.beds.length} vs ${b?.beds.length ?? "—"} beds · ${a.crystals} vs ${b?.crystals ?? "—"} crystals shot`, seconds: null }];
   for (const l of perchLines(a)) out.push({ text: `You: ${l.text}`, seconds: null, at: { you: l.t } });
   if (b) for (const l of perchLines(b)) out.push({ text: `${N}: ${l.text}`, seconds: null, at: { them: l.t } });
   const clock = (t: number | null) => (t === null ? "—" : fmtTime(t));
-  out.push({ text: `Free the End ${clock(a.kill)} vs ${clock(b?.kill ?? null)}`, seconds: null, at: { you: a.kill ?? undefined, them: b?.kill ?? undefined } });
-  out.push({ text: `Completed ${clock(a.done)} vs ${clock(b?.done ?? null)}${a.done === null ? " · you didn't finish" : ""}`, seconds: null, at: { you: a.done ?? undefined, them: b?.done ?? undefined } });
+  out.push({ text: `Free the End: ${clock(a.kill)} vs ${clock(b?.kill ?? null)}`, seconds: null, at: { you: a.kill ?? undefined, them: b?.kill ?? undefined } });
+  out.push({ text: `Finished: ${clock(a.done)} vs ${clock(b?.done ?? null)}${a.done === null ? " · you didn't finish" : ""}`, seconds: null, at: { you: a.done ?? undefined, them: b?.done ?? undefined } });
   return out;
 }
 

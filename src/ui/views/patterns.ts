@@ -21,7 +21,7 @@ const brief = (text: string) => text.split(", ").slice(0, 2).join(", ");
 /** Recent races as small bars, up/pink = finished behind, down/green = ahead */
 function recentBars(i: Insights, open: (id: number) => void) {
   const max = Math.max(60, ...i.recent.map((r) => Math.abs(r.gap)));
-  return h("div", { class: "pt-recent", title: "your recent races, oldest first" },
+  return h("div", { class: "pt-recent", title: "Your recent races, oldest first" },
     i.recent.map((r) => h("button", { class: "pt-rbar", title: `vs ${r.name}: ${fmtDelta(r.gap)}`, onclick: () => open(r.id) },
       h("i", { class: r.gap > 0 ? "up" : "down", style: `height:${Math.max(2, Math.round((Math.abs(r.gap) / max) * 18))}px` }))));
 }
@@ -80,13 +80,13 @@ function sideCards(i: Insights) {
     h("div", { class: "pt-card" },
       h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, structIcon("end"), "The End")),
       e ? [h("div", { class: "pt-card-cost" }, h("b", { class: e.failed ? "bad" : "good" }, `${e.failed} of ${e.ends}`), h("span", { class: "dim" }, "with a failed cycle")),
-        stat("one cycles", String(e.oneCycle)), stat("zero cycles", String(e.zero)), stat("dragon not killed", String(e.notKilled), e.notKilled ? "bad" : ""),
-        e.usualFight !== null ? stat("usual fight", clockSec(e.usualFight)) : null]
+        stat("One cycles", String(e.oneCycle)), stat("Zero cycles", String(e.zero)), stat("Dragon not killed", String(e.notKilled), e.notKilled ? "bad" : ""),
+        e.usualFight !== null ? stat("Usual fight", clockSec(e.usualFight)) : null]
         : h("div", { class: "pt-card-ev dim" }, "No Ends yet.")),
     h("div", { class: "pt-card" },
       h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, "Deaths")),
       h("div", { class: "pt-card-cost" }, h("b", { class: d.deaths ? "bad" : "good" }, String(d.deaths)), h("span", { class: "dim" }, d.deaths === 1 ? "death" : "deaths")),
-      stat("races with a death", `${d.races} of ${i.races}`), stat("time dead", fmtDur(d.seconds), d.seconds ? "bad" : ""), stat("death resets (on purpose)", String(d.resets))),
+      stat("Races with a death", `${d.races} of ${i.races}`), stat("Time dead", fmtDur(d.seconds), d.seconds ? "bad" : ""), stat("Death resets (on purpose)", String(d.resets))),
     h("div", { class: "pt-card" },
       h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, "Seeds"), h("span", { class: "dim" }, "usual gap")),
       i.seeds.length ? i.seeds.slice(0, 6).map((sd) => h("div", { class: "pt-stat" },

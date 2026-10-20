@@ -10,14 +10,14 @@ import { buildSteps, type Step, type StepKind } from "./steps";
 import { findWindows } from "./windows";
 import { phaseWhy, type Part } from "./why";
 import { dragonFight, type DragonFight } from "./end";
-import { blazeBedBlasts, pearlsThrown, precrafts, tradeSummary, type Blast, type Precraft, type TradeItem } from "./stats";
+import { blazeBedBlasts, overworldCrafts, pearlsThrown, precrafts, tradeSummary, type Blast, type CraftScreen, type Precraft, type TradeItem } from "./stats";
 
 /** From entering the End to the end of the run */
 const endSpan = (r: Run): [number, number] | undefined => { const e = r.mark("end"); return e === undefined ? undefined : [e, r.end]; };
 
 export { DEFAULT_LEAVE, type LeaveGoals } from "./findings";
 
-export const ANALYSIS_VERSION = 40;
+export const ANALYSIS_VERSION = 44;
 
 export interface RunnerInfo { uuid: string; name: string; elo: number | null; finished: boolean; endTicks: number; quit?: boolean }
 
@@ -63,6 +63,8 @@ export interface RaceAnalysis {
 
 export interface RunStats {
   precrafts: Precraft[];
+  /** Crafting and furnace screens before the Nether, with what each made */
+  owCrafts?: CraftScreen[];
   /** Pearl throws from leaving the bastion to entering the fortress */
   pearlsToFort: number[];
   blasts: Blast[];
@@ -87,6 +89,7 @@ function runStats(s: Side): RunStats {
   const ts = tradeSummary(r);
   return {
     precrafts: precrafts(s),
+    owCrafts: overworldCrafts(s),
     pearlsToFort: l !== undefined && f !== undefined && f > l ? pearlsThrown(r, l, f) : [],
     blasts: blazeBedBlasts(s),
     trades: ts && { n: ts.barters.length, needed: ts.needed, noneNeeded: ts.noneNeeded, got: ts.got, left: ts.left, leftWith: ts.leftWith, used: ts.used, items: ts.barters.map((b) => b.items), pickups: ts.pickups },

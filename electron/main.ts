@@ -6,7 +6,8 @@ import { homedir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import { basename, dirname, join, resolve } from "node:path";
 import { Service } from "../src/core/service";
-import { rankedAssets, rankIcons } from "../src/core/ranks";
+import { rankedArt, rankedAssets, rankIcons } from "../src/core/ranks";
+import { cachedOldArt, fetchOldArt, oldArtData } from "../src/core/oldart";
 import { skinPng, type SkinOwner } from "../src/core/skins";
 import type { Pick } from "../src/core/seeds/picker";
 
@@ -94,12 +95,13 @@ function openCompanion(raceId: number | null) {
     companion.show();
     return;
   }
+  const onTop = service.settings().prefs.companionOnTop;
   companion = new BrowserWindow({
-    width: 440, height: 720, minWidth: 340, title: "Stratas companion", backgroundColor: "#0f1117", alwaysOnTop: true,
+    width: 440, height: 720, minWidth: 340, title: "Stratas companion", backgroundColor: "#0f1117", alwaysOnTop: onTop,
     icon: iconPath(256), autoHideMenuBar: true,
     webPreferences: { preload: join(root, "electron", "preload.cjs"), contextIsolation: true, sandbox: true },
   });
-  companion.setAlwaysOnTop(true, "floating");
+  if (onTop) companion.setAlwaysOnTop(true, "floating");
   load(companion, `companion/${raceId ?? ""}`);
   companion.on("closed", () => { companion = null; });
 }
@@ -182,6 +184,7 @@ app.whenReady().then(() => {
       n.show();
     }
     for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send("new:game", g);
+    if (g.id && service.settings().prefs.companionAuto) openCompanion(g.id);
   });
 
   readTheme();
@@ -196,7 +199,11 @@ app.whenReady().then(() => {
   } catch { /* No folder, use fallback palette */ }
   ipcMain.handle("theme", () => ({ css: themeCss, file: themeFile, found: !!themeCss }));
   ipcMain.handle("state", () => service.state());
-  ipcMain.handle("settings", now((patch) => service.updateSettings(patch)));
+  ipcMain.handle("settings", now(async (patch) => {
+    await service.updateSettings(patch);
+    // Keep on top applies to an open companion straight away
+    if (companion && !companion.isDestroyed()) companion.setAlwaysOnTop(service.settings().prefs.companionOnTop, "floating");
+  }));
   ipcMain.handle("pick", (_e, opts) => service.pick(opts));
   ipcMain.handle("enqueue", now((picks: Pick[]) => service.enqueue(picks)));
   ipcMain.handle("queue:status", now((id: number, status: Parameters<Service["setQueueStatus"]>[1]) => service.setQueueStatus(id, status)));
@@ -215,6 +222,16 @@ app.whenReady().then(() => {
     return icons;
   });
   let ranked: ReturnType<typeof rankedAssets> | null = null;
+  // Big images, read once each and kept
+  const art = new Map<string, string | null>();
+  ipcMain.handle("ranked-art", (_e, key: string) => {
+    if (!art.has(key) || art.get(key) === null) art.set(key, String(key).startsWith("old:") ? oldArtData(oldArtDir, String(key)) : rankedArt(service.state().instance?.modJar ?? null, String(key)));
+    return art.get(key);
+  });
+  // Older Ranked releases' menu backgrounds: what's saved, and going online to look for them
+  const oldArtDir = join(dataDir, "ranked-art");
+  ipcMain.handle("old-art", () => cachedOldArt(oldArtDir));
+  ipcMain.handle("old-art:fetch", () => fetchOldArt(oldArtDir));
   ipcMain.handle("ranked-assets", () => {
     if (!ranked) { const got = rankedAssets(service.state().instance?.modJar ?? null); if (got.background || got.structures) ranked = got; return got; }
     return ranked;

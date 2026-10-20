@@ -4,6 +4,7 @@ import type { RaceAnalysis } from "../core/detect/analyze";
 import type { Pick, PickOptions } from "../core/seeds/picker";
 import type { QueueRow, RaceRow } from "../core/store";
 import type { MatchDetail, ProfileData } from "../core/profile/types";
+import type { OldArt } from "../core/oldart";
 
 export interface Bridge {
   state(): Promise<AppState>;
@@ -19,6 +20,12 @@ export interface Bridge {
   rankIcons(): Promise<Record<string, string>>;
   /** Ranked's blurred menu background and structure icon sheet, read from the mod jar */
   rankedAssets(): Promise<{ background: string | null; structures: string | null }>;
+  /** One of Ranked's backgrounds (menu, menu_sharp, or a seed type) as a data URL */
+  rankedArt(key: string): Promise<string | null>;
+  /** Menu backgrounds saved from older Ranked releases */
+  oldArt(): Promise<OldArt[]>;
+  /** Go online and look through older Ranked releases for their menu backgrounds */
+  fetchOldArt(): Promise<OldArt[]>;
   /** Player skin PNG as a data URL */
   skin(who: { uuid?: string | null; name?: string | null }): Promise<string | null>;
   /** pool = how many of your newest Ranked matches the split times come from */
