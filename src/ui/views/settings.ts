@@ -134,7 +134,7 @@ export function settingsView(s: AppState, rerender: () => void) {
 
   const effects = [
     group("Over the background", [
-      row("Effect", opt("effect", [["rain", "rain"], ["snow", "snow"], ["embers", "embers"], ["stars", "stars"], ["off", "off"]]), { key: "effect" }),
+      row("Effect", opt("effect", [["snow", "snow"], ["embers", "embers"], ["stars", "stars"], ["off", "off"]]), { key: "effect" }),
       row("Amount", num("effectAmount", 0.25, 3, 0.25, x), { key: "effectAmount" }),
       row("Speed", num("effectSpeed", 0.25, 3, 0.25, x), { key: "effectSpeed" }),
     ]),

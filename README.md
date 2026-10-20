@@ -82,7 +82,7 @@ It finds a run from a player at the Elo you pick, or from one player you type in
   </tr>
 </table>
 
-**Configurable settings:** theme presets, your own colours, old Ranked menu backgrounds, rain, snow, embers or stars, and you pick exactly what shows on the graph and in the splits.
+**Configurable settings:** theme presets, your own colours, old Ranked menu backgrounds, snow, embers or stars, and you pick exactly what shows on the graph and in the splits.
 
 <br>
 

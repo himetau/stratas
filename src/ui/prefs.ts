@@ -101,7 +101,7 @@ function apply() {
   showArt();
   set("--gap-outline", String(cur.outline / 100));
   r.zoom = cur.scale === 100 ? "" : String(cur.scale / 100);
-  // Canvas drawings (rain, charts) read colours, so tell them like a theme change
+  // Canvas drawings (background effect, charts) read colours, so tell them like a theme change
   dispatchEvent(new Event("stratas-theme"));
   dispatchEvent(new Event("stratas-prefs"));
 }
