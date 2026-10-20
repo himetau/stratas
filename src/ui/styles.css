@@ -61,12 +61,11 @@ h1, h2, h3 { font-weight: 700; margin: 0; }
 .them { color: var(--them); }
 .accent { color: var(--accent); }
 
-/* ---------- rain behind everything ---------- */
 /* Behind everything: Ranked art (blurred and dimmed from settings), then the background effect, then the page */
 body::before { content: ""; position: fixed; inset: calc(var(--art-blur, 0px) * -2); z-index: -2; pointer-events: none;
   background: linear-gradient(color-mix(in srgb, var(--bg) var(--art-dim, 74%), transparent), color-mix(in srgb, var(--bg) var(--art-dim, 74%), transparent)), var(--ranked-bg) center / cover, var(--bg);
   filter: blur(var(--art-blur, 0px)); }
-#rain { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+#fx { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 
 /* ---------- shell ---------- */
 #app { display: flex; height: 100vh; }

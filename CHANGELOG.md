@@ -7,6 +7,7 @@ What's new in each version, in plain words. The section for a version goes on to
 - A welcome screen the first time you open Stratas: what it looks at and what stays on your computer, your Minecraft name, and a few settings. Same on the website.
 - Your name is only what you type. Stratas doesn't guess it from your replays anymore unless you click "Find it in my replays".
 - Settings, System, Help: report a problem (copies your version and activity log for a GitHub issue) and suggest a feature.
+- No more rain in the background. Effects are off by default now, snow, embers and stars are still in Settings, Effects.
 
 ## 1.2.0
 

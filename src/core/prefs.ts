@@ -14,7 +14,7 @@ export interface Prefs {
   art: string;
   artBlur: number;
   artDim: number;
-  effect: "rain" | "snow" | "embers" | "stars" | "off";
+  effect: "snow" | "embers" | "stars" | "off";
   effectAmount: number;
   effectSpeed: number;
   motion: "system" | "full" | "reduced";
@@ -66,7 +66,7 @@ export interface Prefs {
 
 export const DEFAULT_PREFS: Prefs = {
   theme: "auto", themeCustom: "", rankAccent: false, font: "pixel", scale: 100, corners: "pixel", art: "menu", artBlur: 0, artDim: 74,
-  effect: "rain", effectAmount: 1, effectSpeed: 1, motion: "system", celebrate: "confetti",
+  effect: "off", effectAmount: 1, effectSpeed: 1, motion: "system", celebrate: "confetti",
   companionOnTop: true, companionAuto: false,
   moments: "curve", minMoment: 15, splits: true, times: true, lead: false, lineTimes: true, costs: 3, callouts: 8, outline: 55, curveWidth: 2, zoomAnim: true,
   phaseNames: true, momentsOf: "both",
@@ -87,6 +87,7 @@ export function mergePrefs(saved: Partial<Prefs> | undefined): Prefs {
     const v = saved?.[k];
     if (v !== undefined && typeof v === typeof DEFAULT_PREFS[k]) (out as Record<string, unknown>)[k] = v;
   }
+  if (!["snow", "embers", "stars", "off"].includes(out.effect)) out.effect = "off"; // Rain got removed
   return out;
 }
 

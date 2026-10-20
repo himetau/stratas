@@ -5,7 +5,7 @@ import { h, mount, toast } from "./dom";
 import { icons } from "./icons";
 import { commitKeys, handleKey, head, rank, setRankIcons } from "./parts";
 import { setStructures } from "./ranked";
-import { startRain } from "./rain";
+import { startEffects } from "./effects";
 import { setPrefs } from "./prefs";
 import { openKofi, trackUsage } from "./support";
 import logo from "./logo.png";
@@ -156,7 +156,7 @@ if (isCompanion) {
   companionInit(render);
 }
 
-startRain();
+startEffects();
 void g.theme().then((t) => { setThemeInfo(t); if (t.css) applyTheme(t.css); });
 void g.rankIcons().then((x) => { setRankIcons(x); render(); }).catch(() => {});
 // Ranked's structure icons (the background art loads from settings)
