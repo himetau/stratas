@@ -139,6 +139,7 @@ export function findView(s: AppState, rerender: () => void) {
   const index = s.index.scanning ? "Updating the match index" : s.index.error ? `Match index error: ${s.index.error}` : `${s.index.matches.toLocaleString()} matches indexed, ${s.index.apiLeft} API calls left`;
 
   return h("div", { class: "page" },
+    howItWorks(s),
     panel(null, null,
       h("div", { class: "p-head" }, h("h2", null, "Opponent Elo"),
         s.you.elo ? h("span", { class: "lv-me" }, rank(s.you.elo, "lv-rank"), s.you.rank ? h("span", { class: "dim" }, `#${s.you.rank}`) : null) : null),
@@ -185,6 +186,19 @@ function results(s: AppState, rerender: () => void, queue: () => void) {
       })) : null,
     notes.map((n) => h("p", { class: "dim", style: "margin:8px 0 0" }, n.replace(/ · /g, ", "))),
     picks.length ? h("div", { class: "row", style: "justify-content:flex-end;margin-top:12px" }, btn(`Queue ${chosen.size}`, queue, { primary: true, key: "q", disabled: !chosen.size })) : null);
+}
+
+/** The whole practice loop, open until you've got something in the queue or played a race */
+function howItWorks(s: AppState) {
+  const step = (n: number, title: string, ...text: (string | HTMLElement)[]) => h("li", { class: "how-step" },
+    h("span", { class: "how-n" }, String(n)), h("div", null, h("b", null, title), h("div", { class: "dim" }, ...text)));
+  return fold(h("h2", null, "How practice works"), !s.queue.length && !s.races.some((r) => r.kind === "race"), "how",
+    h("ol", { class: "how-list" },
+      step(1, "Find runs", "Pick an Elo and a seed type, then queue the runs you want to play."),
+      step(2, "Download their replay", "In Ranked: Profile, search their name, Recent Matches, Download Replay. Ranked only keeps recent games, so do it soon. The seed then shows up on the Practice page."),
+      step(3, "Play the seed in a private room", "Copy the World and Nether seed from the Practice page and set them in the room. The room rules are on the Practice page too."),
+      step(4, "Get at least an iron pickaxe", h("span", { class: "warn" }, "Ranked only saves private room replays once you have an iron pickaxe."), " Reset before that and there's no replay to mix."),
+      step(5, "See where the time went", "Right after the run you get your splits next to theirs, straight from Ranked. Once your replay is saved, it turns into the full race: both of you in one replay, and where and why you lost time.")));
 }
 
 export function roomRules() {

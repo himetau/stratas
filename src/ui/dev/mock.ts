@@ -36,6 +36,7 @@ export async function installMock() {
     reveal: async () => {},
     openDir: async () => {},
     pickInstance: async () => null,
+    practicing: async () => {},
     companion: async () => {},
     openInMinecraft: async () => ({ ok: true, message: "Replay name copied. In Ranked: My replays, paste the name into search, Watch." }),
     theme: async () => ({ css: "", file: "~/.config/stratas/colors.css", found: false }),

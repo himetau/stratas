@@ -187,7 +187,8 @@ function splitsTable(a: RaceAnalysis, id: number, seedType: string | null, selec
         h("td", null, s.splitName), h("td", null, t(sp.you)), h("td", null, t(sp.them)),
         h("td", { class: changeCls(s.segDelta) }, signed(s.segDelta)), h("td", { class: changeCls(s.gap1) }, signed(s.gap1))));
     }
-    if (on && p) body.push(h("tr", { class: "facts-row" }, h("td", { colspan: 5 }, facts(p, a.them.name, a))));
+    // Quick races from Ranked's splits have no play-by-play or reasons to show
+    if (on && p && !a.quick) body.push(h("tr", { class: "facts-row" }, h("td", { colspan: 5 }, facts(p, a.them.name, a))));
   }
   if (unreached.length && P.unreached) {
     body.push(h("tr", { class: "grp off" }, h("td", { colspan: 5 }, unreached.every((x) => x.you !== null) ? "Only you reached" : unreached.every((x) => x.them !== null) ? `Only ${a.them.name} reached` : "Only one of you reached")));
@@ -269,7 +270,12 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
   // so layout never changes. Positions follow scroll exactly, the fold look runs on a spring so it doesn't step per wheel notch.
   // Once it's a strip the playhead follows the split row you're reading
   const chartPanel = panel(null, { cls: "race-graph" }, header, chart, strip);
+  // Built from Ranked's splits, say what's missing and whether the full race is still coming
+  const quick = a.quick ? h("div", { class: "notice" }, h("span", null, a.quick.ironPick
+    ? "Splits from Ranked only. Once your replay is saved this turns into the full race: both of you in one replay, and where and why you lost time."
+    : "Splits from Ranked only. You reset before getting an iron pickaxe, so Ranked didn't save a replay of this run.")) : null;
   const page = h("div", { class: "page race-page" },
+    quick,
     chartPanel,
     tablePanel,
     a.seed?.overworld ? panel(null, null,

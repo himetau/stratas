@@ -108,7 +108,8 @@ export class Run {
       if (t !== undefined) this.marks.push({ key, label, t });
     }
     const fb = this.mark("bastion");
-    if (fb !== undefined) {
+    // Leaving the bastion is worked out from positions, a run built from Ranked's API splits alone has none
+    if (fb !== undefined && this.track.length) {
       // Bastion ends when you leave for good, last time you were near where you looted, mined gold and traded
       // before the next structure or blind
       const next = Math.min(...this.marks.filter((m) => m.t > fb && ["fortress", "blind", "end", "finish"].includes(m.key)).map((m) => m.t), this.end);

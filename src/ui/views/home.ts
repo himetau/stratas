@@ -94,7 +94,8 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
           shown ? null : h("span", { class: "dim" }, "hidden until you play it")))),
     panel(null, null,
       h("div", { class: "p-head" }, h("h2", null, "Seeds"), ready ? null : h("span", { class: "dim" }, "waiting for the replay")),
-      ready ? h("div", { class: "seeds" }, copyField("World", q.overworld_seed ?? "?", "w"), copyField("Nether", q.nether_seed ?? "?", "n"))
+      // Copying a seed means you're about to play it, so your next private room run gets compared with this one
+      ready ? h("div", { class: "seeds" }, copyField("World", q.overworld_seed ?? "?", "w", () => void g.practicing(q.match_id)), copyField("Nether", q.nether_seed ?? "?", "n", () => void g.practicing(q.match_id)))
         : h("dl", { class: "dl" }, h("dt", null, "World"), h("dd", { class: "dim" }, "—"), h("dt", null, "Nether"), h("dd", { class: "dim" }, "—"))),
     history(s, q),
     roomRules());

@@ -12,6 +12,8 @@ export interface Bridge {
   pick(opts: PickOptions): Promise<{ picks: Pick[]; notes: string[] }>;
   enqueue(picks: Pick[]): Promise<void>;
   queueStatus(id: number, status: QueueRow["status"]): Promise<void>;
+  /** You copied this queued run's seed, so your next private room run gets compared with it */
+  practicing(matchId: number): Promise<void>;
   race(id: number): Promise<{ row: RaceRow; analysis: RaceAnalysis | null } | null>;
   deleteRace(id: number): Promise<void>;
   reanalyze(): Promise<void>;

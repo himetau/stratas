@@ -260,6 +260,7 @@ app.whenReady().then(() => {
   }));
   ipcMain.handle("pick", (_e, opts) => service.pick(opts));
   ipcMain.handle("enqueue", now((picks: Pick[]) => service.enqueue(picks)));
+  ipcMain.handle("practicing", (_e, id: number) => service.practicing(Number(id)));
   ipcMain.handle("queue:status", now((id: number, status: Parameters<Service["setQueueStatus"]>[1]) => service.setQueueStatus(id, status)));
   ipcMain.handle("race", (_e, id: number) => service.race(id));
   ipcMain.handle("race:delete", now((id: number) => service.deleteRace(id)));

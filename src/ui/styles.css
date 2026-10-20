@@ -720,3 +720,11 @@ table.picks td .rank img { width: 16px; height: 16px; }
 .support-pop .kofi { color: var(--on-accent); background: var(--accent); }
 .support-pop .x { position: absolute; top: 6px; right: 8px; border: 0; background: none; color: var(--text-dim); cursor: pointer; font: inherit; font-size: 16px; }
 .support-pop .x:hover { color: var(--text); }
+
+/* Find page: how practice works */
+.how-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.how-step { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; }
+.how-step b { display: block; margin-bottom: 2px; }
+.how-n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
+.how-step .warn { color: var(--warn); }

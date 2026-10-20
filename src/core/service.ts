@@ -7,6 +7,7 @@ import { unzipSync, strFromU8 } from "fflate";
 import { decodeRrf, ReplayError, type ReplayMeta } from "./replay/decode";
 import { mergeRunners } from "./replay/merge";
 import { analyzeRace, ANALYSIS_VERSION, type RaceAnalysis } from "./detect/analyze";
+import { quickRace } from "./detect/quick";
 import type { Finding } from "./detect/explain";
 import { buildInsights, type Insights } from "./detect/insights";
 import { fmtDur } from "./detect/names";
@@ -47,6 +48,8 @@ export type GateState = { version: string | null; status: "ok" | "unverified" | 
 export interface RaceSummary {
   id: number; createdAt: number; theirName: string; theirElo: number | null; tier: string | null; finalGap: number;
   seedType: string | null; raceFile: string | null; error: string | null; top: string | null; topSeconds: number | null; kind: "race" | "match";
+  /** Splits only, from Ranked's API */
+  quick: boolean;
 }
 
 export interface AppState {
@@ -197,6 +200,7 @@ export class Service extends EventEmitter {
         .filter((m) => m.date >= NEW_REPLAYS_SINCE && ((!m.seedType && !m.bastionType && m.players.length === 1) || m.players.length > 1));
       const priv = mergeMatches(fetchedPrivate, prevPrivate);
       this.store.set("myPrivate", priv);
+      await this.quickRaces();
       const before = this.store.get<number[] | null>("myGameIds", null);
       this.store.set("myGames", ms);
       this.store.set("myGameIds", ms.map((m) => m.id));
@@ -475,6 +479,49 @@ export class Service extends EventEmitter {
     this.changed();
   }
 
+  /** You copied a queued seed to play it. Your next private room runs get compared with that run */
+  practicing(matchId: number) { this.store.set("practicing", { matchId, at: Date.now() }); }
+
+  /** Your private room runs on a queued seed, compared split by split from Ranked's API. Shows right after you play,
+   *  and is all there is when Ranked doesn't save the replay (no iron pickaxe) */
+  private async quickRaces() {
+    const me = this.settings().uuid;
+    if (!me) return;
+    const playing = this.store.get<{ matchId: number; at: number } | null>("practicing", null);
+    const links = this.store.get<Record<string, number>>("quickLinks", {}); // Your private match -> the queued match you played
+    const races = this.store.races(), runs = this.store.runs();
+    for (const m of this.store.get<ApiMatch[]>("myPrivate", [])) {
+      if (m.players.length !== 1 || m.seedType || m.bastionType) continue; // Solo set seed runs only
+      // The API doesn't say which seed a set seed room was on, so it's the one you copied last, if you played within 3 hours of that
+      if (!links[m.id] && playing && m.date * 1000 >= playing.at && m.date * 1000 - playing.at < 3 * 3600_000) links[m.id] = playing.matchId;
+      const q = links[m.id] ? this.store.queueRow(links[m.id]) : undefined;
+      if (!q) continue;
+      const key = `quick|${m.id}|${q.match_id}`;
+      const full = races.some((r) => r.your_file !== r.their_file && !r.error && runs.some((x) => x.file === r.your_file && x.match_id === m.id));
+      if (full || this.store.raceByKey(key)) continue;
+      const [mine, theirs] = await Promise.all([this.profileMatch(m.id), this.profileMatch(q.match_id)]);
+      if (!mine?.timelines || !theirs?.timelines) continue;
+      const ended = (d: MatchDetail, uuid: string) =>
+        (d.completions?.find((c) => c.uuid === uuid)?.time ?? (d.result?.uuid === uuid || d.players.length === 1 ? d.result?.time : null) ?? d.timelines?.filter((e) => e.uuid === uuid).at(-1)?.time ?? 0) / 1000;
+      const analysis = quickRace(
+        { matchId: m.id, uuid: me, name: m.players[0]?.nickname ?? "You", elo: this.you.elo, timelines: mine.timelines, seconds: ended(mine, me) },
+        { matchId: q.match_id, uuid: q.player_uuid, name: q.player_name, elo: q.elo, timelines: theirs.timelines, seconds: ended(theirs, q.player_uuid) },
+        { overworld: q.overworld_seed ?? "", nether: q.nether_seed ?? "" });
+      const st = q.seed_type || q.bastion_type ? `${(q.seed_type ?? "?").toLowerCase().replace(/_/g, " ")} / ${(q.bastion_type ?? "?").toLowerCase()}` : null;
+      this.store.putRace({ key, your_file: `api:${m.id}`, your_uuid: me, their_file: `api:${q.match_id}`, their_uuid: q.player_uuid, their_name: q.player_name,
+        their_elo: q.elo, tier: q.tier, race_file: null, created_at: m.date * 1000, final_gap: analysis.finalGap, seed_type: st, analysis: JSON.stringify(analysis), error: null });
+      if (q.status !== "raced") this.store.setQueue(q.match_id, { status: "raced" });
+      const made = this.store.raceByKey(key);
+      this.log(`Splits ready vs ${q.player_name} (${fmtDur(analysis.finalGap)} ${analysis.finalGap >= 0 ? "behind" : "ahead"})`);
+      if (made && this.settings().notify) {
+        this.emit("newGame", { id: made.id, title: `vs ${q.player_name} · splits`, body: analysis.quick?.ironPick
+          ? "From Ranked's splits. The full breakdown comes once both replays are in"
+          : "No iron pickaxe, so Ranked didn't save a replay. Splits only" });
+      }
+    }
+    this.store.set("quickLinks", links);
+  }
+
   setQueueStatus(id: number, status: QueueRow["status"]) {
     this.store.setQueue(id, { status });
     this.changed();
@@ -511,6 +558,8 @@ export class Service extends EventEmitter {
         if (!force && old && !old.error && JSON.parse(old.analysis || "{}").analysisVersion === ANALYSIS_VERSION) continue;
         this.buildRace(run, ref, them, q?.tier ?? null, key);
         if (q) this.store.setQueue(q.match_id, { status: "raced" });
+        // The full race replaces the quick one from Ranked's splits
+        if (run.match_id && !this.store.raceByKey(key)?.error) for (const r of this.store.races()) if (r.key.startsWith(`quick|${run.match_id}|`)) this.store.deleteRace(r.id);
       }
     }
     // Prefer our pooled copy, then Ranked's temp-replay, over a renamed copy of the same match
@@ -696,9 +745,10 @@ export class Service extends EventEmitter {
         return { id: r.id, createdAt: r.created_at, theirName: r.their_name, theirElo: r.their_elo, tier: r.tier, finalGap: r.final_gap,
           seedType: r.seed_type, raceFile: r.race_file, error: r.error, top: a?.report ? topCost(a) : a?.losses?.[0] ? summaryLine(a.losses[0]) : null,
           topSeconds: a?.report ? topSeconds(a) : null,
-          kind: r.your_file === r.their_file ? "match" : "race" };
+          kind: r.your_file === r.their_file ? "match" : "race", quick: !!a?.quick };
       }),
-      insights: buildInsights(races.filter((r) => !r.error).map((r) => ({ id: r.id, name: r.their_name, createdAt: r.created_at, finalGap: r.final_gap, seedType: r.seed_type, analysis: JSON.parse(r.analysis) as RaceAnalysis }))),
+      // Quick races have no reasons to learn habits from
+      insights: buildInsights(races.filter((r) => !r.error && !r.key.startsWith("quick|")).map((r) => ({ id: r.id, name: r.their_name, createdAt: r.created_at, finalGap: r.final_gap, seedType: r.seed_type, analysis: JSON.parse(r.analysis) as RaceAnalysis }))),
       tiers: this.you.elo !== null ? {
         ...tierBands(this.you.elo, shift),
       } : null,
