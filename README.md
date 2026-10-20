@@ -81,7 +81,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
   </tr>
 </table>
 
-**Make it yours:** theme presets (Nether, Warped, End, Ice, Colourblind) or your own colours, old Ranked menu backgrounds, rain, snow, embers or stars, and you pick exactly what shows on the graph and in the splits.
+**Make it yours:** theme presets, your own colours, old Ranked menu backgrounds, rain, snow, embers or stars, and you pick exactly what shows on the graph and in the splits.
 
 <br>
 
