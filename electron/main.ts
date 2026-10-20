@@ -303,6 +303,7 @@ app.whenReady().then(() => {
   ipcMain.handle("refresh", () => service.refresh());
   ipcMain.handle("profile", (_e, season?: number, pool?: number) => service.profile(season, pool));
   ipcMain.handle("profile:match", (_e, id: number) => service.profileMatch(id));
+  ipcMain.handle("match:elo", (_e, uuid: string, id: number) => service.matchElo(uuid, id));
   ipcMain.handle("profile:refresh", (_e, season?: number, pool?: number) => service.profileRefresh(season, pool));
   let icons: Record<string, string> | null = null;
   // Not cached while empty, so they show up once the instance gets found or set

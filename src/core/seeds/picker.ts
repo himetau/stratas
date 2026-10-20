@@ -1,11 +1,13 @@
 // Picks stronger players' runs to race. Auto uses 3 tiers above your Elo that adapt to results, manual is an Elo range
 import type { MatchRow, RaceRow, Store } from "../store";
-import type { Api } from "./api";
+import { hasReplay, type Api } from "./api";
 import { fmtTime } from "../detect/names";
 
-export type Tier = "next" | "stretch" | "ceiling" | "manual";
-const TIER_WEIGHT: Record<Exclude<Tier, "manual">, number> = { next: 0.6, stretch: 0.3, ceiling: 0.1 };
-const DEFAULT_BANDS: Record<Exclude<Tier, "manual">, [number, number]> = { next: [100, 250], stretch: [400, 700], ceiling: [0, 0] };
+export type Tier = "next" | "stretch" | "ceiling" | "manual" | "player";
+/** The 3 auto levels, the ones with an Elo band */
+type Band = Exclude<Tier, "manual" | "player">;
+const TIER_WEIGHT: Record<Band, number> = { next: 0.6, stretch: 0.3, ceiling: 0.1 };
+const DEFAULT_BANDS: Record<Band, [number, number]> = { next: [100, 250], stretch: [400, 700], ceiling: [0, 0] };
 
 export interface PickFilters {
   seedType?: string | null;
@@ -19,8 +21,10 @@ export interface PickOptions extends PickFilters {
   minElo?: number;
   maxElo?: number;
   /** Auto mode only, stick to one tier */
-  lockTier?: Exclude<Tier, "manual"> | null;
+  lockTier?: Band | null;
   count: number;
+  /** Just this player's runs, by Minecraft name. Not saved with the rest */
+  player?: string | null;
 }
 export interface Pick { match: MatchRow; tier: Tier; reason: string }
 
@@ -30,7 +34,7 @@ export interface TierShift { next: number; stretch: number; ceiling: number }
 const SHIFT_LIMIT: Record<keyof TierShift, [number, number]> = { next: [-50, 250], stretch: [-250, 400], ceiling: [-250, 600] };
 
 /** Elo bands for all 3 tiers with the learned shifts. Always ordered next < stretch < ceiling */
-export function tierBands(elo: number, shift: TierShift): Record<Exclude<Tier, "manual">, [number, number]> {
+export function tierBands(elo: number, shift: TierShift): Record<Band, [number, number]> {
   // Round edges to 50s since a band gets shown by where it starts ("1400+")
   const r = (x: number) => Math.round(x / 50) * 50;
   const next: [number, number] = [r(elo + DEFAULT_BANDS.next[0] + shift.next), r(elo + DEFAULT_BANDS.next[1] + shift.next)];
@@ -39,7 +43,7 @@ export function tierBands(elo: number, shift: TierShift): Record<Exclude<Tier, "
   const ceiling: [number, number] = [Math.max(r(Math.max(2000, elo + 800) + shift.ceiling), stretch[1]), 4000];
   return { next, stretch, ceiling };
 }
-export const tierBand = (tier: Exclude<Tier, "manual">, elo: number, shift: TierShift): [number, number] => tierBands(elo, shift)[tier];
+export const tierBand = (tier: Band, elo: number, shift: TierShift): [number, number] => tierBands(elo, shift)[tier];
 
 /** Tier goes up when races vs it are close and getting closer, down when you keep losing by minutes.
  * Replayed over the whole race history in order, so reanalysing doesn't move it again */
@@ -61,11 +65,11 @@ export function adaptTiers(races: RaceRow[]): TierShift {
 }
 
 /** Which tiers to fill next to keep the mix near 60/30/10 */
-function tierPlan(count: number, recent: Tier[], lock: Exclude<Tier, "manual"> | null | undefined): Exclude<Tier, "manual">[] {
+function tierPlan(count: number, recent: Tier[], lock: Band | null | undefined): Band[] {
   if (lock) return Array(count).fill(lock);
   const have = { next: 0, stretch: 0, ceiling: 0 };
-  for (const t of recent) if (t !== "manual") have[t]++;
-  const out: Exclude<Tier, "manual">[] = [];
+  for (const t of recent) if (t !== "manual" && t !== "player") have[t]++;
+  const out: Band[] = [];
   for (let i = 0; i < count; i++) {
     const total = Object.values(have).reduce((a, b) => a + b, 0) + 1;
     const t = (Object.keys(TIER_WEIGHT) as (keyof typeof TIER_WEIGHT)[]).sort((a, b) => (have[a] / total - TIER_WEIGHT[a]) - (have[b] / total - TIER_WEIGHT[b]))[0];
@@ -104,7 +108,7 @@ export async function pickRuns(store: Store, api: Api, yourElo: number, yourUuid
   const recentPlayers = [...races.slice(0, 2).map((r) => r.their_uuid), ...queue.filter((q) => q.status === "queued").map((q) => q.player_uuid)];
   const recentTiers = [...races.slice(0, 10).map((r) => r.tier as Tier), ...queue.slice(0, 10).map((q) => q.tier as Tier)];
   const since = Math.floor(Date.now() / 1000) - RECENT_HOURS * 3600;
-  const plan: Tier[] = o.mode === "manual" ? Array(o.count).fill("manual") : tierPlan(o.count, recentTiers, o.lockTier);
+  const plan: (Band | "manual")[] = o.mode === "manual" ? Array(o.count).fill("manual") : tierPlan(o.count, recentTiers, o.lockTier);
   const picks: Pick[] = [];
   const usedPlayers = new Map<string, number>();
   for (const p of recentPlayers) usedPlayers.set(p, (usedPlayers.get(p) ?? 0) + 1);
@@ -135,5 +139,35 @@ export async function pickRuns(store: Store, api: Api, yourElo: number, yourUuid
     taken.add(chosen.match.id);
     usedPlayers.set(chosen.match.winner_uuid!, (usedPlayers.get(chosen.match.winner_uuid!) ?? 0) + 1);
   }
+  return { picks, notes };
+}
+
+/** Recent wins by one player you named, newest first. No Elo or luck checks since you asked for them */
+export async function pickPlayer(store: Store, api: Api, yourUuid: string | null, o: PickOptions): Promise<{ picks: Pick[]; notes: string[] }> {
+  const name = (o.player ?? "").trim();
+  let ms;
+  try { ms = await api.userMatches(name); }
+  catch { return { picks: [], notes: [`Couldn't find a player called ${name}`] }; }
+  if (!ms.length) return { picks: [], notes: [`${name} hasn't played any ranked games yet`] };
+  store.putMatches(ms);
+  // Whoever is in every one of the matches, the name match is just in case they played themselves twice
+  const them = ms[0].players.find((p) => p.nickname.toLowerCase() === name.toLowerCase())
+    ?? ms[0].players.find((p) => ms.every((m) => m.players.some((x) => x.uuid === p.uuid))) ?? ms[0].players[0];
+  if (them.uuid === yourUuid) return { picks: [], notes: ["That's you. Type someone else's name"] };
+  const taken = new Set(store.queue().map((q) => q.match_id));
+  const since = Math.floor(Date.now() / 1000) - RECENT_HOURS * 3600;
+  const wins = ms.filter((m) => m.result?.uuid === them.uuid && !m.forfeited && m.result.time > 0 && hasReplay(m) && m.date >= since);
+  const fits = wins
+    .filter((m) => !o.seedType || (m.seedType ?? m.seed?.overworld) === o.seedType)
+    .filter((m) => !o.bastionType || (m.bastionType ?? m.seed?.nether) === o.bastionType)
+    .filter((m) => !o.maxTime || m.result.time <= o.maxTime * 1000);
+  const rows = fits.filter((m) => !taken.has(m.id))
+    .map((m) => store.match(m.id)).filter((m): m is MatchRow => !!m)
+    .sort((a, b) => b.date - a.date);
+  const picks = rows.slice(0, o.count).map((m): Pick => ({ match: m, tier: "player",
+    reason: `${m.winner_name}, ${m.winner_elo} Elo, ${fmtTime(m.time / 50)} on ${nice(m.seed_type)} / ${nice(m.bastion_type)}` }));
+  const notes = picks.length ? [] : [!wins.length
+    ? `${them.nickname} hasn't won a ranked game with a replay in the last ${RECENT_HOURS} hours, and Ranked only keeps recent ones`
+    : fits.length ? `${them.nickname}'s recent wins are already in your queue` : `None of ${them.nickname}'s recent wins match these filters`];
   return { picks, notes };
 }

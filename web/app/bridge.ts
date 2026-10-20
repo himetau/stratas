@@ -45,6 +45,7 @@ export function webBridge(service: Service, version: string): Bridge {
     refresh: () => service.refresh(),
     profile: (season, pool) => service.profile(season, pool),
     profileMatch: (id) => service.profileMatch(id),
+    matchElo: (uuid, id) => service.matchElo(uuid, id),
     profileRefresh: (season, pool) => service.profileRefresh(season, pool),
     // Rank icons and menu art come out of the Ranked mod's files, which the browser can't see
     rankIcons: async () => ({}),

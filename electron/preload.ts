@@ -21,6 +21,7 @@ const api = {
   skin: (who: { uuid?: string | null; name?: string | null }) => ipcRenderer.invoke("skin", who),
   profile: (season?: number, pool?: number) => ipcRenderer.invoke("profile", season, pool),
   profileMatch: (id: number) => ipcRenderer.invoke("profile:match", id),
+  matchElo: (uuid: string, id: number) => ipcRenderer.invoke("match:elo", uuid, id),
   profileRefresh: (season?: number, pool?: number) => ipcRenderer.invoke("profile:refresh", season, pool),
   copy: (text: string) => ipcRenderer.invoke("copy", text),
   reveal: (file: string) => ipcRenderer.invoke("reveal", file),
