@@ -220,6 +220,7 @@ export function settingsView(s: AppState, rerender: () => void) {
     group("Help", [
       row("Something broken?", btn("report a problem", () => void reportProblem(s)), { hint: "copies your version and activity log, then opens a GitHub issue to paste them in" }),
       row("Missing something?", btn("suggest a feature", suggestFeature), { hint: "opens a GitHub issue" }),
+      row("GitHub", btn("open", () => { window.open("https://github.com/himetau/stratas", "_blank"); }), { hint: "the code, releases and issues" }),
     ]),
     group("Support", [
       row("Support Stratas", h("button", { class: "sx-btn sx-kofi", onclick: openKofi }, "☕ Ko-fi"), { hint: "it's free and made by one person, tips keep it going" }),

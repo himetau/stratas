@@ -1,6 +1,6 @@
 {
   "name": "stratas",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Mix your MCSR Ranked private room replays with a player at any Elo you pick, then watch them side by side.",
   "type": "module",
