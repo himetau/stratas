@@ -25,7 +25,7 @@
 
 Stratas lets you practice against **any Elo you want**, on the **same seed**.
 
-It finds a run from a player at the Elo you pick. You play that seed in a private room. Then Stratas **mixes both replays into one file**, so you open it in Ranked's own replay viewer and you're both in the same world at the same time. No Elo on the line, no pressure, as many tries as you like.
+It finds a run from a player at the Elo you pick. You play that seed in a private room. Then Stratas **mixes both replays into one file**, so you open it in Ranked's own replay viewer and you're both in the same world at the same time. No VODs needed, it only uses Ranked's new replays.
 
 <table>
   <tr>
