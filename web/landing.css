@@ -1,4 +1,4 @@
-@font-face { font-family: "Departure Mono"; src: url("../src/ui/fonts/DepartureMono-Regular.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "Departure Mono"; src: url("./DepartureMono-Regular.woff2") format("woff2"); font-display: block; }
 
 :root {
   --bg: #1a1112; --bg-deep: #140c0d; --bg-raised: #241819; --rule: #3a2a2b;
