@@ -61,7 +61,10 @@ function radar(R: Row[], hot: number, setHot: (i: number) => void, rangeName: st
     const anchor = Math.abs(lx - cx) < 10 ? "middle" : lx > cx ? "start" : "end";
     const icon = structIcon(r.icon);
     if (icon) { const fo = el("foreignObject", { x: anchor === "middle" ? lx - 8 : anchor === "start" ? lx : lx - 16, y: ly - 22, width: 16, height: 16 }); fo.appendChild(icon); svg.appendChild(fo); }
-    svg.appendChild(el("text", { x: lx, y: ly + 6, "text-anchor": anchor, class: i === hot ? "spoke-name on" : "spoke-name" }, r.pct === null ? `${r.label} (no data)` : r.label));
+    // Your time next to the name, so the radar reads without the table
+    const name = el("text", { x: lx, y: ly + 6, "text-anchor": anchor, class: i === hot ? "spoke-name on" : "spoke-name" }, r.pct === null ? `${r.label} (no data)` : `${r.label} `);
+    if (r.pct !== null && r.you !== null) name.appendChild(el("tspan", { class: "spoke-time" }, clock(r.you)));
+    svg.appendChild(name);
   });
   const shape = (key: "pct" | "npct") => R.map((r, i) => { const [x, y] = pt(i, r[key] ?? 0); return `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`; }).join("") + "Z";
   if (nextName && R.some((r) => r.npct !== null)) svg.appendChild(el("path", { d: shape("npct"), class: "shape next" }));

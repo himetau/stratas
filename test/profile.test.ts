@@ -261,3 +261,21 @@ describe("Service.profile() offline & match_detail cache budget", () => {
     svc.stop();
   });
 });
+
+describe("splits radar pool", () => {
+  it("compares you with other players near your Elo, never with your own games", () => {
+    const store = new Store(":memory:");
+    const ME = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    // Your 10 games all at 100 s to the Nether, 10 other players all slower at 120 s
+    const row = (matchId: number, uuid: string, nether: number) => ({ matchId, uuid, elo: 1500, won: true, seedType: "VILLAGE", bastionType: "STABLES",
+      nether: nether * 20, bastion: null, fortress: null, blind: null, eye: null, end: null, finish: null });
+    store.putSplits([...Array.from({ length: 10 }, (_, i) => row(i, ME, 100)), ...Array.from({ length: 10 }, (_, i) => row(100 + i, `other${i}`, 120))]);
+    const details = Array.from({ length: 10 }, (_, i) => ({ id: i, type: 2, date: i, players: [{ uuid: ME, nickname: "me", eloRate: 1500 }],
+      timelines: [{ uuid: ME, type: "story.enter_the_nether", time: 100_000 }], completions: [], result: { uuid: ME, time: 0 } })) as never[];
+    const sp = analyzeSplitsProfile(store, ME, 1500, details, 50);
+    const nether = sp.segments.find((s) => s.key === "nether")!;
+    expect(sp.bandSampleCount).toBe(10);
+    expect(nether.bandMedianMs).toBe(120_000);
+    expect(nether.bandPercentile).toBe(100); // Faster than every other player, not 50% against yourself
+  });
+});

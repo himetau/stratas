@@ -184,6 +184,15 @@ function percentileIn(ticks: number | null, sorted: number[]): number | null {
 const toMs = (ticks: number | null | undefined) => (typeof ticks === "number" && Number.isFinite(ticks) && ticks > 0 ? Math.round(ticks * 50) : null);
 const medianTicks = (sorted: number[]) => (sorted.length ? medianMs(sorted) : null);
 
+/** The Elo ranges a profile compares against: yours (±100) and the whole next rank up */
+export function benchmarkBands(elo: number | null): [number, number][] {
+  if (elo === null || !Number.isFinite(elo)) return [[1000, 1400]];
+  const e = Math.round(elo), out: [number, number][] = [[Math.max(0, e - 100), e + 100]];
+  const nextLo = TIER_THRESHOLDS.find((t) => t > e);
+  if (nextLo !== undefined) out.push([nextLo, (TIER_THRESHOLDS.find((t) => t > nextLo) ?? 4001) - 1]);
+  return out;
+}
+
 /** `pool` is how many of your newest Ranked matches to take times from */
 export function analyzeSplitsProfile(
   store: Store,
@@ -247,9 +256,13 @@ export function analyzeSplitsProfile(
     }
   }
 
+  // Pools are other players only. Your own games are in the same table (every player in every match we load is),
+  // and comparing you with yourself puts every split at 50%
+  const others = (rows: SplitRow[]) => rows.filter((r) => normUuid(r.uuid) !== targetUuid);
+
   // World pool
   const worldBand: [number, number] = [0, 10000];
-  const worldRows = store.splitsForBand(worldBand[0], worldBand[1]);
+  const worldRows = others(store.splitsForBand(worldBand[0], worldBand[1]));
   const worldStats = computeBandStats(worldRows, worldBand);
 
   // Your Elo band
@@ -257,7 +270,7 @@ export function analyzeSplitsProfile(
   const band: [number, number] = hasElo
     ? [Math.max(0, Math.round(yourElo - 100)), Math.round(yourElo + 100)]
     : [1000, 1400];
-  const bandRows = store.splitsForBand(band[0], band[1]);
+  const bandRows = others(store.splitsForBand(band[0], band[1]));
   const bandStats = computeBandStats(bandRows, band);
   const currentRank = rankOf(hasElo ? yourElo : null);
   const bandLabel = hasElo
@@ -270,7 +283,7 @@ export function analyzeSplitsProfile(
   const nextLo = TIER_THRESHOLDS.find((t) => t > effectiveElo) ?? null;
   const nextHi = nextLo === null ? null : (TIER_THRESHOLDS.find((t) => t > nextLo) ?? 4001) - 1;
   const nextCandidate: [number, number] | null = nextLo !== null && nextHi !== null ? [nextLo, nextHi] : null;
-  const nextCandidateRows = nextCandidate ? store.splitsForBand(nextCandidate[0], nextCandidate[1]) : [];
+  const nextCandidateRows = nextCandidate ? others(store.splitsForBand(nextCandidate[0], nextCandidate[1])) : [];
   const enoughNext = nextCandidate !== null && computeBandStats(nextCandidateRows, nextCandidate).count >= MIN_NEXT_SAMPLE;
   const nextBand = enoughNext ? nextCandidate : null;
   const nextRankName = nextBand ? rankOf(nextBand[0]).name : null;
