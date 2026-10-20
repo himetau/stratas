@@ -101,6 +101,8 @@ You need MCSR Ranked set up in a launcher. Stratas finds Prism, MultiMC, Modrint
 
 Older versions and what changed are on the [releases page](https://github.com/himetau/stratas/releases).
 
+Code signing for the Windows installer is going to come from the [SignPath Foundation](https://signpath.org), for free. It's applied for and not active yet, see the code signing policy at the bottom.
+
 <details>
 <summary><b>Build it yourself</b></summary>
 
