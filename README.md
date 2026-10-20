@@ -77,7 +77,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
     <td width="50%"><img src="docs/readme/card-breakdown.png" alt="Where the time went"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/readme/card-habits.png" alt="What you should practice"></td>
+    <td width="50%"><img src="docs/readme/card-what-to-practice.png" alt="What you should practice"></td>
     <td width="50%"><img src="docs/readme/card-themes.png" alt="Themes and colours"></td>
   </tr>
 </table>

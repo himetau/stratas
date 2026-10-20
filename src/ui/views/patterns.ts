@@ -54,7 +54,7 @@ function usualRun(i: Insights) {
 
 /** A card per habit */
 function habitCards(i: Insights, open: (id: number) => void) {
-  if (!i.habits.length) return panel(null, null, h("div", { class: "p-head" }, h("h2", null, "Habits")),
+  if (!i.habits.length) return panel(null, null, h("div", { class: "p-head" }, h("h2", null, "What to practice")),
     h("p", { class: "dim", style: "margin:0" }, i.races < 3 ? "A few more games and the things that keep costing you time show up here." : "Nothing keeps costing you time right now."));
   const card = (hb: Insights["habits"][number]) => h("div", { class: "pt-card" },
     h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, structIcon(phaseIconKey(hb.phase, null)), hb.phase),
@@ -66,7 +66,7 @@ function habitCards(i: Insights, open: (id: number) => void) {
     h("button", { class: "btn sm pt-watch", onclick: () => open(hb.example.raceId) }, `Watch vs ${hb.example.name}${hb.example.at !== null ? ` at ${clockSec(hb.example.at / 20)}` : ""}`));
   const [top, rest] = [i.habits.slice(0, 3), i.habits.slice(3)];
   return h("div", { class: "pt-section" },
-    h("div", { class: "pt-h" }, h("h2", null, "Habits"), h("span", { class: "dim" }, "what keeps costing you time")),
+    h("div", { class: "pt-h" }, h("h2", null, "What to practice"), h("span", { class: "dim" }, "what keeps costing you time")),
     h("div", { class: "pt-cards" }, top.map(card)),
     rest.length ? h("div", { class: "pt-more" }, rest.map((hb) => h("button", { class: "pt-more-row", onclick: () => open(hb.example.raceId) },
       h("span", { class: "dim" }, hb.phase), h("span", null, hb.title), h("span", { class: "dim" }, `${hb.hits} of ${hb.outOf}`), h("b", { class: "bad" }, secs(hb.usual))))) : null);
