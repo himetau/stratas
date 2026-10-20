@@ -201,6 +201,15 @@ export class Store {
       eye: (r.eye as number | null) ?? null, end: (r.end as number | null) ?? null, finish: (r.finish as number | null) ?? null,
     };
   }
+  /** Indexed matches with a player in this Elo range whose splits we haven't loaded, newest first */
+  benchmarkCandidates(minElo: number, maxElo: number, limit: number): number[] {
+    return (this.db.prepare(`SELECT id FROM matches WHERE ((winner_elo BETWEEN ? AND ?) OR (loser_elo BETWEEN ? AND ?)) AND forfeited = 0
+      AND id NOT IN (SELECT id FROM match_detail) ORDER BY date DESC LIMIT ?`).all(minElo, maxElo, minElo, maxElo, limit) as { id: number }[]).map((r) => r.id);
+  }
+  /** Split rows in an Elo range from everyone but this player */
+  othersInBand(minElo: number, maxElo: number, uuid: string): number {
+    return (this.db.prepare("SELECT COUNT(*) AS n FROM splits WHERE elo BETWEEN ? AND ? AND replace(lower(uuid), '-', '') != ?").get(minElo, maxElo, uuid.replace(/-/g, "").toLowerCase()) as { n: number }).n;
+  }
   splitsForBand(minElo: number, maxElo: number, seedType: string | null = null, bastionType: string | null = null): SplitRow[] {
     const raw = this.db.prepare(`SELECT * FROM splits WHERE elo BETWEEN ? AND ? AND (? IS NULL OR seed_type = ?) AND (? IS NULL OR bastion_type = ?)`).all(
       minElo, maxElo, seedType, seedType, bastionType, bastionType,

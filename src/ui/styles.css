@@ -469,6 +469,7 @@ table.picks td .rank img { width: 16px; height: 16px; }
 .pf-radar .ring.mid { stroke: var(--them); stroke-dasharray: none; stroke-width: 1.5; }
 .pf-radar .spoke { stroke: rgba(255, 255, 255, .1); } .pf-radar .spoke.on { stroke: var(--text); }
 .pf-radar .spoke-name { fill: var(--text-mid); } .pf-radar .spoke-name.on { fill: var(--text); }
+.pf-radar .spoke-time { fill: var(--you, var(--accent)); }
 .pf-radar .shape.you { fill: var(--you); fill-opacity: .22; stroke: var(--you); stroke-width: 2; }
 .pf-radar .shape.next { fill: none; stroke: color-mix(in srgb, var(--accent) 55%, var(--them)); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .pf-radar .dot { fill: var(--you); stroke: #000; }

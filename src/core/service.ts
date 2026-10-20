@@ -19,7 +19,7 @@ import { findInstances, inspectInstance, instanceName, myReplaysDir, replayDirs,
 import { fetchProfile, loadCachedProfileRaw } from "./profile/fetch";
 import { buildProfileInsights } from "./profile/insights";
 import { analyzeReplayTrends } from "./profile/replays";
-import { analyzeSplitsProfile, buildScorecard } from "./profile/splits";
+import { analyzeSplitsProfile, benchmarkBands, buildScorecard } from "./profile/splits";
 import { analyzeRanked, eloWinChance } from "./profile/stats";
 import type { MatchDetail, ProfileData, ProfileMatch, ProfileUser, SeasonResultEntry } from "./profile/types";
 import { rankOf } from "./tiers";
@@ -372,8 +372,29 @@ export class Service extends EventEmitter {
   private async scanTick() {
     const added = await this.scanner.tick();
     if (added) this.changed();
+    // A few more games near your Elo each time, so the profile's comparison keeps getting better in the background
+    const s = this.settings();
+    if (s.uuid && this.you.elo !== null) await this.fillBenchmarks(s.uuid, this.you.elo, 6);
     if (this.scanner.lastError) this.log(`Match index: ${this.scanner.lastError}`);
     this.expireQueue();
+  }
+
+  /** Loads splits from other players' games near your Elo (and the next rank) until each range has enough to compare
+   *  against. The match index knows the games, the splits come from each match's details. At most `calls` API calls */
+  private async fillBenchmarks(uuid: string, elo: number | null, calls: number) {
+    const ENOUGH = 120;
+    let made = 0;
+    for (const [lo, hi] of benchmarkBands(elo)) {
+      while (made < calls && this.api.remaining() > 80 && this.store.othersInBand(lo, hi, uuid) < ENOUGH) {
+        const ids = this.store.benchmarkCandidates(lo, hi, Math.min(10, calls - made));
+        if (!ids.length) break;
+        for (const id of ids) {
+          made++;
+          try { this.store.putMatchDetail(await this.api.match(id)); } catch { /* Skip it, the next one will do */ }
+        }
+      }
+    }
+    if (made) this.changed();
   }
 
   private expireQueue() {
@@ -845,6 +866,7 @@ export class Service extends EventEmitter {
           }
         : null;
 
+    if (!this.opts.offline && uuid) await this.fillBenchmarks(uuid, elo ?? null, 30);
     const { stats, eloHistory, breakdowns } = analyzeRanked(uuid, raw.matches, raw.details, raw.user, season);
     const splits = analyzeSplitsProfile(this.store, uuid, elo, raw.details, pool);
     const { scorecard, details: scorecardDetails } = buildScorecard(stats, splits);
