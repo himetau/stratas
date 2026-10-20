@@ -15,6 +15,8 @@ let notes: string[] = [];
 let busy = false;
 let searched = false;
 let count = 3;
+// Just this player's runs instead of the Elo pick. Not saved, it's usually a one off
+let player = "";
 
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const levelOf = (p: AppState["settings"]["pick"]): Level => (p.mode === "manual" ? "custom" : p.lockTier ?? "mix");
@@ -125,7 +127,7 @@ export function findView(s: AppState, rerender: () => void) {
   const find = async () => {
     if (busy) return;
     busy = true; rerender();
-    try { const r = await g.pick({ ...p, count }); picks = r.picks; notes = r.notes; chosen = new Set(picks.map((x) => x.match.id)); }
+    try { const r = await g.pick({ ...p, count, player: player.trim() || null }); picks = r.picks; notes = r.notes; chosen = new Set(picks.map((x) => x.match.id)); }
     catch (e) { notes = [(e as Error).message]; picks = []; }
     busy = false; searched = true; rerender();
   };
@@ -141,6 +143,15 @@ export function findView(s: AppState, rerender: () => void) {
   return h("div", { class: "page" },
     howItWorks(s),
     panel(null, null,
+      h("div", { class: "p-head" }, h("h2", null, "Player")),
+      h("div", { class: "row find-who" },
+        h("input", { id: "who", type: "text", placeholder: "Minecraft name", value: player, spellcheck: "false", autocomplete: "off", "aria-label": "Player name",
+          oninput: (e: Event) => { player = (e.target as HTMLInputElement).value; },
+          onchange: () => rerender(),
+          onkeydown: (e: KeyboardEvent) => { if (e.key === "Enter") { player = (e.target as HTMLInputElement).value; void find(); } } }),
+        player.trim() ? btn("Clear", () => { player = ""; rerender(); }, { ghost: true, sm: true }) : null,
+        h("span", { class: "dim" }, player.trim() ? `Only ${player.trim()}'s recent wins, any Elo` : "Leave it empty to pick by Elo, or type a name to race one player"))),
+    panel(null, { cls: player.trim() ? "find-off" : "" },
       h("div", { class: "p-head" }, h("h2", null, "Opponent Elo"),
         s.you.elo ? h("span", { class: "lv-me" }, rank(s.you.elo, "lv-rank"), s.you.rank ? h("span", { class: "dim" }, `#${s.you.rank}`) : null) : null),
       s.tiers && s.you.elo ? levelList(s, p, setLevel, save)
@@ -178,7 +189,7 @@ function results(s: AppState, rerender: () => void, queue: () => void) {
             onchange: (e: Event) => { (e.target as HTMLInputElement).checked ? chosen.add(m.id) : chosen.delete(m.id); rerender(); } })),
           h("td", null, h("span", { class: "who-sm" }, head({ uuid: m.winner_uuid, name: m.winner_name ?? "?" }, 20), m.winner_name)),
           h("td", null, rank(m.winner_elo)),
-          h("td", { class: x.tier !== "manual" ? `tier-${x.tier}` : "dim" }, tierName(s.tiers, x.tier)),
+          h("td", { class: x.tier !== "manual" && x.tier !== "player" ? `tier-${x.tier}` : "dim" }, tierName(s.tiers, x.tier)),
           h("td", null, h("span", { class: "who-sm" }, structIcon(m.seed_type), structIcon(m.bastion_type), `${cap(nice(m.seed_type))}, ${nice(m.bastion_type)}`)),
           h("td", { class: "dim" }, ago(m.date)),
           // Hidden till clicked so the winning time doesn't set your pace

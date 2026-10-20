@@ -2,13 +2,15 @@
 // Shows the opponent, their run (time hidden till you race it), seeds, and your history on these seed types
 import { g, type AppState, type QueueRow } from "../bridge";
 import { deltaClass, fmtDelta, fmtMs, h, nice } from "../dom";
-import { btn, copyField, head, panel, rank, tierName } from "../parts";
+import { btn, copy, copyField, head, panel, rank, tierName } from "../parts";
 import { roomRules } from "./find";
 import { day, seedText } from "./races";
 import { isWeb, pickReplays } from "../web";
 
 let picked: number | null = null;
 const revealed = new Set<number>();
+// Their Elo going into each queued match, so it's easy to spot in Recent Matches
+const elos = new Map<number, { elo: number; change: number } | null | "loading">();
 const waiting = (s: AppState) => s.queue.filter((q) => q.status === "queued" || q.status === "downloaded");
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const seedLine = (q: QueueRow) => [q.seed_type ? cap(nice(q.seed_type)) : null, q.bastion_type ? `${nice(q.bastion_type)} bastion` : null].filter(Boolean).join(", ");
@@ -23,7 +25,7 @@ export function queueList(s: AppState, redraw: () => void, find: () => void) {
   const item = (q: QueueRow) => h("button", { class: `li ${q.match_id === sel?.match_id ? "sel" : ""}`, onclick: () => { picked = q.match_id; redraw(); } },
     head({ uuid: q.player_uuid, name: q.player_name }, 24),
     h("span", { class: "t" }, q.player_name),
-    q.tier !== "manual" ? h("span", { class: `v tier-${q.tier}` }, tierName(s.tiers, q.tier)) : h("span"),
+    q.tier !== "manual" && q.tier !== "player" ? h("span", { class: `v tier-${q.tier}` }, tierName(s.tiers, q.tier)) : h("span"),
     h("span", { class: "s" }, [q.elo ? String(q.elo) : null, seedLine(q)].filter(Boolean).join(", ")));
   const queued = list.filter((q) => q.status === "queued"), ready = list.filter((q) => q.status === "downloaded");
   return h("aside", { class: "list" },
@@ -73,16 +75,24 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
   const ready = q.status === "downloaded";
   const diff = q.elo && s.you.elo ? q.elo - s.you.elo : null;
   const shown = revealed.has(q.match_id);
+  if (!ready && !elos.has(q.match_id) && q.player_uuid) {
+    elos.set(q.match_id, "loading");
+    void g.matchElo(q.player_uuid, q.match_id).then((e) => { elos.set(q.match_id, e); go.redraw(); });
+  }
+  const at = elos.get(q.match_id);
   return h("div", { class: "page" },
     panel(null, { cls: "hero" },
       head({ uuid: q.player_uuid, name: q.player_name }, 64),
       h("div", { class: "hero-who" },
         h("div", { class: "hero-name" }, q.player_name),
         h("div", { class: "hero-sub" }, rank(q.elo), diff !== null ? h("span", { class: "dim" }, diff >= 0 ? `${diff} above you` : `${-diff} below you`) : null),
-        h("div", { class: "dim" }, q.tier === "manual" ? "Picked from your own range" : tierName(s.tiers, q.tier) ? `${tierName(s.tiers, q.tier)} pick` : "")),
+        h("div", { class: "dim" }, q.tier === "manual" ? "Picked from your own range" : q.tier === "player" ? "Picked by name" : tierName(s.tiers, q.tier) ? `${tierName(s.tiers, q.tier)} pick` : "")),
       h("div", { class: "hero-side" },
         ready ? h("div", { class: "good" }, "Ready to play")
           : [h("div", null, "Download the replay in Ranked"), h("div", { class: "dim" }, `Search Profile, ${q.player_name}, Recent Matches, Download Replay`),
+            // Pasting the exact name beats eyeballing it in Ranked's search
+            at && at !== "loading" ? h("div", null, `They were ${at.elo} (${at.change >= 0 ? "+" : ""}${at.change}) vs ${q.opponent_name ?? "someone"} on ${day(q.date * 1000)}`) : null,
+            btn("Copy name", () => copy(q.player_name, "Name"), { sm: true, key: "c" }),
             isWeb ? btn("Add the replay here", pickReplays, { sm: true }) : null],
         btn("Skip", () => g.queueStatus(q.match_id, "skipped"), { ghost: true, sm: true }))),
     panel(null, null,

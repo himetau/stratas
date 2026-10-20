@@ -443,6 +443,9 @@ canvas.sicon { display: block; flex-shrink: 0; image-rendering: pixelated; }
 .chip2:has(.sicon) { padding-left: 4px; }
 .chip2:hover { color: var(--text); background: var(--tile-hi); }
 .chip2.on { color: var(--on-accent); background: var(--accent); }
+.find-who { font-size: 13px; }
+.find-who input[type=text] { width: 220px; }
+.find-off { opacity: .45; }
 .find-bar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 13px; }
 .find-bar .inline { display: inline-flex; align-items: center; gap: 8px; color: var(--text-mid); }
 .find-bar input[type=number] { width: 64px; }

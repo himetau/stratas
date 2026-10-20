@@ -14,7 +14,7 @@ import { fmtDur } from "./detect/names";
 import { Store, type QueueRow, type RaceRow, type RunKind, type RunRow } from "./store";
 import { Api, type ApiMatch } from "./seeds/api";
 import { Scanner } from "./seeds/scanner";
-import { adaptTiers, pickRuns, tierBands, type Pick, type PickOptions, type Tier, type TierShift } from "./seeds/picker";
+import { adaptTiers, pickPlayer, pickRuns, tierBands, type Pick, type PickOptions, type Tier, type TierShift } from "./seeds/picker";
 import { findInstances, inspectInstance, instanceName, myReplaysDir, replayDirs, type Instance } from "./ingest/paths";
 import { fetchProfile, loadCachedProfileRaw } from "./profile/fetch";
 import { buildProfileInsights } from "./profile/insights";
@@ -62,7 +62,7 @@ export interface AppState {
   queue: QueueRow[];
   races: RaceSummary[];
   insights: Insights;
-  tiers: Record<Exclude<Tier, "manual">, [number, number]> | null;
+  tiers: Record<Exclude<Tier, "manual" | "player">, [number, number]> | null;
   library: { practice: number; ranked: number; reference: number; unreadable: number };
   /** Your newest Ranked games since the new replay format, analysed or still waiting on the replay */
   myGames: MyGame[];
@@ -484,6 +484,7 @@ export class Service extends EventEmitter {
 
   async pick(o: PickOptions): Promise<{ picks: Pick[]; notes: string[] }> {
     const s = this.settings();
+    if (o.player?.trim()) return pickPlayer(this.store, this.api, s.uuid, o);
     if (this.you.elo === null) await this.refreshYou();
     if (this.you.elo === null) return { picks: [], notes: ["Set your Minecraft name in Settings so Stratas knows your Elo"] };
     if (this.store.matchCount() < 200) await this.scanTick();
@@ -1038,6 +1039,17 @@ export class Service extends EventEmitter {
       this.changed();
     }
     return this.profile(season, pool);
+  }
+
+  /** The player's Elo going into a match and what they gained, to spot it in their Recent Matches */
+  async matchElo(uuid: string, matchId: number): Promise<{ elo: number; change: number } | null> {
+    try {
+      const c = (await this.profileMatch(matchId))?.changes?.find((x) => x.uuid === uuid);
+      return c && c.eloRate != null && c.change != null ? { elo: c.eloRate, change: c.change } : null;
+    } catch (e) {
+      this.log(`Couldn't load ${uuid}'s matches: ${(e as Error).message}`);
+      return null;
+    }
   }
 
   async profileMatch(id: number): Promise<MatchDetail | null> {

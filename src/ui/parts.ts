@@ -56,6 +56,7 @@ export const setRankIcons = (x: Record<string, string>) => { rankIcons = x; };
 /** Level is named by the Elo it starts at ("1400+"), custom range is just "custom" */
 export function tierName(tiers: Record<"next" | "stretch" | "ceiling", [number, number]> | null | undefined, tier: string | null | undefined): string {
   if (tier === "manual") return "custom";
+  if (tier === "player") return "by name";
   const b = tiers && tier && tier in tiers ? tiers[tier as "next" | "stretch" | "ceiling"] : null;
   return b ? `${b[0]}+` : "";
 }

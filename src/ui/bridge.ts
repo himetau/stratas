@@ -36,6 +36,8 @@ export interface Bridge {
   /** pool = how many of your newest Ranked matches the split times come from */
   profile(season?: number, pool?: number): Promise<ProfileData>;
   profileMatch(id: number): Promise<MatchDetail | null>;
+  /** The player's Elo going into a match and what they gained */
+  matchElo(uuid: string, matchId: number): Promise<{ elo: number; change: number } | null>;
   profileRefresh(season?: number, pool?: number): Promise<ProfileData>;
   copy(text: string): Promise<void>;
   reveal(file: string): Promise<void>;
