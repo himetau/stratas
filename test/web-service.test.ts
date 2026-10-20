@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("node:fs", async () => await import("../web/shims/fs"));
 vi.mock("node:sqlite", async () => await import("../web/shims/sqlite"));
 vi.mock("node:zlib", async () => await import("../web/shims/zlib"));
+// The site swaps node:path for path-browserify too, so paths are "/" on Windows like in a browser
+vi.mock("node:path", async () => { const p = (await import("path-browserify")).default; return { ...p, default: p }; });
 import { readFile } from "node:fs/promises";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import initSqlJs from "sql.js";
