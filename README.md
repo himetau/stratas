@@ -153,8 +153,9 @@ a donut keeps it going 🍩
 The Windows installer is going to be signed for free through SignPath: free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). This is applied for and not active yet, so for now the installer isn't signed.
 
 - Author, reviewer and approver: [cyoshi](https://github.com/himetau). Every release is built from this repo by GitHub Actions and approved by hand before it gets signed.
+- Downloads: [stratas.lol](https://stratas.lol) and the [releases page](https://github.com/himetau/stratas/releases), both point to the same files built here.
 - Privacy: Stratas only talks to the MCSR Ranked API (public match data), Mojang (player skins) and, if you ask it to, Modrinth (old Ranked menu backgrounds). Your replays and settings stay on your computer and are never uploaded.
 
 </details>
 
-<p align="center"><sub>made with 🩷 by cyoshi · <a href="LICENSE">GPL-3.0</a> · not affiliated with MCSR Ranked or Mojang</sub></p>
+<p align="center"><sub>made with 🩷 by cyoshi · <a href="https://stratas.lol">stratas.lol</a> · <a href="LICENSE">GPL-3.0</a> · not affiliated with MCSR Ranked or Mojang</sub></p>

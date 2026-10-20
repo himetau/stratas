@@ -95,4 +95,9 @@ jobs:
       - name: Make the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Stratas ${GITHUB_REF_NAME#v}" --generate-notes *.exe *.AppImage *.blockmap latest*.yml
+        # Where to get it on top, GitHub's list of changes under it
+        run: |
+          printf '%s\n' "Website: **[stratas.lol](https://stratas.lol)**, or [try it in your browser](https://stratas.lol/app/) without installing anything." "" \
+            "Windows: \`Stratas-Setup.exe\`. Until it's signed, Windows shows a \"Windows protected your PC\" popup: click More info, then Run anyway." "" \
+            "Linux: \`Stratas.AppImage\`. Already on 1.1.0 or newer? Click the update button in the app." > notes.md
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Stratas ${GITHUB_REF_NAME#v}" --notes-file notes.md --generate-notes *.exe *.AppImage *.blockmap latest*.yml
