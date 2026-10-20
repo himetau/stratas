@@ -1,22 +1,24 @@
 // Electron main. Windows, tray and IPC around the core service
-import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, Notification, shell, Tray } from "electron";
-import { execFileSync, spawn } from "node:child_process";
-import { copyFileSync, existsSync, readdirSync, readFileSync, renameSync, rmdirSync, statSync, watch } from "node:fs";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, Notification, shell, Tray } from "electron";
+import { execFile, execFileSync, spawn } from "node:child_process";
+import { copyFileSync, existsSync, readdirSync, readFileSync, renameSync, rmdirSync, statSync, watch, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { Service } from "../src/core/service";
 import { rankedArt, rankedAssets, rankIcons } from "../src/core/ranks";
 import { cachedOldArt, fetchOldArt, oldArtData } from "../src/core/oldart";
 import { skinPng, type SkinOwner } from "../src/core/skins";
 import type { Pick } from "../src/core/seeds/picker";
 
-const dataDir = join(process.env.XDG_DATA_HOME || join(homedir(), ".local/share"), "stratas");
+const linux = process.platform === "linux", win = process.platform === "win32";
+// XDG folders on Linux, %APPDATA%\stratas on Windows
+const dataDir = linux ? join(process.env.XDG_DATA_HOME || join(homedir(), ".local/share"), "stratas") : join(app.getPath("appData"), "stratas");
 const root = join(__dirname, "..");
 const iconPath = (s: number) => join(root, "..", "packaging", `icon-${s}.png`);
 const background = process.argv.includes("--background");
-// matugen writes this (see ~/.config/matugen/templates/stratas-colors.css)
-const themeFile = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "stratas", "colors.css");
+// matugen writes this on Linux (see ~/.config/matugen/templates/stratas-colors.css). Elsewhere it sits next to the data
+const themeFile = linux ? join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "stratas", "colors.css") : join(dataDir, "colors.css");
 // Stratas used to be Gapium. Move the old data (games, races, db) and config (window state, matugen colors)
 // over once, before anything opens them
 function moveFromGapium() {
@@ -59,7 +61,7 @@ function moveFromGapium() {
     console.error("couldn't update the database's file paths:", e);
   } finally { db?.close(); }
 }
-moveFromGapium();
+if (linux) moveFromGapium(); // Gapium only ever ran on Linux
 let themeCss = "";
 const readTheme = () => { try { themeCss = existsSync(themeFile) ? readFileSync(themeFile, "utf8") : ""; } catch { themeCss = ""; } };
 
@@ -67,8 +69,11 @@ let service: Service;
 let main: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
 let tray: Tray | null = null;
+const notes = new Set<Notification>();
 
 if (!app.requestSingleInstanceLock()) app.quit();
+// Windows ties notifications to this id, it has to match the installer's appId
+if (win) app.setAppUserModelId("com.cyoshi.stratas");
 app.on("second-instance", () => showMain());
 
 function load(win: BrowserWindow, hash = "") {
@@ -110,28 +115,33 @@ function openCompanion(raceId: number | null) {
 function ours(file: unknown): file is string {
   if (typeof file !== "string") return false;
   const f = resolve(file), inst = service.state().instance;
-  return [dataDir, inst?.ranked].some((d) => d && f.startsWith(resolve(d) + "/"));
+  // relative() rather than startsWith so it works with Windows paths (and ignores their case)
+  const inside = (d: string) => { const r = relative(resolve(d), f); return !!r && !r.startsWith("..") && !isAbsolute(r); };
+  return [dataDir, inst?.ranked].some((d) => !!d && inside(d));
 }
 
-/** Ranked can't open a replay from outside, so copy its name and focus or launch the game */
-function openInMinecraft(file: string): { ok: boolean; message: string } {
-  // My Replays only lists mcsrranked/replay/ so copy it there if it's somewhere else (temp-replay)
-  const inst0 = service.state().instance;
-  if (inst0) {
-    const mine = join(inst0.ranked, "replay");
-    if (dirname(file) !== mine) {
-      const target = join(mine, `match ${basename(file)}`);
-      try { if (!existsSync(target)) copyFileSync(file, target); file = target; } catch { /* Keep the original name */ }
-    }
-  }
-  const name = basename(file).replace(/\.rrf$/, "");
-  clipboard.writeText(name);
-  const steps = "In Ranked: My replays, paste the name into search, Watch.";
-  const inst = service.state().instance;
-  // Already running? Match the process not the window title since it can be wrapped by waywall
+/** The instance's own folder (Prism's .../instances/<id>, not the minecraft/ inside it), and its id if a launcher can start it */
+function instanceInfo(root: string) {
+  const dir = basename(root) === "minecraft" || (basename(root) === ".minecraft" && basename(dirname(dirname(root))).toLowerCase() === "instances") ? dirname(root) : root;
+  const inLauncher = basename(dirname(dir)).toLowerCase() === "instances"; // Prism and MultiMC
+  return { dir, id: inLauncher ? basename(dir) : null, launcherDir: inLauncher ? dirname(dirname(dir)) : null };
+}
+
+/** Starts a program and says whether it actually started (spawn reports a missing program later, not by throwing) */
+const tryStart = (cmd: string, args: string[]) => new Promise<boolean>((done) => {
+  try {
+    const p = spawn(cmd, args, { detached: true, stdio: "ignore" });
+    p.once("spawn", () => { p.unref(); done(true); });
+    p.once("error", () => done(false));
+  } catch { done(false); }
+});
+
+/** Linux: is the game running (match the process, not the window title, since waywall can wrap it) and can we focus it (Hyprland) */
+function findGameLinux(dir: string): "focused" | "running" | null {
   const gamePids = new Set<number>();
   try {
-    for (const line of execFileSync("pgrep", ["-f", inst ? inst.root.replace(/\/minecraft$/, "") : "minecraft"], { encoding: "utf8", timeout: 2000 }).split("\n"))
+    const pattern = dir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    for (const line of execFileSync("pgrep", ["-f", pattern], { encoding: "utf8", timeout: 2000 }).split("\n"))
       if (line.trim()) gamePids.add(Number(line));
   } catch { /* None running */ }
   try {
@@ -140,22 +150,63 @@ function openInMinecraft(file: string): { ok: boolean; message: string } {
     const mc = clients.find((c) => gamePids.has(c.pid) || ancestorOfGame(c.pid)) ?? clients.find((c) => /minecraft|waywall/i.test(`${c.class} ${c.title}`));
     if (mc) {
       execFileSync("hyprctl", ["dispatch", "focuswindow", `address:${mc.address}`], { timeout: 2000 });
-      return { ok: true, message: `Switched to Minecraft. Replay name copied. ${steps}` };
+      return "focused";
     }
   } catch { /* Not on Hyprland */ }
-  if (gamePids.size) return { ok: true, message: `Minecraft is already running. Replay name copied. ${steps}` };
-  if (!inst) return { ok: false, message: "No Ranked instance found. Set it in Settings." };
-  const id = basename(dirname(inst.root)); // .../instances/<id>/minecraft
-  const tries: [string, string[]][] = [["prismlauncher", ["--launch", id]], ["flatpak", ["run", "org.prismlauncher.PrismLauncher", "--launch", id]]];
-  for (const [cmd, args] of tries) {
-    try {
-      const p = spawn(cmd, args, { detached: true, stdio: "ignore" });
-      p.on("error", () => {});
-      p.unref();
-      return { ok: true, message: `Starting Minecraft. Replay name copied. ${steps}` };
-    } catch { /* Try the next launcher */ }
+  return gamePids.size ? "running" : null;
+}
+
+/** Windows: find the game's java process by its command line and bring its window forward */
+const findGameWindows = (dir: string) => new Promise<"focused" | "running" | null>((done) => {
+  const script = [
+    "$d = $env:STRATAS_DIR.ToLower()",
+    "$p = Get-CimInstance Win32_Process -Filter \"Name='javaw.exe' OR Name='java.exe'\" | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains($d) } | Select-Object -First 1",
+    "if ($p) { if ((New-Object -ComObject WScript.Shell).AppActivate([int]$p.ProcessId)) { 'focused' } else { 'running' } }",
+  ].join("; ");
+  execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { env: { ...process.env, STRATAS_DIR: dir }, timeout: 8000, windowsHide: true },
+    (err, out) => { const r = String(out ?? "").trim(); done(err ? null : r === "focused" || r === "running" ? r : null); });
+});
+
+/** Ways to start a Prism or MultiMC instance on this OS, most likely first */
+function launchers(id: string, launcherDir: string): [string, string[]][] {
+  const multimc = /multimc/i.test(basename(launcherDir));
+  if (win) {
+    const local = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
+    return [
+      [join(launcherDir, "MultiMC.exe"), ["-l", id]],
+      [join(launcherDir, "prismlauncher.exe"), ["--launch", id]], // Portable Prism keeps its instances next to it
+      [join(local, "Programs", "PrismLauncher", "prismlauncher.exe"), ["--launch", id]],
+      [join(homedir(), "scoop", "apps", "prismlauncher", "current", "prismlauncher.exe"), ["--launch", id]],
+    ].filter(([exe]) => existsSync(exe as string)) as [string, string[]][];
   }
-  return { ok: false, message: `Replay name copied, but Prism Launcher wasn't found. Start Ranked yourself, then: ${steps}` };
+  const prism: [string, string[]][] = [["prismlauncher", ["--launch", id]], ["flatpak", ["run", "org.prismlauncher.PrismLauncher", "--launch", id]]];
+  return multimc ? [["multimc", ["-l", id]], ...prism] : prism;
+}
+
+/** Ranked can't open a replay from outside, so copy its name and focus or launch the game */
+async function openInMinecraft(file: string): Promise<{ ok: boolean; message: string }> {
+  // My Replays only lists mcsrranked/replay/ so copy it there if it's somewhere else (temp-replay)
+  const inst = service.state().instance;
+  if (inst) {
+    const mine = join(inst.ranked, "replay");
+    if (dirname(file) !== mine) {
+      const target = join(mine, `match ${basename(file)}`);
+      try { if (!existsSync(target)) copyFileSync(file, target); file = target; } catch { /* Keep the original name */ }
+    }
+  }
+  const name = basename(file).replace(/\.rrf$/, "");
+  clipboard.writeText(name);
+  const steps = "In Ranked: My replays, paste the name into search, Watch.";
+  if (!inst) return { ok: false, message: "No Ranked instance found. Set it in Settings." };
+  const { dir, id, launcherDir } = instanceInfo(inst.root);
+  const game = win ? await findGameWindows(dir) : linux ? findGameLinux(dir) : null;
+  if (game === "focused") return { ok: true, message: `Switched to Minecraft. Replay name copied. ${steps}` };
+  if (game === "running") return { ok: true, message: `Minecraft is already running. Replay name copied. ${steps}` };
+  if (id && launcherDir) {
+    for (const [cmd, args] of launchers(id, launcherDir))
+      if (await tryStart(cmd, args)) return { ok: true, message: `Starting Minecraft. Replay name copied. ${steps}` };
+  }
+  return { ok: false, message: `Replay name copied. Start Ranked yourself, then: ${steps}` };
 }
 
 // Background work (scans, downloads) changes state in bursts so those get batched. User actions go out
@@ -179,8 +230,11 @@ app.whenReady().then(() => {
   service.on("newGame", (g: { id: number | null; title: string; body: string }) => {
     const openIt = () => { showMain(); const w = main!; const send = () => w.webContents.send("open:race", g.id ?? 0); if (w.webContents.isLoading()) w.webContents.once("did-finish-load", send); else send(); };
     if (Notification.isSupported()) {
+      // Held on to until it's gone, a collected notification loses its click handler on Windows
       const n = new Notification({ title: g.title, body: g.body, icon: iconPath(256) });
-      n.on("click", openIt);
+      notes.add(n);
+      n.on("click", () => { notes.delete(n); openIt(); });
+      n.on("close", () => notes.delete(n));
       n.show();
     }
     for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send("new:game", g);
@@ -252,6 +306,12 @@ app.whenReady().then(() => {
   ipcMain.handle("copy", (_e, text: string) => clipboard.writeText(String(text)));
   ipcMain.handle("reveal", (_e, file: string) => { if (ours(file)) shell.showItemInFolder(file); });
   ipcMain.handle("open-dir", (_e, file: string) => (ours(file) ? shell.openPath(dirname(file)) : "not a Stratas file"));
+  ipcMain.handle("pick-instance", async (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    const opts = { title: "Pick your Ranked instance folder", properties: ["openDirectory" as const] };
+    const r = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts);
+    return r.canceled ? null : r.filePaths[0] ?? null;
+  });
   ipcMain.handle("companion", (_e, id: number | null) => openCompanion(id));
   ipcMain.handle("open-mc", (_e, file: string) => (ours(file) && file.endsWith(".rrf") ? openInMinecraft(file) : { ok: false, message: "That isn't a replay Stratas knows about" }));
 
@@ -259,7 +319,10 @@ app.whenReady().then(() => {
   try { service.start(); } catch (e) { console.error("couldn't start the service:", e); }
 
   try {
-    tray = new Tray(nativeImage.createFromPath(iconPath(32)));
+    // Windows draws tray icons at 16px (more on scaled screens), a 32px one gets squashed
+    const icon = nativeImage.createFromPath(iconPath(win ? 16 : 32));
+    if (win) icon.addRepresentation({ scaleFactor: 2, buffer: readFileSync(iconPath(32)) });
+    tray = new Tray(icon);
     tray.setToolTip("Stratas");
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: "Open Stratas", click: () => showMain() },
@@ -271,7 +334,21 @@ app.whenReady().then(() => {
   } catch { tray = null; }
 
   if (!background || !tray) showMain();
+
+  // CI starts the built app with STRATAS_SMOKE=<file> to check it really runs on that OS: the service is up and the page drew
+  const smoke = process.env.STRATAS_SMOKE;
+  if (smoke && main) {
+    const report = (ok: boolean, detail: string) => { writeFileSync(smoke, JSON.stringify({ ok, detail, platform: process.platform, dataDir })); app.exit(ok ? 0 : 1); };
+    setTimeout(() => report(false, "timed out"), 60_000);
+    main.webContents.once("did-finish-load", () => setTimeout(async () => {
+      try {
+        const chars = Number(await main!.webContents.executeJavaScript("document.body.innerText.length"));
+        report(chars > 0, `page has ${chars} characters, ${service.state().races.length} races, instance ${service.state().instance?.root ?? "none"}`);
+      } catch (e) { report(false, String(e)); }
+    }, 3000));
+  }
 });
 
 app.on("window-all-closed", () => { if (!tray) app.quit(); });
+app.on("activate", () => { if (service) showMain(); }); // macOS Dock click
 app.on("before-quit", () => service?.stop());

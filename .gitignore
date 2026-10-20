@@ -3,3 +3,4 @@ dist
 src/ui/dev/snapshot.json
 *.db
 *.db-*
+release

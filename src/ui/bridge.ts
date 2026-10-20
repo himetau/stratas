@@ -35,6 +35,8 @@ export interface Bridge {
   copy(text: string): Promise<void>;
   reveal(file: string): Promise<void>;
   openDir(file: string): Promise<void>;
+  /** Folder picker for an instance the scan didn't find, null if cancelled */
+  pickInstance(): Promise<string | null>;
   companion(id: number | null): Promise<void>;
   openInMinecraft(file: string): Promise<{ ok: boolean; message: string }>;
   theme(): Promise<{ css: string; file: string; found: boolean }>;

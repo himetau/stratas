@@ -24,6 +24,7 @@ const api = {
   copy: (text: string) => ipcRenderer.invoke("copy", text),
   reveal: (file: string) => ipcRenderer.invoke("reveal", file),
   openDir: (file: string) => ipcRenderer.invoke("open-dir", file),
+  pickInstance: () => ipcRenderer.invoke("pick-instance"),
   companion: (id: number | null) => ipcRenderer.invoke("companion", id),
   openInMinecraft: (file: string) => ipcRenderer.invoke("open-mc", file),
   theme: () => ipcRenderer.invoke("theme"),

@@ -13,7 +13,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/MCSR_Ranked-6.0%2B-ffb2ba?style=flat-square&labelColor=1a1112" alt="MCSR Ranked 6.0+">
-  <img src="https://img.shields.io/badge/platform-Linux-efc186?style=flat-square&labelColor=1a1112" alt="Linux">
+  <img src="https://img.shields.io/badge/platform-Windows_%7C_Linux-efc186?style=flat-square&labelColor=1a1112" alt="Windows and Linux">
   <img src="https://img.shields.io/badge/uploads-none-87edcd?style=flat-square&labelColor=1a1112" alt="Nothing uploaded">
   <img src="https://img.shields.io/badge/price-free-87ee86?style=flat-square&labelColor=1a1112" alt="Free">
 </p>
@@ -87,17 +87,35 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
 
 ## Get it running
 
-Linux only for now. You need Node and an MCSR Ranked instance. Prism, MultiMC and Modrinth instances are found automatically.
+You need MCSR Ranked set up in a launcher. Stratas finds Prism, MultiMC, Modrinth, CurseForge and normal Minecraft Launcher instances on its own. If it doesn't find yours, go to Settings → MCSR Ranked → pick folder.
+
+**Windows**
+
+1. Download **[Stratas-Setup.exe](https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe)** and open it. It installs and starts by itself.
+2. If Windows says "Windows protected your PC", click **More info** → **Run anyway**. That shows up for any app that isn't paid to be signed.
+
+**Linux**
+
+1. Download **[Stratas.AppImage](https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage)**.
+2. Right click it → Properties → allow it to run as a program (or `chmod +x Stratas.AppImage`), then open it.
+
+Older versions and what changed are on the [releases page](https://github.com/himetau/stratas/releases).
+
+<details>
+<summary><b>Build it yourself</b></summary>
+
+You need [Git](https://git-scm.com/downloads) and [Node.js](https://nodejs.org) (the LTS one is fine). Then in a terminal:
 
 ```
+git clone https://github.com/himetau/stratas.git
+cd stratas
 npm install
 npm start
 ```
 
-You can also put `bin/stratas` on your path. It rebuilds when the code changes, and `--background` starts it in the tray.
+`git clone` downloads the code into a `stratas` folder. `npm install` downloads everything Stratas is built with (Electron and a few tools) into `node_modules`, you only need it once. `npm start` builds Stratas and opens it.
 
-<details>
-<summary><b>Development</b></summary>
+`npm run dist` makes the installer for your OS in `release/`. On Linux you can also put `bin/stratas` on your path, it rebuilds when the code changes and `--background` starts it in the tray.
 
 ```
 npm test

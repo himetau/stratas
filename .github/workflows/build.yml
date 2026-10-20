@@ -1,0 +1,63 @@
+# Tests and starts the app on Linux and Windows on every push. A v* tag also builds the downloads and puts them on a release
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Package
+        run: npx electron-builder --publish never ${{ startsWith(github.ref, 'refs/tags/v') && '' || '--dir' }}
+
+      - name: Start the built app
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then app=release/win-unpacked/Stratas.exe; run=""; else app=release/linux-unpacked/stratas; run="xvfb-run -a"; fi
+          STRATAS_SMOKE="$PWD/smoke.json" timeout 120 $run "$app" || true
+          cat smoke.json
+          node -e 'process.exit(JSON.parse(require("fs").readFileSync("smoke.json","utf8")).ok ? 0 : 1)'
+
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.AppImage
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+      - name: Make the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Stratas ${GITHUB_REF_NAME#v}" --generate-notes *.exe *.AppImage
