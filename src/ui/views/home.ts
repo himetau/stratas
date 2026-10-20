@@ -5,6 +5,7 @@ import { deltaClass, fmtDelta, fmtMs, h, nice } from "../dom";
 import { btn, copyField, head, panel, rank, tierName } from "../parts";
 import { roomRules } from "./find";
 import { day, seedText } from "./races";
+import { isWeb, pickReplays } from "../web";
 
 let picked: number | null = null;
 const revealed = new Set<number>();
@@ -81,7 +82,8 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
         h("div", { class: "dim" }, q.tier === "manual" ? "Picked from your own range" : tierName(s.tiers, q.tier) ? `${tierName(s.tiers, q.tier)} pick` : "")),
       h("div", { class: "hero-side" },
         ready ? h("div", { class: "good" }, "Ready to play")
-          : [h("div", null, "Download the replay in Ranked"), h("div", { class: "dim" }, `Search Profile, ${q.player_name}, Recent Matches, Download Replay`)],
+          : [h("div", null, "Download the replay in Ranked"), h("div", { class: "dim" }, `Search Profile, ${q.player_name}, Recent Matches, Download Replay`),
+            isWeb ? btn("Add the replay here", pickReplays, { sm: true }) : null],
         btn("Skip", () => g.queueStatus(q.match_id, "skipped"), { ghost: true, sm: true }))),
     panel(null, null,
       h("div", { class: "p-head" }, h("h2", null, "Their run")),

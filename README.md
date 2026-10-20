@@ -87,6 +87,8 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
 
 ## Get it running
 
+Want to try it first? **[Stratas runs in your browser too](https://himetau.github.io/stratas/app/)**: your profile and splits, Find runs, and full races from replays you add yourself. The app has all the features and does everything on its own, the browser version is just a taste.
+
 You need MCSR Ranked set up in a launcher. Stratas finds Prism, MultiMC, Modrinth, CurseForge and normal Minecraft Launcher instances on its own. If it doesn't find yours, go to Settings → MCSR Ranked → pick folder.
 
 **Windows**

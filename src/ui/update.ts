@@ -2,6 +2,7 @@
 import { g, type UpdateState } from "./bridge";
 import { h } from "./dom";
 import { icons } from "./icons";
+import { isWeb } from "./web";
 
 export let update: UpdateState | null = null;
 
@@ -24,7 +25,7 @@ export function updateRailBtn() {
 /** Settings row: what you're on, and check or update */
 export function updateSetting(btn: (label: string, fn: () => void) => HTMLElement): { control: HTMLElement; hint: string } {
   const u = update;
-  if (!u || u.status === "off") return { control: h("span", { class: "dim" }, u ? `version ${u.current}` : ""), hint: "running from the code, update with git pull" };
+  if (!u || u.status === "off") return { control: h("span", { class: "dim" }, u ? `version ${u.current}` : ""), hint: isWeb ? "the browser version is always the newest" : "running from the code, update with git pull" };
   const control = u.status === "available" ? btn(`update to ${u.version}`, () => void g.updateInstall())
     : u.status === "downloading" ? h("span", { class: "dim" }, `downloading ${pct(u)}`)
     : u.status === "ready" ? h("span", { class: "dim" }, "restarting")
