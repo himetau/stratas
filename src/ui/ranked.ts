@@ -6,7 +6,7 @@ const TILE: Record<string, [number, number]> = {
   village: [0, 0], buried_treasure: [0, 1], shipwreck: [0, 2], desert_temple: [0, 3],
   ruined_portal: [1, 0], jungle_temple: [1, 1], nether: [2, 1], bastion: [2, 2], fortress: [2, 3],
   portal: [3, 0], stronghold: [3, 1], end: [3, 2], dragon: [3, 3],
-  bridge: [4, 0], housing: [4, 1], stables: [4, 2], treasure: [4, 3],
+  bridge: [4, 3], housing: [4, 1], stables: [4, 2], treasure: [4, 0],
 };
 
 let sheet: HTMLImageElement | null = null;
