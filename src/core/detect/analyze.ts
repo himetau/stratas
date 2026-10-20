@@ -59,6 +59,8 @@ export interface RaceAnalysis {
   end?: { you: DragonFight | null; them: DragonFight | null };
   /** Only when opts.debugClaims is set */
   claims?: Claim[];
+  /** Built from Ranked's API splits because the replays aren't here (yet). Only splits and phase times, no curve or reasons */
+  quick?: { yourMatch: number; theirMatch: number; ironPick: boolean };
 }
 
 export interface RunStats {
@@ -117,10 +119,10 @@ export interface PhaseReport {
   steps: { you: Step[]; them: Step[] };
 }
 
-const PHASE_ORDER = ["Overworld", "Nether travel", "Fortress", "Bastion", "Bastion to fortress", "Fortress to stronghold", "Bastion to blind", "After the bastion", "Stronghold", "End"];
+export const PHASE_ORDER = ["Overworld", "Nether travel", "Fortress", "Bastion", "Bastion to fortress", "Fortress to stronghold", "Bastion to blind", "After the bastion", "Stronghold", "End"];
 
 /** Each phase's time span for one runner */
-function phaseSpans(r: Run): Map<string, [number, number][]> {
+export function phaseSpans(r: Run): Map<string, [number, number][]> {
   const out = new Map<string, [number, number][]>();
   const push = (name: string, a: number, b: number) => { if (b > a) out.set(name, [...(out.get(name) ?? []), [a, b]]); };
   push("Overworld", 0, r.marks[0]?.t ?? r.end);
@@ -128,7 +130,7 @@ function phaseSpans(r: Run): Map<string, [number, number][]> {
   return out;
 }
 
-function phaseChanges(you: Run, them: Run, finalGap: number) {
+export function phaseChanges(you: Run, them: Run, finalGap: number) {
   const out: { name: string; change: number }[] = [];
   let prevGap = 0, phase = "Overworld";
   you.marks.forEach((m, i) => {

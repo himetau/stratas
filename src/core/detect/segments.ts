@@ -52,7 +52,10 @@ function segmentNaming(prevSplit: string, curSplit: string): { label: string; sh
   if (curSplit === "Entered Fortress") {
     return prevSplit === "Left the Bastion"
       ? { label: "Bastion to fortress", short: "To fort", fallbackPhase: "Bastion to fortress" }
-      : { label: "To fortress", short: "To fort", fallbackPhase: "Nether travel" };
+      // No "Left the Bastion" in races from Ranked's splits alone, the bastion runs till the fortress
+      : prevSplit === "Entered Bastion"
+        ? { label: "Bastion", short: "Bastion", fallbackPhase: "Bastion" }
+        : { label: "To fortress", short: "To fort", fallbackPhase: "Nether travel" };
   }
   // Fortress then blind, whichever of 6 rods or blind travel comes first
   if (/Blaze Rods/i.test(curSplit)) {
@@ -65,7 +68,9 @@ function segmentNaming(prevSplit: string, curSplit: string): { label: string; sh
       ? { label: "Fortress to blind", short: "Fortress", fallbackPhase: "Fortress to stronghold" }
       : prevSplit === "Left the Bastion"
         ? { label: "Bastion to blind", short: "Blind", fallbackPhase: "Bastion to blind" }
-        : { label: "Out of the fortress", short: "Blind", fallbackPhase: "Fortress to stronghold" };
+        : prevSplit === "Entered Bastion"
+          ? { label: "Bastion", short: "Bastion", fallbackPhase: "Bastion" }
+          : { label: "Out of the fortress", short: "Blind", fallbackPhase: "Fortress to stronghold" };
   }
   if (curSplit === "Eye Spy") return { label: "Blind to stronghold", short: "To stronghold", fallbackPhase: "Fortress to stronghold" };
   if (curSplit === "Entered the End") return { label: "Stronghold", short: "Stronghold", fallbackPhase: "Stronghold" };
@@ -93,8 +98,9 @@ function resolveReportPhase(a: RaceAnalysis, you0: number, you1: number, fallbac
     }
   }
   if (bestPhase) return bestPhase;
+  // Nothing matches (like the bit after your last split in a race from Ranked's splits), it keeps its own name
   const exact = reports.find((r) => r.phase.toLowerCase() === fallback.toLowerCase());
-  return exact ? exact.phase : reports[0]?.phase ?? null;
+  return exact ? exact.phase : null;
 }
 
 export function buildDeltaModel(a: RaceAnalysis): {

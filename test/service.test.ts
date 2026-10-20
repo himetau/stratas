@@ -28,7 +28,7 @@ describe("service: the whole loop on a fake Ranked folder", () => {
   svc.store.set("settings", { nickname: "cyoshi", uuid: ME, instancePath: root });
   afterAll(() => { svc.stop(); rmSync(root, { recursive: true, force: true }); });
 
-  it("downloaded run -> seeds -> your private-room run -> race file + analysis", () => {
+  it("downloaded run -> seeds -> your private-room run -> quick splits -> race file + analysis", async () => {
     svc.start();
     svc.store.enqueue({ match_id: 14182329, player_uuid: CHAV, player_name: "Chavron", opponent_name: "cyoshi", date: Math.floor(Date.now() / 1000),
       time: 785002, seed_type: "VILLAGE", bastion_type: "STABLES", elo: 1390, tier: "next", reason: "test" });
@@ -41,9 +41,30 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(q.overworld_seed).toBe("-3566570342730286256");
     expect(q.nether_seed).toBe("198406064683359");
 
-    // 2. Play the seed solo in a private room, Ranked saves your replay
+    // 2. Copy the seed and play it solo in a private room. Ranked's API has the splits right away
+    svc.practicing(14182329);
+    const notes: { id: number | null; title: string; body: string }[] = [];
+    svc.on("newGame", (n) => notes.push(n));
+    const splits = (uuid: string, ms: [string, number][]) => ms.map(([type, time]) => ({ uuid, type, time }));
+    const now = Math.floor(Date.now() / 1000);
+    const detail = (id: number, uuid: string, name: string, time: number, timelines: { uuid: string; type: string; time: number }[]) => ({
+      id, type: id === 14182329 ? 2 : 3, date: now + 5, seed: null, seedType: null, bastionType: null, players: [{ uuid, nickname: name, eloRate: null, eloRank: null }],
+      result: { uuid, time }, forfeited: false, timelines, completions: [{ uuid, time }], changes: [] });
+    svc.store.putMatchDetail(detail(99999999, ME, "cyoshi", 950000, splits(ME, [["story.enter_the_nether", 120000], ["story.iron_tools", 60000], ["nether.find_bastion", 170000], ["projectelo.timeline.dragon_death", 950000]])) as never);
+    svc.store.putMatchDetail(detail(14182329, CHAV, "Chavron", 785002, splits(CHAV, [["story.enter_the_nether", 100000], ["nether.find_bastion", 140000], ["projectelo.timeline.dragon_death", 785002]])) as never);
+    svc.store.set("myPrivate", [{ id: 99999999, type: 3, date: now + 5, seedType: null, bastionType: null, players: [{ uuid: ME, nickname: "cyoshi" }], result: { uuid: ME, time: 950000 }, forfeited: false }]);
+    await (svc as unknown as { quickRaces(): Promise<void> }).quickRaces();
+    const quick = svc.state().races.find((r) => r.quick)!;
+    expect(quick.theirName).toBe("Chavron");
+    expect(quick.finalGap).toBeCloseTo((950000 - 785002) / 1000, 1);
+    expect(svc.race(quick.id)!.analysis!.splits.map((s) => s.name)).toEqual(["Entered the Nether", "Entered Bastion", "Defeated the Dragon"]);
+    expect(svc.store.queueRow(14182329)!.status).toBe("raced");
+    expect(notes.map((n) => n.title)).toEqual(["vs Chavron · splits"]);
+
+    // 3. Ranked saves your replay, the full race replaces the quick one
     writeFileSync(join(mc, "mcsrranked", "temp-replay", "99999999.rrf"), solo(ME, { matchId: 99999999, matchType: 3 }));
     svc.rescanLibrary();
+    expect(svc.state().races.some((r) => r.quick)).toBe(false);
 
     const st = svc.state();
     const race = st.races.find((r) => r.kind === "race")!;

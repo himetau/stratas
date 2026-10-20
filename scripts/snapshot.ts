@@ -61,12 +61,34 @@ writeFileSync(join(mc, "mcsrranked/temp-replay/14182329.rrf"), CHAVRON);
 copyFileSync("test/fixtures/corpus/14232012.rrf", join(mc, "mcsrranked/temp-replay/14232012.rrf"));
 copyFileSync("test/fixtures/corpus/14234287.rrf", join(mc, "mcsrranked/temp-replay/14234287.rrf"));
 svc.rescanLibrary();
-const state = svc.state();
-state.you = { elo: 1288, rank: 2538, checkedAt: Date.now() };
-state.tiers = { next: [1400, 1550], stretch: [1700, 2000], ceiling: [2100, 4000] }; // tierBands(1288) with no shift
-state.index = { matches: 1834, scanning: false, error: null, apiLeft: 401 };
-const races = Object.fromEntries(state.races.map((r) => [r.id, svc.race(r.id)]));
+
+// Two private room runs with only Ranked's splits: one still waiting for its replay, one reset before an iron pickaxe
+const split = (uuid: string, ms: [string, number][]) => ms.map(([type, time]) => ({ uuid, type, time }));
+const detail = (id: number, uuid: string, name: string, time: number, done: boolean, timelines: { uuid: string; type: string; time: number }[]) => ({
+  id, type: id > 99000000 ? 3 : 2, date: now, seed: null, seedType: null, bastionType: null, players: [{ uuid, nickname: name, eloRate: null, eloRank: null }],
+  result: { uuid: done ? uuid : null, time }, forfeited: !done, timelines, completions: done ? [{ uuid, time }] : [], changes: [] });
+const quick = async (yours: number, theirs: number, name: string, mine: [string, number][], time: number, done: boolean, them: [string, number][]) => {
+  svc.practicing(theirs);
+  svc.store.putMatchDetail(detail(yours, ME, "cyoshi", time, done, split(ME, mine)) as never);
+  svc.store.putMatchDetail(detail(theirs, `uuid-${theirs}`, name, them.at(-1)![1], true, split(`uuid-${theirs}`, them)) as never);
+  svc.store.set("myPrivate", [{ id: yours, type: 3, date: now + 60, seedType: null, bastionType: null, players: [{ uuid: ME, nickname: "cyoshi" }], result: { uuid: done ? ME : null, time }, forfeited: !done }]);
+  await (svc as unknown as { quickRaces(): Promise<void> }).quickRaces();
+};
+
 void (async () => {
+  await quick(99999990, 14214980, "Liqhtman",
+    [["story.iron_tools", 52000], ["story.enter_the_nether", 131000], ["nether.find_bastion", 171000], ["nether.find_fortress", 402000], ["projectelo.timeline.blind_travel", 468000], ["story.follow_ender_eye", 585000], ["story.enter_the_end", 641000], ["projectelo.timeline.dragon_death", 731000]], 731000, true,
+    [["story.enter_the_nether", 98000], ["nether.find_bastion", 129000], ["nether.find_fortress", 318000], ["projectelo.timeline.blind_travel", 377000], ["story.follow_ender_eye", 489000], ["story.enter_the_end", 530000], ["projectelo.timeline.dragon_death", 612000]]);
+  await quick(99999991, 14215217, "Captain_Ammy",
+    [["story.enter_the_nether", 151000], ["nether.find_bastion", 196000]], 288000, false,
+    [["story.enter_the_nether", 112000], ["nether.find_bastion", 150000], ["nether.find_fortress", 352000], ["projectelo.timeline.blind_travel", 420000], ["projectelo.timeline.dragon_death", 690000]]);
+  // Back in the queue so the Practice page still has something to show
+  for (const id of [14214980, 14215217]) svc.store.setQueue(id, { status: "queued" });
+  const state = svc.state();
+  state.you = { elo: 1288, rank: 2538, checkedAt: Date.now() };
+  state.tiers = { next: [1400, 1550], stretch: [1700, 2000], ceiling: [2100, 4000] }; // tierBands(1288) with no shift
+  state.index = { matches: 1834, scanning: false, error: null, apiLeft: 401 };
+  const races = Object.fromEntries(state.races.map((r) => [r.id, svc.race(r.id)]));
   const profile = await svc.profile();
   profile.offline = false;
   const matchDetails = Object.fromEntries(detailsFixture.map((d) => [d.id, d]));

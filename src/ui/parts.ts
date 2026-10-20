@@ -29,8 +29,8 @@ export async function openInMinecraft(file: string) {
   toast(r.message, 6000);
 }
 
-export function copyField(k: string, v: string, key?: string) {
-  return h("div", { class: "field" }, h("span", { class: "k" }, k), h("span", { class: "v" }, v), btn("Copy", () => copy(v, k), { sm: true, key }));
+export function copyField(k: string, v: string, key?: string, onCopy?: () => void) {
+  return h("div", { class: "field" }, h("span", { class: "k" }, k), h("span", { class: "v" }, v), btn("Copy", () => { copy(v, k); onCopy?.(); }, { sm: true, key }));
 }
 
 // ---- page shortcuts, rebound every render so only what's on screen responds

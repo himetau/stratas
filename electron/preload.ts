@@ -7,6 +7,7 @@ const api = {
   pick: (opts: unknown) => ipcRenderer.invoke("pick", opts),
   enqueue: (picks: unknown) => ipcRenderer.invoke("enqueue", picks),
   queueStatus: (id: number, status: string) => ipcRenderer.invoke("queue:status", id, status),
+  practicing: (id: number) => ipcRenderer.invoke("practicing", id),
   race: (id: number) => ipcRenderer.invoke("race", id),
   deleteRace: (id: number) => ipcRenderer.invoke("race:delete", id),
   reanalyze: () => ipcRenderer.invoke("reanalyze"),

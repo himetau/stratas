@@ -51,7 +51,7 @@ export function raceList(s: AppState, openId: number | null, open: (id: number) 
     head({ name: r.theirName }, 24),
     h("span", { class: "t" }, `vs ${r.theirName}`),
     h("span", { class: `v ${r.error ? "dim" : deltaClass(r.finalGap)}` }, r.error ? "failed" : fmtDelta(r.finalGap)),
-    h("span", { class: "s" }, [seedText(r.seedType), day(r.createdAt)].filter(Boolean).join(", ")));
+    h("span", { class: "s" }, [r.quick ? "splits only" : null, seedText(r.seedType), day(r.createdAt)].filter(Boolean).join(", ")));
   const waiting = (s.myGames ?? []).filter((x) => x.raceId === null && !x.private).length;
   return h("aside", { class: "list" },
     h("div", { class: "list-head" }, h("h2", null, "Games"),
