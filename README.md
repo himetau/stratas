@@ -22,9 +22,9 @@
 
 ## Why Stratas?
 
-In ranked you only ever play people around your own Elo. Stratas lets you practice against someone **way better**, on the **same seed**, whenever you want.
+In ranked you only ever play people around your own Elo. Stratas lets you practice against **any Elo you want**, on the **same seed**, whenever you want.
 
-It finds a run from a player above your Elo. You play that seed in a private room. Then Stratas **mixes both replays into one file**, so you open it in Ranked's own replay viewer and you're both in the same world at the same time. No Elo on the line, no pressure, as many tries as you like.
+It finds a run from a player at the Elo you pick. You play that seed in a private room. Then Stratas **mixes both replays into one file**, so you open it in Ranked's own replay viewer and you're both in the same world at the same time. No Elo on the line, no pressure, as many tries as you like.
 
 <table>
   <tr>
@@ -37,7 +37,7 @@ It finds a run from a player above your Elo. You play that seed in a private roo
 
 ## What does it do?
 
-**It analyses every match you play, from the first log to the dragon.** Every private room practice, and every ranked game once you download its replay.
+**It analyses the match from every step you do.** Every private room practice, and every ranked game once you download its replay.
 
 <p align="center"><img src="docs/readme/splits.png" width="100%" alt="The splits overview in Stratas: every split against Frieren, and where the time went in the stronghold"></p>
 
@@ -60,18 +60,11 @@ It finds a run from a player above your Elo. You play that seed in a private roo
 
 ## Why it's different
 
-|  | watching a VOD | a replay on its own | split trackers | **Stratas** |
-|---|:---:|:---:|:---:|:---:|
-| you and a better player in the same world | — | — | — | **✓** |
-| same seed, opponent picked by Elo | — | — | — | **✓** |
-| where every second went | you guess | you guess | per split | **✓ with the reason** |
-| trades, crafts, pearls, rods, eyes | — | — | — | **✓** |
-| habits across many games | — | — | — | **✓** |
-| jump to the moment in the replay | — | — | — | **✓** |
-
-- **It reads Ranked's own replays.** No extra mod, no recording, nothing to set up in game.
-- **Nothing leaves your computer.** It only reads Ranked's files and adds the mixed replays to My replays.
-- **Made by a runner, for runners.** Every number is something you can actually go and fix.
+- Ranked only lets you watch the people from your own match. Stratas puts **anyone's run on the same seed** into your replay, at whatever Elo you pick, so you can see exactly where you lost or gained time.
+- It doesn't just tell you that you lost 40 seconds in the bastion, it tells you **why**, like 7 piglins being stuck on gold.
+- After a few games it picks up on **the stuff that keeps losing you time**.
+- There's no mod and nothing to record. It just uses the replays Ranked already saves.
+- Everything stays on your computer. It reads Ranked's files and adds the mixed replays to My replays, that's it.
 
 <br>
 
