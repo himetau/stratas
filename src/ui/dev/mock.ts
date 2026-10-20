@@ -8,7 +8,8 @@ type Snap = {
 };
 
 export async function installMock() {
-  const snap = (await import("./snapshot.json")).default as unknown as Snap;
+  // Fetched rather than imported so the type check works without a snapshot (it isn't in git)
+  const snap = (await fetch(new URL("./snapshot.json", import.meta.url)).then((r) => r.json())) as Snap;
   const listeners: ((s: unknown) => void)[] = [];
   // Dev server reads these from your Ranked instance (vite.config.ts)
   const ranked: Promise<{ icons: Record<string, string>; background: string | null; structures: string | null }> = fetch("/__dev/ranked").then((r) => r.json()).catch(() => ({ icons: {}, background: null, structures: null }));
