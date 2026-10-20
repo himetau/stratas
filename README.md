@@ -69,7 +69,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
 
 <br>
 
-## A look inside
+## Previews
 
 <table>
   <tr>
@@ -82,7 +82,7 @@ It finds a run from a player at the Elo you pick. You play that seed in a privat
   </tr>
 </table>
 
-**Make it yours:** theme presets, your own colours, old Ranked menu backgrounds, rain, snow, embers or stars, and you pick exactly what shows on the graph and in the splits.
+**Configurable settings:** theme presets, your own colours, old Ranked menu backgrounds, rain, snow, embers or stars, and you pick exactly what shows on the graph and in the splits.
 
 <br>
 
