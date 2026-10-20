@@ -9,8 +9,9 @@ import { skinPng } from "./src/core/skins";
 function devAssets(): Plugin {
   const modJar = () => {
     try {
-      const snap = JSON.parse(readFileSync("src/ui/dev/snapshot.json", "utf8")) as { state: { instances?: string[]; instance?: { modJar?: string } } };
-      for (const inst of [...(snap.state.instances ?? []), snap.state.instance?.modJar ? join(snap.state.instance.modJar, "../..") : ""]) {
+      const snap = JSON.parse(readFileSync("src/ui/dev/snapshot.json", "utf8")) as { state: { instances?: (string | { path: string })[]; instance?: { modJar?: string } } };
+      const paths = (snap.state.instances ?? []).map((i) => (typeof i === "string" ? i : i.path));
+      for (const inst of [...paths, snap.state.instance?.modJar ? join(snap.state.instance.modJar, "../..") : ""]) {
         if (!inst) continue;
         try { const jar = readdirSync(join(inst, "mods")).find((f) => /^mcsrranked-.*\.jar$/.test(f)); if (jar) return join(inst, "mods", jar); } catch { /* next */ }
       }

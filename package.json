@@ -5,6 +5,7 @@
   "description": "Mix your MCSR Ranked private room replays with a player at any Elo you pick, then watch them side by side.",
   "type": "module",
   "main": "dist/electron/main.cjs",
+  "desktopName": "stratas.desktop",
   "scripts": {
     "build:main": "node scripts/build-main.mjs",
     "build:ui": "vite build",
@@ -15,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "cli": "node scripts/build-main.mjs && node dist/cli.cjs",
     "snapshot": "esbuild scripts/snapshot.ts --bundle --platform=node --format=cjs --loader:.json=json --outfile=dist/snapshot.cjs --log-level=warning && node dist/snapshot.cjs",
-    "ui:dev": "vite"
+    "ui:dev": "vite",
+    "dist": "npm run build && electron-builder --publish never"
   },
   "dependencies": {
     "fflate": "^0.8.3"
@@ -23,9 +25,70 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "electron": "^44.8.0",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vitest": "^5.0.5"
+  },
+  "author": "cyoshi",
+  "homepage": "https://github.com/himetau/stratas",
+  "build": {
+    "appId": "com.cyoshi.stratas",
+    "productName": "Stratas",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "package.json",
+      "dist/electron/*.cjs",
+      "dist/ui/**",
+      "packaging/icon-*.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "packaging/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Stratas",
+      "artifactName": "Stratas-Setup.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "packaging/icon-512.png",
+      "category": "Game",
+      "executableName": "stratas",
+      "artifactName": "Stratas.${ext}",
+      "desktop": {
+        "entry": {
+          "Name": "Stratas",
+          "Comment": "Replay mixer and analysis for MCSR Ranked",
+          "StartupWMClass": "stratas"
+        }
+      },
+      "syncDesktopName": true
+    }
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "electron-winstaller": false
   }
 }

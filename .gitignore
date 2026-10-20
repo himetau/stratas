@@ -4,3 +4,4 @@ src/ui/dev/snapshot.json
 *.db
 *.db-*
 .claude
+release

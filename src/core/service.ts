@@ -14,7 +14,7 @@ import { Store, type QueueRow, type RaceRow, type RunKind, type RunRow } from ".
 import { Api, type ApiMatch } from "./seeds/api";
 import { Scanner } from "./seeds/scanner";
 import { adaptTiers, pickRuns, tierBands, type Pick, type PickOptions, type Tier, type TierShift } from "./seeds/picker";
-import { findInstances, inspectInstance, myReplaysDir, replayDirs, type Instance } from "./ingest/paths";
+import { findInstances, inspectInstance, instanceName, myReplaysDir, replayDirs, type Instance } from "./ingest/paths";
 import { fetchProfile, loadCachedProfileRaw } from "./profile/fetch";
 import { buildProfileInsights } from "./profile/insights";
 import { analyzeReplayTrends } from "./profile/replays";
@@ -52,7 +52,7 @@ export interface RaceSummary {
 export interface AppState {
   settings: Settings;
   instance: Instance | null;
-  instances: string[];
+  instances: { path: string; name: string }[];
   gate: GateState;
   you: { elo: number | null; rank: number | null; checkedAt: number | null };
   index: { matches: number; scanning: boolean; error: string | null; apiLeft: number };
@@ -486,7 +486,7 @@ export class Service extends EventEmitter {
   pairRuns(force = false) {
     const me = this.settings().uuid;
     if (!me || !this.instance) return;
-    const rank = (f: string) => (f.startsWith(this.poolDir) ? 2 : f.includes("/temp-replay/") ? 1 : 0);
+    const rank = (f: string) => (f.startsWith(this.poolDir) ? 2 : basename(dirname(f)) === "temp-replay" ? 1 : 0);
     const dedupByMatch = (rows: RunRow[]) => {
       const sorted = [...rows].sort((a, b) => rank(b.file) - rank(a.file));
       const seen = new Set<string | number>();
@@ -686,7 +686,7 @@ export class Service extends EventEmitter {
     return {
       settings: this.settings(),
       instance: this.instance,
-      instances: findInstances().map((i) => i.root),
+      instances: findInstances().map((i) => ({ path: i.root, name: instanceName(i.root) })),
       gate: this.gate(),
       you: this.you,
       index: { matches: this.store.matchCount(), scanning: this.scanner.busy, error: this.scanner.lastError, apiLeft: this.api.remaining() },

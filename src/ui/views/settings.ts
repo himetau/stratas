@@ -222,8 +222,11 @@ export function settingsView(s: AppState, rerender: () => void) {
     group("MCSR Ranked", [
       row("Instance", h("select", { class: "sx-in", "aria-label": "Ranked instance", onchange: (e: Event) => g.settings({ instancePath: (e.target as HTMLSelectElement).value || null }) },
         h("option", { value: "", selected: !st.instancePath }, "detect"),
-        s.instances.map((i) => h("option", { value: i, selected: st.instancePath === i }, i.replace(/^.*instances\//, "").replace(/\/minecraft$/, "")))),
+        s.instances.map((i) => h("option", { value: i.path, selected: st.instancePath === i.path }, i.name)),
+        st.instancePath && !s.instances.some((i) => i.path === st.instancePath) ? h("option", { value: st.instancePath, selected: true }, st.instancePath) : null),
         { hint: s.instance ? undefined : "not found" }),
+      row("Somewhere else?", btn("pick folder", async () => { const dir = await g.pickInstance(); if (dir) { await g.settings({ instancePath: dir }); toast("Instance set"); } }),
+        { hint: "the instance folder, if it isn't in the list" }),
       row("Replay format", gate.status === "ok" ? dot("good", "ok") : gate.status === "failed" ? dot("bad", "changed") : dot("warn", "unchecked"), { hint: `MCSR Ranked ${gate.version ?? "?"}` }),
       row("Mix replays on their own", tog(st.autoRace, (v) => g.settings({ autoRace: v }), "Mix replays on their own"), { hint: "when a replay shows up" }),
     ]),
