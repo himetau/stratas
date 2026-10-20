@@ -607,7 +607,7 @@ export class Service extends EventEmitter {
     const base = { key, your_file: run.file, your_uuid: me, their_file: ref.file, their_uuid: them.uuid, their_name: them.nickname,
       their_elo: them.eloRate, tier, created_at: Date.now(), seed_type: this.seedTypeOf(ref) };
     if (this.gate().status === "failed") {
-      this.store.putRace({ ...base, race_file: null, final_gap: 0, analysis: "{}", error: "Ranked's replay format changed in this version; Stratas won't write race files until it's updated" });
+      this.store.putRace({ ...base, race_file: null, final_gap: 0, analysis: "{}", error: "Ranked's replay format changed in this version; Stratas won't write mixed replays until it's updated" });
       return;
     }
     try {
@@ -624,12 +624,12 @@ export class Service extends EventEmitter {
       this.indexFile(out);
       this.setGate("ok", "Replays from this version decode completely");
       this.store.putRace({ ...base, race_file: out, final_gap: analysis.finalGap, analysis: JSON.stringify(analysis), error: null });
-      this.log(`Race ready: ${name.replace(/\.rrf$/, "")} (${fmtDur(analysis.finalGap)} ${analysis.finalGap >= 0 ? "behind" : "ahead"})`);
+      this.log(`Game ready: ${name.replace(/\.rrf$/, "")} (${fmtDur(analysis.finalGap)} ${analysis.finalGap >= 0 ? "behind" : "ahead"})`);
     } catch (e) {
       const msg = (e as Error).message;
       if (e instanceof ReplayError && run.mtime > (this.instance?.modTime ?? 0)) this.setGate("failed", msg);
       this.store.putRace({ ...base, race_file: null, final_gap: 0, analysis: "{}", error: msg });
-      this.log(`Couldn't build race vs ${them.nickname}: ${msg}`);
+      this.log(`Couldn't build the mixed replay vs ${them.nickname}: ${msg}`);
     }
     this.changed();
   }

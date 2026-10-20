@@ -62,7 +62,7 @@ function render() {
   const view = route.page === "home" ? homeView(s, { find: () => go({ page: "find" }), race: openRace, redraw: render })
     : route.page === "find" ? findView(s, render)
     : route.page === "races" || route.page === "race" ? (raceId !== null ? raceView(raceId, render, s.you.elo)
-      : h("div", { class: "page" }, h("div", { class: "empty" }, "No races yet. Queue a run on Practice, then play it in a private room.")))
+      : h("div", { class: "page" }, h("div", { class: "empty" }, "No games yet. Queue a run on Practice, then play it in a private room.")))
     : route.page === "patterns" ? patternsView(s, openRace)
     : route.page === "profile" ? profileView(s, openRace, render)
     : settingsView(s, render);
@@ -86,7 +86,7 @@ function render() {
       h("img", { class: "logo", src: logo, alt: "Stratas", title: "Stratas" }),
       navBtn("home", "Practice", icons.next, waiting),
       navBtn("find", "Find runs", icons.find),
-      navBtn("races", "Races", icons.races),
+      navBtn("races", "Games", icons.races),
       navBtn("patterns", "Patterns", icons.patterns),
       navBtn("profile", "Profile", icons.profile),
       h("div", { class: "spacer" }),

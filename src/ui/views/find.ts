@@ -27,9 +27,9 @@ const plus = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 /** Your races vs a level and the average gap */
 function record(s: AppState, tier: string) {
   const rs = s.races.filter((r) => r.tier === tier && !r.error);
-  if (!rs.length) return h("span", { class: "dim" }, "no races yet");
+  if (!rs.length) return h("span", { class: "dim" }, "no games yet");
   const avg = rs.reduce((n, r) => n + r.finalGap, 0) / rs.length;
-  return h("span", null, `${rs.length} race${rs.length === 1 ? "" : "s"} · avg `, h("span", { class: deltaClass(avg) }, fmtDelta(avg)));
+  return h("span", null, `${rs.length} game${rs.length === 1 ? "" : "s"} · avg `, h("span", { class: deltaClass(avg) }, fmtDelta(avg)));
 }
 
 // Picked row pops once, background redraws don't replay it
@@ -166,7 +166,7 @@ export function findView(s: AppState, rerender: () => void) {
 
 function results(s: AppState, rerender: () => void, queue: () => void) {
   return panel(null, null,
-    h("div", { class: "p-head" }, h("h2", null, picks.length ? "Runs to race" : "No runs found"),
+    h("div", { class: "p-head" }, h("h2", null, picks.length ? "Runs to practice" : "No runs found"),
       picks.length ? h("span", { class: "dim" }, `${chosen.size} of ${picks.length} picked`) : null),
     picks.length ? h("table", { class: "plain picks" },
       h("tr", null, h("th"), h("th", null, "Player"), h("th", null, "Elo"), h("th", null, "Level"), h("th", null, "Seed"), h("th", null, "Played"), h("th", { class: "grow" }, "Time")),

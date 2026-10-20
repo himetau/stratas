@@ -21,7 +21,7 @@ const brief = (text: string) => text.split(", ").slice(0, 2).join(", ");
 /** Recent races as small bars, up/pink = finished behind, down/green = ahead */
 function recentBars(i: Insights, open: (id: number) => void) {
   const max = Math.max(60, ...i.recent.map((r) => Math.abs(r.gap)));
-  return h("div", { class: "pt-recent", title: "Your recent races, oldest first" },
+  return h("div", { class: "pt-recent", title: "Your recent games, oldest first" },
     i.recent.map((r) => h("button", { class: "pt-rbar", title: `vs ${r.name}: ${fmtDelta(r.gap)}`, onclick: () => open(r.id) },
       h("i", { class: r.gap > 0 ? "up" : "down", style: `height:${Math.max(2, Math.round((Math.abs(r.gap) / max) * 18))}px` }))));
 }
@@ -41,7 +41,7 @@ function usualRun(i: Insights) {
         h("div", { class: "pt-note-body" }, good
           ? `Your strongest phase: usually ${fmtDur(-x.usual)} quicker, ${clockSec(x.you)} against their ${clockSec(x.them)}.`
           : habit ? `${habit.title}: ${brief(habit.example.text)}.` : `You usually take ${clockSec(x.you)} here, they take ${clockSec(x.them)}.`),
-        h("div", { class: "pt-note-foot dim" }, good ? `quicker in ${x.races - x.lostIn} of ${x.races} races` : `slower in ${x.lostIn} of ${x.races} races`));
+        h("div", { class: "pt-note-foot dim" }, good ? `quicker in ${x.races - x.lostIn} of ${x.races} games` : `slower in ${x.lostIn} of ${x.races} games`));
     });
   })();
   return panel(null, null,
@@ -55,13 +55,13 @@ function usualRun(i: Insights) {
 /** A card per habit */
 function habitCards(i: Insights, open: (id: number) => void) {
   if (!i.habits.length) return panel(null, null, h("div", { class: "p-head" }, h("h2", null, "Habits")),
-    h("p", { class: "dim", style: "margin:0" }, i.races < 3 ? "A few more races and the things that keep costing you time show up here." : "Nothing keeps costing you time right now."));
+    h("p", { class: "dim", style: "margin:0" }, i.races < 3 ? "A few more games and the things that keep costing you time show up here." : "Nothing keeps costing you time right now."));
   const card = (hb: Insights["habits"][number]) => h("div", { class: "pt-card" },
     h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, structIcon(phaseIconKey(hb.phase, null)), hb.phase),
       hb.trend ? h("span", { class: `pt-trend ${hb.trend}` }, hb.trend === "better" ? "getting better" : hb.trend === "worse" ? "getting worse" : "steady") : null),
     h("div", { class: "pt-card-title" }, hb.title),
     h("div", { class: "pt-card-cost" }, h("b", { class: "bad" }, secs(hb.usual)), h("span", { class: "dim" }, "usually")),
-    h("div", { class: "pt-dots" }, hb.dots.map((d) => h("i", { class: d ? "on" : "" })), h("span", { class: "dim" }, `${hb.hits} of ${hb.outOf} races`)),
+    h("div", { class: "pt-dots" }, hb.dots.map((d) => h("i", { class: d ? "on" : "" })), h("span", { class: "dim" }, `${hb.hits} of ${hb.outOf} games`)),
     h("div", { class: "pt-card-ev" }, brief(hb.example.text)),
     h("button", { class: "btn sm pt-watch", onclick: () => open(hb.example.raceId) }, `Watch vs ${hb.example.name}${hb.example.at !== null ? ` at ${clockSec(hb.example.at / 20)}` : ""}`));
   const [top, rest] = [i.habits.slice(0, 3), i.habits.slice(3)];
@@ -86,12 +86,12 @@ function sideCards(i: Insights) {
     h("div", { class: "pt-card" },
       h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, "Deaths")),
       h("div", { class: "pt-card-cost" }, h("b", { class: d.deaths ? "bad" : "good" }, String(d.deaths)), h("span", { class: "dim" }, d.deaths === 1 ? "death" : "deaths")),
-      stat("Races with a death", `${d.races} of ${i.races}`), stat("Time dead", fmtDur(d.seconds), d.seconds ? "bad" : ""), stat("Death resets (on purpose)", String(d.resets))),
+      stat("Games with a death", `${d.races} of ${i.races}`), stat("Time dead", fmtDur(d.seconds), d.seconds ? "bad" : ""), stat("Death resets (on purpose)", String(d.resets))),
     h("div", { class: "pt-card" },
       h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, "Seeds"), h("span", { class: "dim" }, "usual gap")),
       i.seeds.length ? i.seeds.slice(0, 6).map((sd) => h("div", { class: "pt-stat" },
         h("span", null, structIcon(sd.type.replace(/ /g, "_")), cap(sd.type), h("span", { class: "dim" }, ` · ${sd.races}`)), h("b", { class: deltaClass(sd.usual) }, secs(sd.usual))))
-        : h("div", { class: "pt-card-ev dim" }, "Race a few seed types to compare them.")));
+        : h("div", { class: "pt-card-ev dim" }, "Practice a few seed types to compare them.")));
 }
 
 /** Best time per phase and who you raced */
@@ -107,9 +107,9 @@ export function patternsView(s: AppState, open: (id: number) => void) {
   const i = s.insights;
   return h("div", { class: "page" },
     h("div", { class: "page-head pt-head" }, h("h1", null, "Patterns"),
-      h("span", { class: "dim" }, `${i.races} race${i.races === 1 ? "" : "s"}`),
+      h("span", { class: "dim" }, `${i.races} game${i.races === 1 ? "" : "s"}`),
       i.usual !== null ? h("span", null, "you usually finish ", h("b", { class: deltaClass(i.usual) }, `${fmtDelta(i.usual)} ${i.usual > 0 ? "behind" : "ahead"}`)) : null,
       i.recent.length > 1 ? recentBars(i, open) : null),
     i.races ? [usualRun(i), habitCards(i, open), sideCards(i), bests(i, open)]
-      : panel(null, null, h("div", { class: "empty" }, h("b", null, "No races yet"), "Race a few seeds and your patterns show up here.")));
+      : panel(null, null, h("div", { class: "empty" }, h("b", null, "No games yet"), "Practice a few seeds and your patterns show up here.")));
 }

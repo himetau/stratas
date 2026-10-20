@@ -37,7 +37,7 @@ It finds a run from a player above your Elo. You play that seed in a private roo
 
 ## What does it do?
 
-**It analyses every match you play, from the first log to the dragon.** Every private room race, and every ranked game once you download its replay.
+**It analyses every match you play, from the first log to the dragon.** Every private room practice, and every ranked game once you download its replay.
 
 <p align="center"><img src="docs/readme/splits.png" width="100%" alt="The splits overview in Stratas: every split against Frieren, and where the time went in the stronghold"></p>
 
@@ -51,7 +51,7 @@ It finds a run from a player above your Elo. You play that seed in a private roo
     <td width="50%" valign="top">
       <p><b>Deaths and what they cost</b><br>how long you were gone and what you dropped</p>
       <p><b>The End</b><br>zero cycles, failed cycles, each perch and the dragon kill</p>
-      <p><b>Your habits</b><br>after a few races, the things that keep losing you time</p>
+      <p><b>Your habits</b><br>after a few games, the things that keep losing you time</p>
     </td>
   </tr>
 </table>
@@ -66,7 +66,7 @@ It finds a run from a player above your Elo. You play that seed in a private roo
 | same seed, opponent picked by Elo | — | — | — | **✓** |
 | where every second went | you guess | you guess | per split | **✓ with the reason** |
 | trades, crafts, pearls, rods, eyes | — | — | — | **✓** |
-| habits across many races | — | — | — | **✓** |
+| habits across many games | — | — | — | **✓** |
 | jump to the moment in the replay | — | — | — | **✓** |
 
 - **It reads Ranked's own replays.** No extra mod, no recording, nothing to set up in game.

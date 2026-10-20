@@ -39,7 +39,7 @@ export function mergeRunners(sources: RunnerSource[]): MergeResult {
   const picked: RawChunk[] = [];
   const seen = new Set<string>();
   for (const s of sources) {
-    if (seen.has(s.uuid)) throw new ReplayError("the same player can't be in a race twice");
+    if (seen.has(s.uuid)) throw new ReplayError("the same player can't be in a replay twice");
     seen.add(s.uuid);
     const { meta, timelines: tl, rpd } = readRrf(s.bytes);
     checkReadable(meta);

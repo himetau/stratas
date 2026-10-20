@@ -200,8 +200,8 @@ function splitsTable(a: RaceAnalysis, id: number, seedType: string | null, selec
 
 export function raceView(id: number, rerender: () => void, yourElo: number | null = null) {
   const r = cache.get(id);
-  if (!r && gone.has(id)) return h("div", { class: "page" }, h("div", { class: "empty" }, "This race isn't there anymore."));
-  if (!r) { void loadRace(id).then(rerender); return h("div", { class: "page" }, h("div", { class: "empty" }, "Loading race")); }
+  if (!r && gone.has(id)) return h("div", { class: "page" }, h("div", { class: "empty" }, "This game isn't there anymore."));
+  if (!r) { void loadRace(id).then(rerender); return h("div", { class: "page" }, h("div", { class: "empty" }, "Loading game")); }
   const { row, analysis: a } = r;
   const isRace = row.your_file !== row.their_file;
   // All actions are behind ⋯, the keys from settings still work as shortcuts
@@ -217,12 +217,12 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
       item("Companion", companion, keys.keyCompanion.toUpperCase() || undefined),
       row.race_file ? item("Show file", () => g.reveal(row.race_file!)) : null,
       item("Remove", async () => {
-        if (!confirm(`Remove the race vs ${row.their_name}? The replay files stay.`)) return;
+        if (!confirm(`Remove the game vs ${row.their_name}? The replay files stay.`)) return;
         forgetRace(id); gone.add(id);
         await g.deleteRace(id); rerender();
       }, undefined, "bad")));
   const where = [isRace ? null : "Ranked match", seedText(row.seed_type), day(row.created_at)].filter(Boolean).join(", ");
-  if (!a) return h("div", { class: "page" }, h("div", { class: "race-head" }, h("span", { class: "dim" }, where), actions), h("div", { class: "notice bad" }, row.error ?? "This race couldn't be analysed."));
+  if (!a) return h("div", { class: "page" }, h("div", { class: "race-head" }, h("span", { class: "dim" }, where), actions), h("div", { class: "notice bad" }, row.error ?? "This game couldn't be analysed."));
 
   if (open?.race !== id) {
     noteRaceOpened();
