@@ -16,6 +16,7 @@ import { forgetRace, raceView } from "./views/race";
 import { patternsView } from "./views/patterns";
 import { profileView, forgetProfile } from "./views/profile";
 import { setThemeInfo, settingsView } from "./views/settings";
+import { welcomeView } from "./views/welcome";
 import { companionInit, companionView, setCompanionRace } from "./views/companion";
 import { updateRailBtn, watchUpdates } from "./update";
 
@@ -57,6 +58,7 @@ function render() {
   // The race you were on got removed
   if (route.page === "race" && !s.races.some((r) => r.id === (route as { id: number }).id)) route = { page: "races" };
   if (isCompanion) { app.className = "companion"; mount(app, companionView(s, render)); commitKeys(); return; }
+  if (!s.settings.onboarded) { lastPage = null; mount(app, welcomeView(s, render)); commitKeys(); return; }
   const waiting = s.queue.filter((q) => q.status === "queued" || q.status === "downloaded").length;
   const openRace = (id: number) => go({ page: "race", id });
   const raceId = route.page === "race" ? route.id : route.page === "races" ? firstRace(s) : null;

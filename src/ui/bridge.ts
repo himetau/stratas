@@ -36,6 +36,10 @@ export interface Bridge {
   /** pool = how many of your newest Ranked matches the split times come from */
   profile(season?: number, pool?: number): Promise<ProfileData>;
   profileMatch(id: number): Promise<MatchDetail | null>;
+  /** The name that shows up most in your replays, only asked for on the welcome screen */
+  suggestName(): Promise<string | null>;
+  /** Checks a name on Ranked */
+  lookupPlayer(name: string): Promise<{ nickname: string; uuid: string; elo: number | null; rank: number | null } | null>;
   /** The player's Elo going into a match and what they gained */
   matchElo(uuid: string, matchId: number): Promise<{ elo: number; change: number } | null>;
   profileRefresh(season?: number, pool?: number): Promise<ProfileData>;
