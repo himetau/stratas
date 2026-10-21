@@ -242,6 +242,7 @@ export function settingsView(s: AppState, rerender: () => void) {
       ]),
       row("Replay format", gate.status === "ok" ? dot("good", "ok") : gate.status === "failed" ? dot("bad", "changed") : dot("warn", "unchecked"), { hint: `MCSR Ranked ${gate.version ?? "?"}` }),
       row("Mix replays on their own", tog(st.autoRace, (v) => g.settings({ autoRace: v }), "Mix replays on their own"), { hint: "when a replay shows up" }),
+      row("Delete forfeited runs", ptog("dropForfeits", "Delete forfeited runs"), { key: "dropForfeits", hint: "races on queued seeds you forfeit from now on, older ones stay" }),
     ]),
     group("Data", [
       row("Replays", btn("rescan", async () => { await g.rescan(); toast("Rescanned"); }), { hint: `${s.library.practice} private, ${s.library.ranked} ranked, ${s.library.reference} reference` }),

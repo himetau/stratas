@@ -113,4 +113,24 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(svc.store.run(join(mc, "mcsrranked", "replay", "vs nei1019V.rrf"))!.kind).toBe("ranked");
     expect(svc.store.races().some((r) => r.key.startsWith("match|20000009|"))).toBe(true);
   });
+
+  it("deletes forfeited private room runs from after the setting got turned on, not older ones", async () => {
+    const before = svc.state().races.filter((r) => r.kind === "race").length;
+    await svc.updateSettings({ prefs: { ...svc.settings().prefs, dropForfeits: true, dropForfeitsSince: 0 } });
+    expect(svc.settings().prefs.dropForfeitsSince).toBeGreaterThan(Date.now() - 60_000); // The ui's copy doesn't count
+    const now = Math.floor(Date.now() / 1000);
+    const priv = (id: number) => ({ id, type: 3, date: now, seedType: null, bastionType: null, players: [{ uuid: ME, nickname: "cyoshi" }], result: { uuid: null, time: 0 }, forfeited: true });
+    // The old run from the first test was a forfeit too, but from before
+    svc.store.set("myPrivate", [priv(99999999), priv(99999998)]);
+    writeFileSync(join(mc, "mcsrranked", "temp-replay", "99999998.rrf"), solo(ME, { matchId: 99999998, matchType: 3, date: Date.now() + 1000 }));
+    svc.rescanLibrary();
+    expect(svc.state().races.filter((r) => r.kind === "race").length).toBe(before);
+    expect(readdirSync(join(root, "games"))).not.toContain("99999998.rrf");
+    expect(readdirSync(join(root, "games"))).toContain("99999999.rrf");
+    expect(svc.state().myGames.some((g) => g.id === 99999998)).toBe(false);
+    expect(svc.state().myGames.some((g) => g.id === 99999999)).toBe(true);
+    // Stays deleted on the next scan
+    svc.rescanLibrary(true);
+    expect(svc.state().races.filter((r) => r.kind === "race").length).toBe(before);
+  });
 });
