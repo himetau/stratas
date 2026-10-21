@@ -1,7 +1,7 @@
 // Core of the app. Settings, replay library, download queue, pairing runs into races, analysis, API scan
 // Used by Electron main but has no Electron imports
 import { EventEmitter } from "node:events";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { unzipSync, strFromU8 } from "fflate";
 import { decodeRrf, ReplayError, type ReplayMeta } from "./replay/decode";
@@ -223,7 +223,8 @@ export class Service extends EventEmitter {
     const ms = this.store.get<ApiMatch[]>("myGames", []);
     const races = this.store.races();
     const runs = this.store.runs();
-    const priv = this.store.get<ApiMatch[]>("myPrivate", []).map((m): MyGame => {
+    const dropped = new Set(this.store.get<number[]>("droppedForfeits", []));
+    const priv = this.store.get<ApiMatch[]>("myPrivate", []).filter((m) => !dropped.has(m.id)).map((m): MyGame => {
       // Private room run turns into a race once its replay is here and paired with someone on that seed
       const mine = runs.filter((r) => r.match_id === m.id && (r.kind === "practice" || r.kind === "ranked"));
       const race = races.find((r) => mine.some((x) => x.file === r.your_file) && r.your_file !== r.their_file);
@@ -282,6 +283,8 @@ export class Service extends EventEmitter {
     const cur = this.settings();
     const next = { ...cur, ...patch, pick: { ...cur.pick, ...(patch.pick ?? {}) }, prefs: mergePrefs({ ...cur.prefs, ...(patch.prefs ?? {}) }) };
     if (patch.nickname !== undefined && patch.nickname !== cur.nickname) { next.uuid = null; this.forgetAccount(); }
+    // Only forfeits from now on get deleted. The ui sends all its prefs, so its copy of when never counts
+    next.prefs.dropForfeitsSince = next.prefs.dropForfeits && !cur.prefs.dropForfeits ? Date.now() : cur.prefs.dropForfeitsSince;
     this.store.set("settings", next);
     if (patch.instancePath !== undefined) { this.locateInstance(); this.rescanLibrary(); }
     if (patch.nickname !== undefined) { if (!this.opts.offline) await this.refreshYou(); this.rescanLibrary(true); }
@@ -525,8 +528,11 @@ export class Service extends EventEmitter {
     const playing = this.store.get<{ matchId: number; at: number } | null>("practicing", null);
     const links = this.store.get<Record<string, number>>("quickLinks", {}); // Your private match -> the queued match you played
     const races = this.store.races(), runs = this.store.runs();
+    const dropped = new Set(this.store.get<number[]>("droppedForfeits", []));
     for (const m of this.store.get<ApiMatch[]>("myPrivate", [])) {
       if (m.players.length !== 1 || m.seedType || m.bastionType) continue; // Solo set seed runs only
+      if (dropped.has(m.id)) continue;
+      if (m.forfeited && this.dropsForfeit(m.date * 1000)) { this.dropForfeit(m.id); continue; }
       // The API doesn't say which seed a set seed room was on, so it's the one you copied last, if you played within 3 hours of that
       if (!links[m.id] && playing && m.date * 1000 >= playing.at && m.date * 1000 - playing.at < 3 * 3600_000) links[m.id] = playing.matchId;
       const q = links[m.id] ? this.store.queueRow(links[m.id]) : undefined;
@@ -581,8 +587,13 @@ export class Service extends EventEmitter {
     };
     const current = new Set<string>(); // Race keys from the files we pair with now
     const refs = dedupByMatch(this.store.runs("reference"));
+    const dropped = new Set(this.store.get<number[]>("droppedForfeits", []));
+    const forfeits = new Set(this.store.get<ApiMatch[]>("myPrivate", []).filter((m) => m.forfeited).map((m) => m.id));
     for (const run of dedupByMatch(this.store.runs("practice"))) {
+      if (run.match_id && dropped.has(run.match_id)) continue;
       const mates = refs.filter((r) => r.overworld_seed === run.overworld_seed && r.nether_seed === run.nether_seed);
+      // Ranked's match list already says you forfeited, don't bother mixing it
+      if (mates.length && run.match_id && forfeits.has(run.match_id) && this.dropsForfeit(run.date ?? run.mtime)) { this.dropForfeit(run.match_id); continue; }
       for (const ref of mates) {
         const q = ref.match_id ? this.store.queueRow(ref.match_id) : undefined;
         const players = JSON.parse(ref.players) as { uuid: string; nickname: string; eloRate: number | null }[];
@@ -592,6 +603,12 @@ export class Service extends EventEmitter {
         const old = this.store.raceByKey(key);
         if (!force && old && !old.error && JSON.parse(old.analysis || "{}").analysisVersion === ANALYSIS_VERSION) continue;
         this.buildRace(run, ref, them, q?.tier ?? null, key);
+        // Ranked's match list can lag behind the replay, a run that never killed the dragon is a forfeit too
+        const built = this.store.raceByKey(key);
+        if (run.match_id && built && !built.error && !(JSON.parse(built.analysis) as RaceAnalysis).you.finished && this.dropsForfeit(run.date ?? run.mtime)) {
+          this.dropForfeit(run.match_id);
+          break;
+        }
         if (q) this.store.setQueue(q.match_id, { status: "raced" });
         // The full race replaces the quick one from Ranked's splits
         if (run.match_id && !this.store.raceByKey(key)?.error) for (const r of this.store.races()) if (r.key.startsWith(`quick|${run.match_id}|`)) this.store.deleteRace(r.id);
@@ -635,11 +652,41 @@ export class Service extends EventEmitter {
     }
   }
 
+  /** Deleting forfeits is on and this run is from after it got turned on */
+  private dropsForfeit(dateMs: number) {
+    const p = this.settings().prefs;
+    return p.dropForfeits && dateMs >= p.dropForfeitsSince;
+  }
+
+  /** You forfeited this private room run: delete its races, the mixed replay and our copy, and never pair it again.
+   *  Ranked's own replay files stay, and the seed goes back to the queue so you can race it again */
+  private dropForfeit(matchId: number) {
+    const gameOf = (f: string) => (f.startsWith("api:") ? Number(f.slice(4)) : this.store.run(f)?.match_id ?? null);
+    const rm = (f: string) => {
+      try { if (existsSync(f)) rmSync(f); } catch (e) { this.log(`Couldn't delete ${basename(f)}: ${(e as Error).message}`); return; }
+      this.store.dropRun(f);
+    };
+    let who: string | null = null;
+    for (const r of this.store.races()) {
+      if (r.your_file === r.their_file || gameOf(r.your_file) !== matchId) continue;
+      if (r.race_file) rm(r.race_file);
+      this.store.deleteRace(r.id);
+      who = r.their_name;
+      const theirs = gameOf(r.their_file), q = theirs !== null ? this.store.queueRow(theirs) : undefined;
+      if (q?.status === "raced") this.store.setQueue(q.match_id, { status: q.file ? "downloaded" : "queued" });
+    }
+    rm(join(this.poolDir, `${matchId}.rrf`));
+    this.store.set("droppedForfeits", [...this.store.get<number[]>("droppedForfeits", []), matchId]);
+    this.log(`Forfeited run${who ? ` vs ${who}` : ""} deleted`);
+    this.changed();
+  }
+
   /** Copy new format replays with a match_id into the pool so they outlive Ranked's temp-replay */
   private pool() {
+    const dropped = new Set(this.store.get<number[]>("droppedForfeits", []));
     const poolable = this.store.runs().filter(
       (r) =>
-        r.match_id &&
+        r.match_id && !dropped.has(r.match_id) &&
         (r.version ?? 0) >= 40 &&
         (r.kind === "ranked" || r.kind === "practice" || r.kind === "reference"),
     );

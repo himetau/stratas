@@ -54,6 +54,10 @@ export interface Prefs {
   leavePearls: number;
   leaveObsidian: number;
   leaveString: number;
+  /** Delete the race and our copy of your run when you forfeit a private room run. Only runs from after
+   *  it got turned on (dropForfeitsSince, ms), older ones stay */
+  dropForfeits: boolean;
+  dropForfeitsSince: number;
   // Keys
   keyWatch: string;
   keyCompanion: string;
@@ -76,6 +80,7 @@ export const DEFAULT_PREFS: Prefs = {
   nTrading: true, nDeaths: true, nOverworld: true, nNether: true, nPrecraft: true, nEnd: true, nOther: true,
   playByPlay: "closed",
   leavePearls: 20, leaveObsidian: 20, leaveString: 64,
+  dropForfeits: false, dropForfeitsSince: 0,
   keyWatch: "m", keyCompanion: "c",
   supportAsked: 0, supportLastAsked: 0, supportClicked: false,
 };
