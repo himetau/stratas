@@ -9,7 +9,8 @@
   <a href="#why-its-different"><b>Why it's different</b></a> ·
   <a href="#a-look-inside"><b>A look inside</b></a> ·
   <a href="#get-it-running"><b>Get it running</b></a> ·
-  <a href="#support-me"><b>Support me</b></a>
+  <a href="#support-me"><b>Support me</b></a> ·
+  <a href="https://discord.gg/K3NxjhJRD"><b>Discord</b></a>
 </p>
 
 <p align="center">
@@ -17,6 +18,7 @@
   <img src="https://img.shields.io/badge/platform-Windows_%7C_Linux-efc186?style=flat-square&labelColor=1a1112" alt="Windows and Linux">
   <img src="https://img.shields.io/badge/uploads-none-87edcd?style=flat-square&labelColor=1a1112" alt="Nothing uploaded">
   <img src="https://img.shields.io/badge/price-free-87ee86?style=flat-square&labelColor=1a1112" alt="Free">
+  <a href="https://discord.gg/K3NxjhJRD"><img src="https://img.shields.io/badge/discord-join-b8b8ff?style=flat-square&labelColor=1a1112&logo=discord&logoColor=white" alt="Join the Discord"></a>
 </p>
 
 <br>
@@ -144,6 +146,10 @@ a donut keeps it going 🍩
 </p>
 
 <p align="center"><a href="https://ko-fi.com/cyoshi"><img src="docs/readme/kofi.svg" width="230" alt="Buy me a donut on Ko-fi"></a></p>
+
+<p align="center">
+Questions, bugs or runs to show off? Come hang out on <a href="https://discord.gg/K3NxjhJRD"><b>Discord</b></a>.
+</p>
 
 <br>
 

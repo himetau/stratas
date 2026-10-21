@@ -7,7 +7,7 @@ import { g, type AppState } from "../bridge";
 import { h, toast } from "../dom";
 import { artUrl, celebrate, prefs, rankColor, savePrefs, themeColors } from "../prefs";
 import { reportProblem, suggestFeature } from "../problem";
-import { openKofi } from "../support";
+import { DISCORD_URL, openKofi } from "../support";
 import { updateSetting } from "../update";
 import { isWeb, pickReplays } from "../web";
 
@@ -220,6 +220,7 @@ export function settingsView(s: AppState, rerender: () => void) {
     group("Help", [
       row("Something broken?", btn("report a problem", () => void reportProblem(s)), { hint: "copies your version and activity log, then opens a GitHub issue to paste them in" }),
       row("Missing something?", btn("suggest a feature", suggestFeature), { hint: "opens a GitHub issue" }),
+      row("Discord", btn("join", () => { window.open(DISCORD_URL, "_blank", "noopener"); }), { hint: "ask questions, share runs, hear about updates first" }),
       row("GitHub", btn("open", () => { window.open("https://github.com/himetau/stratas", "_blank"); }), { hint: "the code, releases and issues" }),
     ]),
     group("Support", [
