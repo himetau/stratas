@@ -5,6 +5,7 @@ import { h } from "./dom";
 import { prefs, savePrefs, still } from "./prefs";
 
 export const KOFI_URL = "https://ko-fi.com/cyoshi";
+export const DISCORD_URL = "https://discord.gg/K3NxjhJRD";
 
 const MIN = 60_000, DAY = 86_400_000;
 
