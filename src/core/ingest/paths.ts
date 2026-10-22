@@ -1,5 +1,5 @@
 // Finds the Ranked instance, picks the one whose mcsrranked/ folder was used most recently
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -43,13 +43,19 @@ function launcherDirs(): { many: string[]; one: string[] } {
   };
 }
 
+/** Same rule as the mod: a usable ~/mcsrranked is shared by every instance, otherwise each instance keeps its own */
+function rankedDir(mc: string) {
+  const global = join(homedir(), "mcsrranked");
+  try { accessSync(global, constants.R_OK | constants.W_OK); return global; } catch { return join(mc, "mcsrranked"); }
+}
+
 export function inspectInstance(root: string): Instance | null {
   const mc = existsSync(join(root, "minecraft")) ? join(root, "minecraft") : existsSync(join(root, ".minecraft")) ? join(root, ".minecraft") : root;
   const mods = join(mc, "mods");
   if (!existsSync(mods)) return null;
   const jar = readdirSync(mods).filter((f) => /^mcsrranked-.*\.jar$/.test(f)).sort().at(-1);
   if (!jar) return null;
-  const ranked = join(mc, "mcsrranked");
+  const ranked = rankedDir(mc);
   return {
     root: mc, ranked, modJar: join(mods, jar),
     modVersion: jar.replace(/^mcsrranked-|\.jar$/g, ""),
