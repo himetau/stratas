@@ -19,6 +19,9 @@ function launcherDirs(): { many: string[]; one: string[] } {
         join(home, "curseforge", "minecraft", "Instances"),
         join(roaming, "gdlauncher_carbon", "data", "instances"),
         join(roaming, "ATLauncher", "instances"),
+        // MultiMC is portable, these are the usual places people unzip it
+        ...[env.SystemDrive ? env.SystemDrive + "\\" : "C:\\", home, join(home, "Desktop"), join(home, "Documents"), join(home, "Downloads")]
+          .map((d) => join(d, "MultiMC", "instances")),
       ],
       one: [join(roaming, ".minecraft")],
     };
