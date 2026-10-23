@@ -276,6 +276,8 @@ export class Service extends EventEmitter {
     for (const k of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) if (k !== "pick" && k !== "prefs" && s[k] !== undefined) (out as Record<string, unknown>)[k] = s[k];
     // From before the welcome screen. Already set up if there's a name
     if (s.onboarded === undefined) out.onboarded = !!s.nickname;
+    // The jungle temple filter is gone, don't keep filtering by it with no chip to turn it off
+    if (out.pick.seedType === "JUNGLE_TEMPLE") out.pick.seedType = null;
     return out;
   }
 
