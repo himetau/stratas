@@ -4,7 +4,7 @@ import { ago, deltaClass, fmtDelta, fmtMs, h, nice, toast } from "../dom";
 import { btn, fold, head, panel, rank, tierName } from "../parts";
 import { structIcon } from "../ranked";
 
-const OVERWORLD = ["VILLAGE", "BURIED_TREASURE", "SHIPWRECK", "DESERT_TEMPLE", "RUINED_PORTAL", "JUNGLE_TEMPLE"];
+const OVERWORLD = ["VILLAGE", "BURIED_TREASURE", "SHIPWRECK", "DESERT_TEMPLE", "RUINED_PORTAL"];
 const BASTION = ["BRIDGE", "HOUSING", "STABLES", "TREASURE"];
 type Level = "mix" | "next" | "stretch" | "ceiling" | "custom";
 
