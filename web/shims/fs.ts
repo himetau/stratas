@@ -14,6 +14,8 @@ export function mkdirSync(p: string, _opts?: unknown) {
   for (let d = norm(p); !dirs.has(d); d = dirname(d)) dirs.add(d);
 }
 export function existsSync(p: string) { const n = norm(p); return files.has(n) || dirs.has(n); }
+export const constants = { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1 };
+export function accessSync(p: string, _mode?: number) { if (!existsSync(p)) throw missing(p); }
 export function readdirSync(p: string): string[] {
   const n = norm(p);
   if (!dirs.has(n)) throw missing(p);
@@ -54,4 +56,4 @@ export function onFilesChanged(fn: () => void) { onChange = fn; }
 export function allFiles(): [string, Entry][] { return [...files.entries()]; }
 export function loadFiles(list: [string, Entry][]) { for (const [p, e] of list) { mkdirSync(dirname(p)); files.set(p, e); } }
 
-export default { mkdirSync, existsSync, readdirSync, statSync, readFileSync, writeFileSync, copyFileSync, renameSync, unlinkSync, rmSync, rmdirSync, watch };
+export default { constants, mkdirSync, existsSync, accessSync, readdirSync, statSync, readFileSync, writeFileSync, copyFileSync, renameSync, unlinkSync, rmSync, rmdirSync, watch };
