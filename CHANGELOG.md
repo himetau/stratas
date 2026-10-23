@@ -2,6 +2,15 @@
 
 What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
 
+## 1.4.0
+
+- Settings, You: "Delete forfeited runs" removes races on queued seeds you forfeit. Only new ones, older forfeits stay.
+- Replays in the shared ~/mcsrranked folder are found, same as the Ranked mod saves them.
+- MultiMC instances are found on Windows too.
+- The Discord server is linked in Settings, on the website and in the readme.
+- The bridge and treasure bastion icons were swapped.
+- No more jungle temple filter on the Find page.
+
 ## 1.3.0
 
 - A welcome screen the first time you open Stratas: what it looks at and what stays on your computer, your Minecraft name, and a few settings. Same on the website.
