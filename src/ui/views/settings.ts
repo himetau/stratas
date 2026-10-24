@@ -116,7 +116,14 @@ export function settingsView(s: AppState, rerender: () => void) {
         tile("menu", "Current menu", "blurred"), tile("menu_sharp", "Current menu", "sharp"),
         // The one your installed Ranked still uses is already the first two tiles
         (oldArt ?? []).filter((a) => !gate.version || !a.versions.split("–").at(-1)!.startsWith(gate.version.split(".").slice(0, 2).join("."))).map((a) => tile(a.key, a.label, "older release")),
+        // Your own image, once you've picked one
+        /^custom:/.test(p.art) ? tile(p.art, "Your image") : null,
         tile("off", "None")),
+      isWeb ? null : row("Your own image", h("span", { class: "dim" }, "png, jpg, webp or gif"),
+        { hint: "copied into Stratas, so it keeps working if you move the original", extra: btn("choose file", async () => {
+          const k = await g.pickArt();
+          if (k) { savePrefs({ art: k }); toast("Background set"); } else toast("Nothing picked");
+        }) }),
       row("Older Ranked menus", h("span", { class: "dim" }, looking ? "looking…" : oldArt?.length ? `${oldArt.length} found` : "not looked yet"),
         { hint: "looks through past MCSR Ranked releases on Modrinth", extra: btn(oldArt?.length ? "look again" : "find them", async () => {
           if (looking) return;

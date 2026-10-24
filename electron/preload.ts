@@ -16,6 +16,7 @@ const api = {
   rankIcons: () => ipcRenderer.invoke("rank-icons"),
   rankedAssets: () => ipcRenderer.invoke("ranked-assets"),
   rankedArt: (key: string) => ipcRenderer.invoke("ranked-art", key),
+  pickArt: () => ipcRenderer.invoke("pick-art"),
   oldArt: () => ipcRenderer.invoke("old-art"),
   fetchOldArt: () => ipcRenderer.invoke("old-art:fetch"),
   skin: (who: { uuid?: string | null; name?: string | null }) => ipcRenderer.invoke("skin", who),

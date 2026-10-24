@@ -91,7 +91,7 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
         ready ? h("div", { class: "good" }, "Ready to play")
           : [h("div", null, "Download the replay in Ranked"), h("div", { class: "dim" }, `Search Profile, ${q.player_name}, Recent Matches, Download Replay`),
             // Pasting the exact name beats eyeballing it in Ranked's search
-            at && at !== "loading" ? h("div", null, `They were ${at.elo} (${at.change >= 0 ? "+" : ""}${at.change}) vs ${q.opponent_name ?? "someone"} on ${day(q.date * 1000)}`) : null,
+            at && at !== "loading" ? h("div", null, `${at.elo} to ${at.elo + at.change} (${at.change >= 0 ? "+" : ""}${at.change}) vs ${q.opponent_name ?? "someone"} on ${day(q.date * 1000)}`) : null,
             btn("Copy name", () => copy(q.player_name, "Name"), { sm: true, key: "c" }),
             isWeb ? btn("Add the replay here", pickReplays, { sm: true }) : null],
         btn("Skip", () => g.queueStatus(q.match_id, "skipped"), { ghost: true, sm: true }))),

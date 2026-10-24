@@ -34,7 +34,7 @@ function devAssets(): Plugin {
       });
       server.middlewares.use("/__dev/art", (req, res) => {
         const key = new URL(req.url ?? "", "http://x").searchParams.get("key") ?? "";
-        const url = key.startsWith("old:") ? oldArtData(oldDir, key) : rankedArt(modJar(), key);
+        const url = key.startsWith("old:") ? oldArtData(oldDir, key) : key.startsWith("custom:") ? null : rankedArt(modJar(), key);
         if (!url) { res.statusCode = 404; res.end(); return; }
         res.end(url);
       });

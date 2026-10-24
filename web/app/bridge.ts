@@ -53,6 +53,7 @@ export function webBridge(service: Service, version: string): Bridge {
     rankIcons: async () => ({}),
     rankedAssets: async () => ({ background: null, structures: null }),
     rankedArt: async () => null,
+    pickArt: async () => null,
     oldArt: async () => [],
     fetchOldArt: async () => [],
     // Mojang's API doesn't answer web pages, mc-heads.net does

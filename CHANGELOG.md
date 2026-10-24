@@ -2,6 +2,11 @@
 
 What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
 
+## 1.5.0
+
+- Settings, Background: pick an image of your own. It's copied into Stratas, so it keeps working if you move the original.
+- The Practice page shows their Elo before and after the match (2024 to 2043), so you can find the exact point on their graph in Ranked.
+
 ## 1.4.0
 
 - Settings, You: "Delete forfeited runs" removes races on queued seeds you forfeit. Only new ones, older forfeits stay.
