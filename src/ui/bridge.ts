@@ -27,6 +27,8 @@ export interface Bridge {
   rankedAssets(): Promise<{ background: string | null; structures: string | null }>;
   /** One of Ranked's backgrounds (menu, menu_sharp, or a seed type) as a data URL */
   rankedArt(key: string): Promise<string | null>;
+  /** Asks for an image file and keeps a copy as a background, returns its art key (null if cancelled or not possible here) */
+  pickArt(): Promise<string | null>;
   /** Menu backgrounds saved from older Ranked releases */
   oldArt(): Promise<OldArt[]>;
   /** Go online and look through older Ranked releases for their menu backgrounds */

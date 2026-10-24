@@ -7,6 +7,7 @@ let cur: Prefs = DEFAULT_PREFS;
 let elo: number | null = null;
 // Background art: object URLs loaded so far
 const art = new Map<string, string | null>();
+const ART_KEY = /^(menu|menu_sharp|old:[0-9a-f]+|custom:[0-9a-f]{10})$/;
 let last = "";
 
 export const prefs = (): Prefs => cur;
@@ -53,12 +54,12 @@ export async function artUrl(key: string): Promise<string | null> {
 /** Load the picked background if needed, then put it behind the pages */
 function showArt() {
   // Anything else is from before (the seed type backgrounds), back to the current menu
-  const key = cur.art === "off" ? null : /^(menu|menu_sharp|old:[0-9a-f]+)$/.test(cur.art) ? cur.art : "menu";
+  const key = cur.art === "off" ? null : ART_KEY.test(cur.art) ? cur.art : "menu";
   const r = document.documentElement.style;
   if (!key) { r.removeProperty("--ranked-bg"); return; }
   void artUrl(key).then((url) => {
     // Only if it's still the one wanted by the time it loaded
-    if ((/^(menu|menu_sharp|old:[0-9a-f]+)$/.test(cur.art) ? cur.art : "menu") !== key) return;
+    if ((ART_KEY.test(cur.art) ? cur.art : "menu") !== key) return;
     if (url) r.setProperty("--ranked-bg", `url("${url}")`); else r.removeProperty("--ranked-bg");
   });
 }

@@ -42,6 +42,7 @@ export async function installMock() {
     reveal: async () => {},
     openDir: async () => {},
     pickInstance: async () => null,
+    pickArt: async () => null,
     practicing: async () => {},
     // Pretends a new version is out so the update button shows, and walks through the download
     update: async () => update,

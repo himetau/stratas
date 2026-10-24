@@ -9,6 +9,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { Service } from "../src/core/service";
 import { rankedArt, rankedAssets, rankIcons } from "../src/core/ranks";
 import { cachedOldArt, fetchOldArt, oldArtData } from "../src/core/oldart";
+import { customArtData, saveCustomArt } from "../src/core/customart";
 import { skinPng, type SkinOwner } from "../src/core/skins";
 import type { Pick } from "../src/core/seeds/picker";
 import type { UpdateState } from "../src/core/update";
@@ -317,11 +318,19 @@ app.whenReady().then(() => {
   // Big images, read once each and kept
   const art = new Map<string, string | null>();
   ipcMain.handle("ranked-art", (_e, key: string) => {
-    if (!art.has(key) || art.get(key) === null) art.set(key, String(key).startsWith("old:") ? oldArtData(oldArtDir, String(key)) : rankedArt(service.state().instance?.modJar ?? null, String(key)));
+    if (!art.has(key) || art.get(key) === null) art.set(key, String(key).startsWith("old:") ? oldArtData(oldArtDir, String(key)) : String(key).startsWith("custom:") ? customArtData(customArtDir, String(key)) : rankedArt(service.state().instance?.modJar ?? null, String(key)));
     return art.get(key);
   });
   // Older Ranked releases' menu backgrounds: what's saved, and going online to look for them
   const oldArtDir = join(dataDir, "ranked-art");
+  // An image of your own: copied here when picked so it keeps working if the original moves
+  const customArtDir = join(dataDir, "custom-art");
+  ipcMain.handle("pick-art", async (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    const opts = { title: "Pick a background image", properties: ["openFile" as const], filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }] };
+    const r = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts);
+    return r.canceled || !r.filePaths[0] ? null : saveCustomArt(customArtDir, r.filePaths[0]);
+  });
   ipcMain.handle("old-art", () => cachedOldArt(oldArtDir));
   ipcMain.handle("old-art:fetch", () => fetchOldArt(oldArtDir));
   ipcMain.handle("ranked-assets", () => {
