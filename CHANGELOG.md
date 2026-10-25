@@ -2,6 +2,11 @@
 
 What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
 
+## 1.5.1
+
+- The Find page looks back 5 days instead of 36 hours, so a player's wins from the last few days show up, newest first. Newer runs are still preferred when picking by Elo.
+- Queued runs stay in your queue for 5 days instead of 2.
+
 ## 1.5.0
 
 - Settings, Background: pick an image of your own. It's copied into Stratas, so it keeps working if you move the original.

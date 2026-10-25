@@ -2,7 +2,7 @@
 import type { Store } from "../store";
 import type { Api } from "./api";
 
-const BACKFILL_DAYS = 4;
+const BACKFILL_DAYS = 5; // Covers the picker's RECENT_HOURS
 
 export class Scanner {
   busy = false;
