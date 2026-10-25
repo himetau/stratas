@@ -78,7 +78,9 @@ function tierPlan(count: number, recent: Tier[], lock: Band | null | undefined):
   return out;
 }
 
-const RECENT_HOURS = 36; // Ranked only lets you download recent matches
+export const RECENT_HOURS = 120; // Ranked only lets you download recent matches
+/** Recency penalty scale, kept at 36 h so newer runs still win clearly over older ones */
+const RECENCY_HOURS = 36;
 
 async function playerMedians(store: Store, api: Api, uuid: string, name: string) {
   const cached = store.player(uuid);
@@ -120,7 +122,7 @@ export async function pickRuns(store: Store, api: Api, yourElo: number, yourUuid
     if (!rows.length) { notes.push("No recent runs match these filters"); continue; }
     const median = store.bandMedian(lo, hi, o.seedType ?? null, o.bastionType ?? null);
     const ranked = rows
-      .map((m) => ({ m, score: (median ? Math.abs(m.time - median) / median : 0) + (usedPlayers.get(m.winner_uuid!) ?? 0) * 0.5 + (Date.now() / 1000 - m.date) / (RECENT_HOURS * 3600) * 0.2 }))
+      .map((m) => ({ m, score: (median ? Math.abs(m.time - median) / median : 0) + (usedPlayers.get(m.winner_uuid!) ?? 0) * 0.5 + (Date.now() / 1000 - m.date) / (RECENCY_HOURS * 3600) * 0.2 }))
       .sort((a, b) => a.score - b.score);
     let chosen: Pick | null = null;
     for (const { m } of ranked.slice(0, 8)) {

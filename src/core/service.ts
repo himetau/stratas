@@ -14,7 +14,7 @@ import { fmtDur } from "./detect/names";
 import { Store, type QueueRow, type RaceRow, type RunKind, type RunRow } from "./store";
 import { Api, type ApiMatch } from "./seeds/api";
 import { Scanner } from "./seeds/scanner";
-import { adaptTiers, pickPlayer, pickRuns, tierBands, type Pick, type PickOptions, type Tier, type TierShift } from "./seeds/picker";
+import { adaptTiers, pickPlayer, pickRuns, RECENT_HOURS, tierBands, type Pick, type PickOptions, type Tier, type TierShift } from "./seeds/picker";
 import { findInstances, inspectInstance, instanceName, myReplaysDir, replayDirs, type Instance } from "./ingest/paths";
 import { fetchProfile, loadCachedProfileRaw } from "./profile/fetch";
 import { buildProfileInsights } from "./profile/insights";
@@ -72,7 +72,7 @@ export interface AppState {
   log: string[];
 }
 
-const QUEUE_EXPIRE_MS = 48 * 3600_000;
+const QUEUE_EXPIRE_MS = RECENT_HOURS * 3600_000; // Same window the picker searches, so queued runs don't expire right away
 
 /** One line summary, phase and time lost then the top 2 causes */
 function summaryLine(f: Finding): string {
