@@ -127,7 +127,7 @@ a donut for some motivation 🍩
 <p align="center"><a href="https://ko-fi.com/cyoshi"><img src="docs/readme/kofi.svg" width="230" alt="Buy me a donut on Ko-fi"></a></p>
 
 <p align="center">
-Questions, bugs or runs to show off? Come hang out on <a href="https://discord.gg/K3NxjhJRD"><b>Discord</b></a>.
+Questions, bugs or runs to show off? Join the discord <a href="https://discord.gg/K3NxjhJRD"><b>Discord</b></a>.
 </p>
 
 <br>
