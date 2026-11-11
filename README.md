@@ -8,7 +8,7 @@
   <a href="#what-does-it-do"><b>What it does</b></a> ·
   <a href="#why-its-different"><b>Why it's different</b></a> ·
   <a href="#a-look-inside"><b>A look inside</b></a> ·
-  <a href="#get-it-running"><b>Get it running</b></a> ·
+  <a href="#get-it-running"><b>Download it</b></a> ·
   <a href="#support-me"><b>Support me</b></a> ·
   <a href="https://discord.gg/K3NxjhJRD"><b>Discord</b></a>
 </p>
@@ -25,9 +25,9 @@
 
 ## Why Stratas?
 
-Stratas lets you practice against **any Elo you want**, on the **same seed**.
+Stratas lets you practice against **any** elo or player you want, in the same seed, in a new way.
 
-It finds a run from a player at the Elo you pick, or from one player you type in. You play that seed in a private room. Then Stratas **mixes both replays into one file**, so you open it in Ranked's own replay viewer and you're both in the same world at the same time. No VODs needed, it only uses Ranked's new replays.
+It finds a run from a player at the elo you picked, or from one player you type in. Play the seed in a private room. Then Stratas **mixes the replays into one file**, so you open it in Ranked's own replay viewer. No VODs needed, it only uses Ranked's new replays.
 
 <table>
   <tr>
@@ -38,9 +38,9 @@ It finds a run from a player at the Elo you pick, or from one player you type in
 
 <br>
 
-## What does it do?
+## What else does it do?
 
-**It analyses the match from every step you do.** Every private room practice, and every ranked game once you download its replay.
+It can analyze the match and give you detailed information about every segment. Every private room game, and every ranked game once you download the replay.
 
 <p align="center"><img src="docs/readme/splits.png" width="100%" alt="The splits overview in Stratas: every split against Frieren, and where the time went in the stronghold"></p>
 
@@ -52,7 +52,7 @@ It finds a run from a player at the Elo you pick, or from one player you type in
       <p><b>Every trade, craft, pearl and rod</b><br>side by side with theirs, item by item</p>
     </td>
     <td width="50%" valign="top">
-      <p><b>Deaths and what they cost</b><br>how long you were gone and what you dropped</p>
+      <p><b>Deaths </b><br>how long you were gone and what you dropped</p>
       <p><b>The End</b><br>zero cycles, failed cycles, each perch and the dragon kill</p>
       <p><b>What you should practice</b><br>after a few games, the things that keep losing you time</p>
     </td>
@@ -63,9 +63,9 @@ It finds a run from a player at the Elo you pick, or from one player you type in
 
 ## Why it's different
 
-- Ranked only lets you watch the people from your own match. Stratas puts **anyone's run on the same seed** into your replay, at whatever Elo you pick, so you can see exactly where you lost or gained time.
-- It doesn't just tell you that you lost 40 seconds in the bastion, it tells you **why**, like 7 piglins being stuck on gold.
-- After a few games it tells you **what you should practice**, the stuff that keeps losing you time.
+- Ranked only lets you watch the people from your own match. Stratas lets you put **anyone's run in the same seed** into your replay, at whatever Elo you want, so you can see exactly where you lost or gained time.
+- It doesn't just tell you that you lost 40 seconds in the bastion, it tells you why, like 7 piglins being stuck on gold. 
+- After a few games it tells you **what you should practice**, from where you consistently lose time.
 - There's no mod and nothing to record. It just uses the replays Ranked already saves.
 - Everything stays on your computer. It reads Ranked's files and adds the mixed replays to My replays, that's it.
 
@@ -84,11 +84,11 @@ It finds a run from a player at the Elo you pick, or from one player you type in
   </tr>
 </table>
 
-**Configurable settings:** theme presets, your own colours, old Ranked menu backgrounds, snow, embers or stars, and you pick exactly what shows on the graph and in the splits.
+**Configurable settings:** theme presets, your own colours, old Ranked menu backgrounds, background effects, and you can pick what shows on the graph and in the splits.
 
 <br>
 
-## Get it running
+## Downloading it
 
 Want to try it first? **[Stratas runs in your browser too](https://stratas.lol/app/)**: your profile and splits, Find runs, and full races from replays you add yourself. The app has all the features and does everything on its own, the browser version is just a taste.
 
@@ -140,7 +140,7 @@ npm run snapshot && npm run ui:dev   # the UI in a browser with test data
 
 <p align="center">
 Stratas is free and made by one person. Any support is highly appreciated.<br>
-a donut keeps it going 🍩
+a donut for some motivation 🍩
 </p>
 
 <p align="center"><a href="https://ko-fi.com/cyoshi"><img src="docs/readme/kofi.svg" width="230" alt="Buy me a donut on Ko-fi"></a></p>
@@ -154,7 +154,7 @@ Questions, bugs or runs to show off? Come hang out on <a href="https://discord.g
 <details>
 <summary><b>Code signing policy</b></summary>
 
-The Windows installer is going to be signed for free through SignPath: free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). This is applied for and not active yet, so for now the installer isn't signed.
+The Windows installer is going to be signed for free through SignPath: free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). This is applied for and not active yet, so for now the installer isn't signed. You can help getting this signed by supporting the project!
 
 - Author, reviewer and approver: [cyoshi](https://github.com/himetau). Every release is built from this repo by GitHub Actions and approved by hand before it gets signed.
 - Downloads: [stratas.lol](https://stratas.lol) and the [releases page](https://github.com/himetau/stratas/releases), both point to the same files built here.
