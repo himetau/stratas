@@ -6,7 +6,7 @@
   <a href="https://stratas.lol"><b>stratas.lol</b></a> ·
   <a href="#replay-mixing"><b>Replay mixing</b></a> ·
   <a href="#match-analysis"><b>Match analysis</b></a> ·
-  <a href="#why-its-different"><b>Why it's different</b></a> ·
+  <a href="#what-makes-it-different"><b>Why it's different</b></a> ·
   <a href="#screenshots"><b>Screenshots</b></a> ·
   <a href="#download-it"><b>Download it</b></a> ·
   <a href="#support-me"><b>Support me</b></a> ·
