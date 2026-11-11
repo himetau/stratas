@@ -25,8 +25,6 @@
 
 ## Replay mixing
 
-Stratas lets you practice against **any** elo or player you want, in the same seed, in a new way.
-
 It finds a run from a player at the elo you picked, or from one player you type in. Play the seed in a private room. Then Stratas **mixes the replays into one file**, so you open it in Ranked's own replay viewer. No VODs needed, it only uses Ranked's new replays.
 
 <table>
@@ -40,7 +38,7 @@ It finds a run from a player at the elo you picked, or from one player you type 
 
 ## Match analysis
 
-Analyze your match and it gives you detailed information about every segment. Every private room game, and every ranked game once you download the replay.
+Analyse your match and it gives you detailed information about every segment. Every private room game, and every ranked game once you download the replay.
 
 <p align="center"><img src="docs/readme/splits.png" width="100%" alt="The splits overview in Stratas: every split against Frieren, and where the time went in the stronghold"></p>
 
