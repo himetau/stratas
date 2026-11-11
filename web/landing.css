@@ -26,6 +26,8 @@ h1 { font-size: clamp(24px, 4vw, 36px); line-height: 1.25; font-weight: 400; mar
 h2 { font-size: 17px; font-weight: 400; color: var(--accent); margin: 0 0 6px; }
 .lead { max-width: 720px; margin: 0 auto; color: var(--text-dim); }
 .small { font-size: 13px; color: var(--text-dim); }
+.downloads { display: inline-block; margin: 0; padding: 3px 10px; font-size: 13px; color: var(--text); border: 1px solid var(--accent); border-radius: 3px; background: color-mix(in srgb, var(--bg-raised) 88%, var(--accent)); }
+.downloads[hidden] { display: none; }
 
 .cta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 22px 0 10px; }
 .btn { display: inline-block; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--rule); background: var(--bg-raised); color: var(--text); text-decoration: none; }
