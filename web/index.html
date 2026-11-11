@@ -43,6 +43,7 @@
           <a class="btn ghost" href="./app/">Try it in your browser</a>
         </div>
         <p class="small">Free. Nothing gets uploaded, your replays stay on your computer.</p>
+        <p class="small" id="downloads" hidden></p>
       </section>
 
       <section class="shots">
@@ -72,5 +73,21 @@
     <footer>
       made with 🩷 by cyoshi · <a href="https://discord.gg/K3NxjhJRD">Discord</a> · <a href="https://github.com/himetau/stratas">GitHub</a> · <a href="https://github.com/himetau/stratas/blob/main/LICENSE">GPL-3.0</a> · <a href="https://ko-fi.com/cyoshi">Ko-fi</a> · not affiliated with MCSR Ranked or Mojang
     </footer>
+    <script type="module">
+      const freshDownloadsWhenCounterStarted = 146;
+      const shownWhenCounterStarted = 130;
+      const blockmapsFetchedPerUpdate = 2;
+      const countOf = (assets, test) => assets.filter((a) => test(a.name)).reduce((sum, a) => sum + a.download_count, 0);
+      try {
+        const releases = await (await fetch("https://api.github.com/repos/himetau/stratas/releases?per_page=100")).json();
+        const assets = releases.flatMap((r) => r.assets);
+        const installers = countOf(assets, (n) => n === "Stratas-Setup.exe" || n === "Stratas.AppImage");
+        const updates = countOf(assets, (n) => n.endsWith(".blockmap")) / blockmapsFetchedPerUpdate;
+        const fresh = Math.round(installers - updates);
+        const el = document.getElementById("downloads");
+        el.textContent = `${shownWhenCounterStarted + Math.max(0, fresh - freshDownloadsWhenCounterStarted)} downloads`;
+        el.hidden = false;
+      } catch {}
+    </script>
   </body>
 </html>
