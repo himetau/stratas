@@ -44,23 +44,6 @@ It can analyze the match and give you detailed information about every segment. 
 
 <p align="center"><img src="docs/readme/splits.png" width="100%" alt="The splits overview in Stratas: every split against Frieren, and where the time went in the stronghold"></p>
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <p><b>The gap, phase by phase</b><br>where you gained and lost, on a graph you can zoom into</p>
-      <p><b>Why you lost time, in plain words</b><br>"7 piglins stuck on gold", "longer way to the fortress", "15 s crafting"</p>
-      <p><b>Every trade, craft, pearl and rod</b><br>side by side with theirs, item by item</p>
-    </td>
-    <td width="50%" valign="top">
-      <p><b>Deaths </b><br>how long you were gone and what you dropped</p>
-      <p><b>The End</b><br>zero cycles, failed cycles, each perch and the dragon kill</p>
-      <p><b>What you should practice</b><br>after a few games, the things that keep losing you time</p>
-    </td>
-  </tr>
-</table>
-
-<br>
-
 ## Why it's different
 
 - Ranked only lets you watch the people from your own match. Stratas lets you put **anyone's run in the same seed** into your replay, at whatever Elo you want, so you can see exactly where you lost or gained time.
