@@ -1,5 +1,6 @@
 // The whole loop again, but on the browser build's stand-ins for node:fs, node:sqlite and node:zlib
 import { describe, expect, it, vi } from "vitest";
+import { deepStrictEqual } from "node:assert";
 vi.mock("node:fs", async () => await import("../web/shims/fs"));
 vi.mock("node:sqlite", async () => await import("../web/shims/sqlite"));
 vi.mock("node:zlib", async () => await import("../web/shims/zlib"));
@@ -11,13 +12,22 @@ import initSqlJs from "sql.js";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "../web/shims/fs";
 import { exportDb, useSqlJs } from "../web/shims/sqlite";
 import { mergeRunners } from "../src/core/replay/merge";
-import { decodeRrf } from "../src/core/replay/decode";
+import { repairReplay } from "../src/core/replay/size";
+import { decodeRrf, readRrf } from "../src/core/replay/decode";
 import { Service } from "../src/core/service";
 
 const ME = "fba98cacdc6a495eba271ee046dcbba9";
 const CHAV = "e1b919fe90b044b484ff93979e8308a4";
 
 describe("browser build: the whole loop in memory", () => {
+  it("reads size-matched replay padding with the browser decoder", async () => {
+    const original = new Uint8Array(await readFile(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)));
+    const solo = mergeRunners([{ bytes: original, uuid: ME }], { matchSourceSize: false });
+    const repaired = repairReplay(solo.bytes, original);
+    expect(readRrf(repaired).rpd.length).toBe(readRrf(original).rpd.length);
+    deepStrictEqual(decodeRrf(repaired).events.get(ME), decodeRrf(solo.bytes).events.get(ME));
+  });
+
   it("their replay -> seeds -> your replay -> mixed replay you can download", async () => {
     const CHAVRON = new Uint8Array(await readFile(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)));
     const solo = (uuid: string, patch: Record<string, unknown>) => {

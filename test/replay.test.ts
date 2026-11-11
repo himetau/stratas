@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { zstdDecompressSync } from "node:zlib";
+import { zstdCompressSync, zstdDecompressSync } from "node:zlib";
+import { zipSync, strToU8 } from "fflate";
 import { decodeRrf, readRrf, splitChunks, ReplayError, type Replay } from "../src/core/replay/decode";
 import { mergeRunners, retimeChunk } from "../src/core/replay/merge";
 import { recordLength } from "../src/core/replay/walk";
@@ -60,6 +61,34 @@ describe("walk", () => {
       }
     });
   }
+});
+
+describe("6.0.11 records", () => {
+  const dragonZeroWithAngle = Uint8Array.from([
+    ...Array(16).fill(0xab), 0x83,
+    88, 255, 0, 0, 0, 10, 2, 0x3f, 0x80, 0, 0,
+    13, 1, 4,
+  ]);
+
+  it("reads a DRAGON_ZERO that carries one float", () => {
+    const bytes = zipSync({
+      "meta.json": strToU8(JSON.stringify({ ...readRrf(CHAVRON).meta, symmetricKey: null })),
+      "timelines.json": strToU8("[]"),
+      "replay.rpd": (() => {
+        const z = new Uint8Array(zstdCompressSync(dragonZeroWithAngle));
+        const out = new Uint8Array(4 + z.length);
+        new DataView(out.buffer).setUint32(0, z.length);
+        out.set(z, 4);
+        return out;
+      })(),
+    });
+    const ev = [...decodeRrf(bytes).events.values()][0];
+    expect(ev.map((e) => [e.t, e.type, e.slot])).toEqual([[10, "DRAGON_ZERO", undefined], [11, "HELD_SLOT", 4]]);
+  });
+
+  it("walks a DRAGON_ZERO that carries one float", () => {
+    expect(recordLength(88, dragonZeroWithAngle, 23)).toBe(5);
+  });
 });
 
 describe("merge", () => {

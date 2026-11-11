@@ -283,7 +283,7 @@ function record(t: number, r: Reader, st: State, e: ReplayEvent) {
     case 82: case 83: case 84: case 85: e.value = r.u8(); return;
     case 86: r.skip(3); return;
     case 87: r.skip(8 * r.u8()); return;
-    case 88: if (r.u8() !== 1) r.skip(18); return;
+    case 88: { const kind = r.u8(); if (kind === 2) r.skip(4); else if (kind !== 1) r.skip(18); return; }
     case 89: r.skip(3); return;
     case 90: if (r.u8() !== 0) r.skip(12); return;
     case 91: { r.u8(); const n = r.u8(); for (let i = 0; i < n; i++) if (r.u8() === 255) r.skip(8); return; }

@@ -2,9 +2,11 @@
 //   node dist/cli.cjs analyze <replay.rrf> <you> [them]
 //   node dist/cli.cjs race <your.rrf> <you> <their.rrf> <them> [out.rrf]
 //   node dist/cli.cjs seed <replay.rrf>
+//   node dist/cli.cjs repair <mixed.rrf> <original.rrf> <out.rrf>
 import { readFileSync, writeFileSync } from "node:fs";
 import { decodeRrf, readRrf, type ReplayMeta } from "../src/core/replay/decode";
 import { mergeRunners } from "../src/core/replay/merge";
+import { repairReplay } from "../src/core/replay/size";
 import { analyzeRace, type RaceAnalysis } from "../src/core/detect/analyze";
 import { fmtTime } from "../src/core/detect/names";
 
@@ -43,14 +45,21 @@ function main() {
   } else if (cmd === "race") {
     const [yf, yn, tf, tn, out = "race.rrf"] = args;
     const yb = new Uint8Array(readFileSync(yf)), tb = new Uint8Array(readFileSync(tf));
-    const m = mergeRunners([{ bytes: yb, uuid: uuidOf(readRrf(yb).meta, yn) }, { bytes: tb, uuid: uuidOf(readRrf(tb).meta, tn) }]);
+    const m = mergeRunners([{ bytes: yb, uuid: uuidOf(readRrf(yb).meta, yn) }, { bytes: tb, uuid: uuidOf(readRrf(tb).meta, tn) }], { matchSourceSize: true });
     writeFileSync(out, m.bytes);
     console.log(`wrote ${out}`);
+  } else if (cmd === "repair") {
+    const [mixed, original, out] = args;
+    if (!mixed || !original || !out) throw new Error("usage: repair <mixed.rrf> <original.rrf> <out.rrf>");
+    const bytes = repairReplay(new Uint8Array(readFileSync(mixed)), new Uint8Array(readFileSync(original)));
+    decodeRrf(bytes); // Refuse to write a replay whose records cannot be decoded.
+    writeFileSync(out, bytes, { flag: "wx" });
+    console.log(`wrote ${out} (replay.rpd: ${readRrf(bytes).rpd.length} bytes)`);
   } else if (cmd === "seed") {
     const { meta } = readRrf(new Uint8Array(readFileSync(args[0])));
     console.log(`overworld ${meta.overworldSeed}\nnether    ${meta.netherSeed}`);
   } else {
-    console.log("usage: analyze <rrf> <you> [them] | race <your.rrf> <you> <their.rrf> <them> [out] | seed <rrf>");
+    console.log("usage: analyze <rrf> <you> [them] | race <your.rrf> <you> <their.rrf> <them> [out] | repair <mixed.rrf> <original.rrf> <out.rrf> | seed <rrf>");
     process.exit(1);
   }
 }

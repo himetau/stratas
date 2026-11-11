@@ -11,28 +11,41 @@ let picked: number | null = null;
 const revealed = new Set<number>();
 // Their Elo going into each queued match, so it's easy to spot in Recent Matches
 const elos = new Map<number, { elo: number; change: number } | null | "loading">();
-const waiting = (s: AppState) => s.queue.filter((q) => q.status === "queued" || q.status === "downloaded");
+type PracticeRun = AppState["queue"][number];
+const stage = (q: PracticeRun) => q.practice?.step ?? (q.status === "queued" ? "download-player" : "play-seed");
+export function practiceQueue(s: AppState): PracticeRun[] {
+  const active = s.queue.filter((q) => q.status === "queued" || q.status === "downloaded" ||
+    q.status === "raced" && stage(q) === "download-private");
+  const completed = s.queue.filter((q) => q.status === "raced" && stage(q) === "analyze")
+    .sort((a, b) => (b.practice?.updatedAt ?? 0) - (a.practice?.updatedAt ?? 0));
+  const last = completed.find((q) => q.match_id === picked) ?? completed[0];
+  return last ? [...active, last] : active;
+}
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const seedLine = (q: QueueRow) => [q.seed_type ? cap(nice(q.seed_type)) : null, q.bastion_type ? `${nice(q.bastion_type)} bastion` : null].filter(Boolean).join(", ");
 
-function current(s: AppState): QueueRow | null {
-  const list = waiting(s);
-  return list.find((q) => q.match_id === picked) ?? list.find((q) => q.status === "downloaded") ?? list[0] ?? null;
+function current(s: AppState): PracticeRun | null {
+  const list = practiceQueue(s);
+  return list.find((q) => q.match_id === picked) ?? list.find((q) => stage(q) === "download-private") ??
+    list.find((q) => q.status === "downloaded") ?? list[0] ?? null;
 }
 
 export function queueList(s: AppState, redraw: () => void, find: () => void) {
-  const list = waiting(s), sel = current(s);
-  const item = (q: QueueRow) => h("button", { class: `li ${q.match_id === sel?.match_id ? "sel" : ""}`, onclick: () => { picked = q.match_id; redraw(); } },
+  const list = practiceQueue(s), sel = current(s);
+  const item = (q: PracticeRun) => h("button", { class: `li ${q.match_id === sel?.match_id ? "sel" : ""}`, onclick: () => { picked = q.match_id; redraw(); } },
     head({ uuid: q.player_uuid, name: q.player_name }, 24),
     h("span", { class: "t" }, q.player_name),
     q.tier !== "manual" && q.tier !== "player" ? h("span", { class: `v tier-${q.tier}` }, tierName(s.tiers, q.tier)) : h("span"),
     h("span", { class: "s" }, [q.elo ? String(q.elo) : null, seedLine(q)].filter(Boolean).join(", ")));
-  const queued = list.filter((q) => q.status === "queued"), ready = list.filter((q) => q.status === "downloaded");
+  const queued = list.filter((q) => stage(q) === "download-player"), ready = list.filter((q) => stage(q) === "play-seed");
+  const replay = list.filter((q) => stage(q) === "download-private"), done = list.filter((q) => stage(q) === "analyze");
   return h("aside", { class: "list" },
-    h("div", { class: "list-head" }, h("h2", null, "Practice"), h("span", { class: "dim" }, list.length ? `${list.length} in queue` : "")),
+    h("div", { class: "list-head" }, h("h2", null, "Practice"), h("span", { class: "dim" }, list.length ? `${list.length} ${list.length === 1 ? "run" : "runs"}` : "")),
     h("div", { class: "list-body" },
-      h("div", { class: "list-grp" }, "Ready to play"),
-      ready.length ? ready.map(item) : h("div", { class: "list-empty" }, "Seeds show up here when a replay is downloaded."),
+      replay.length ? [h("div", { class: "list-grp" }, "Your replay"), replay.map(item)] : null,
+      done.length ? [h("div", { class: "list-grp" }, "Ready to analyze"), done.map(item)] : null,
+      ready.length ? [h("div", { class: "list-grp" }, "Ready to play"), ready.map(item)] : null,
+      !list.length ? h("div", { class: "list-empty" }, "Empty until you queue a run on Find runs.") : null,
       queued.length ? [h("div", { class: "list-grp" }, "To download"), queued.map(item)] : null),
     h("div", { class: "list-foot" }, btn("Find more runs", find, { key: "f" })));
 }
@@ -56,6 +69,19 @@ function history(s: AppState, q: QueueRow) {
       : h("p", { class: "dim", style: "margin:0" }, `No analysed games on ${types || "this seed"} yet.`));
 }
 
+/** One short instruction for the current stage of this seed's practice run. */
+function nextStep(q: PracticeRun, open: (id: number) => void) {
+  const step = stage(q);
+  const text = step === "download-player" ? "Download the player's replay."
+    : step === "play-seed" ? "Play the seed in a private room."
+    : step === "download-private" ? "Download your private room replay."
+    : null;
+  return h("div", { class: "notice next", "data-step": step, role: "status", "aria-live": "polite" },
+    h("span", null, text ?? ["View your replay folder and analyze the ",
+      h("button", { class: "linkish", onclick: () => { if (q.practice?.raceId != null) open(q.practice.raceId); },
+        "aria-label": `Analyze your run against ${q.player_name}` }, "run"), "."]));
+}
+
 export function homeView(s: AppState, go: { find: () => void; race: (id: number) => void; redraw: () => void }) {
   const q = current(s);
   if (!q) {
@@ -63,7 +89,7 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
     return h("div", { class: "page" },
       panel(null, null,
         h("div", { class: "p-head" }, h("h2", null, "Nothing in the queue")),
-        h("p", { class: "dim", style: "margin:0 0 12px" }, "Pick a few runs by stronger players to practice their seed."),
+        h("p", { class: "dim", style: "margin:0 0 12px" }, "Queue runs on the Find page to play their seeds."),
         btn("Find runs", go.find, { primary: true, key: "f" })),
       latest ? panel(null, null,
         h("div", { class: "p-head" }, h("h2", null, "Last game")),
@@ -72,7 +98,9 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
           btn("Open", () => go.race(latest.id), { key: "o" }))) : null,
       roomRules());
   }
-  const ready = q.status === "downloaded";
+  picked = q.match_id; // Keep this run selected while its API result and replay arrive.
+  const ready = stage(q) !== "download-player";
+  const status = stage(q) === "analyze" ? "Ready to analyze" : stage(q) === "download-private" ? "Waiting for your replay" : "Ready to play";
   const diff = q.elo && s.you.elo ? q.elo - s.you.elo : null;
   const shown = revealed.has(q.match_id);
   if (!ready && !elos.has(q.match_id) && q.player_uuid) {
@@ -81,6 +109,7 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
   }
   const at = elos.get(q.match_id);
   return h("div", { class: "page" },
+    nextStep(q, go.race),
     panel(null, { cls: "hero" },
       head({ uuid: q.player_uuid, name: q.player_name }, 64),
       h("div", { class: "hero-who" },
@@ -88,10 +117,10 @@ export function homeView(s: AppState, go: { find: () => void; race: (id: number)
         h("div", { class: "hero-sub" }, rank(q.elo), diff !== null ? h("span", { class: "dim" }, diff >= 0 ? `${diff} above you` : `${-diff} below you`) : null),
         h("div", { class: "dim" }, q.tier === "manual" ? "Picked from your own range" : q.tier === "player" ? "Picked by name" : tierName(s.tiers, q.tier) ? `${tierName(s.tiers, q.tier)} pick` : "")),
       h("div", { class: "hero-side" },
-        ready ? h("div", { class: "good" }, "Ready to play")
-          : [h("div", null, "Download the replay in Ranked"), h("div", { class: "dim" }, `Search Profile, ${q.player_name}, Recent Matches, Download Replay`),
+        ready ? h("div", { class: stage(q) === "download-private" ? "dim" : "good" }, status)
+          : [h("div", null, "Waiting for their replay"),
             // Pasting the exact name beats eyeballing it in Ranked's search
-            at && at !== "loading" ? h("div", null, `${at.elo} to ${at.elo + at.change} (${at.change >= 0 ? "+" : ""}${at.change}) vs ${q.opponent_name ?? "someone"} on ${day(q.date * 1000)}`) : null,
+            at && at !== "loading" ? h("div", { class: "dim" }, `Match: ${at.elo} to ${at.elo + at.change} (${at.change >= 0 ? "+" : ""}${at.change}) vs ${q.opponent_name ?? "someone"} on ${day(q.date * 1000)}`) : null,
             btn("Copy name", () => copy(q.player_name, "Name"), { sm: true, key: "c" }),
             isWeb ? btn("Add the replay here", pickReplays, { sm: true }) : null],
         btn("Skip", () => g.queueStatus(q.match_id, "skipped"), { ghost: true, sm: true }))),

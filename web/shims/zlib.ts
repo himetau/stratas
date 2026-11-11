@@ -2,6 +2,9 @@
 // as zstd frames with uncompressed blocks: still valid zstd that any decoder reads, just not smaller
 import { decompress } from "fzstd";
 
+// Matches Node's parameter key. This raw-block encoder ignores compression levels.
+export const constants = { ZSTD_c_compressionLevel: 100 };
+
 export function zstdDecompressSync(b: Uint8Array): Uint8Array { return decompress(b); }
 
 const BLOCK = 128 * 1024;
@@ -23,4 +26,4 @@ export function zstdCompressSync(raw: Uint8Array): Uint8Array {
   return out;
 }
 
-export default { zstdDecompressSync, zstdCompressSync };
+export default { constants, zstdDecompressSync, zstdCompressSync };

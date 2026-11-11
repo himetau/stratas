@@ -209,7 +209,7 @@ function howItWorks(s: AppState) {
       step(2, "Download their replay", "In Ranked: Profile, search their name, Recent Matches, Download Replay. Ranked only keeps recent games, so do it soon. The seed then shows up on the Practice page."),
       step(3, "Play the seed in a private room", "Copy the World and Nether seed from the Practice page and set them in the room. The room rules are on the Practice page too."),
       step(4, "Get at least an iron pickaxe", h("span", { class: "warn" }, "Ranked only saves private room replays once you have an iron pickaxe."), " Reset before that and there's no replay to mix."),
-      step(5, "See where the time went", "Right after the run you get your splits next to theirs, straight from Ranked. Once your replay is saved, it turns into the full race: both of you in one replay, and where and why you lost time.")));
+      step(5, "Compare", "After the run, Games shows your splits next to theirs from Ranked's API. When Ranked saves your replay, Stratas merges both runs into one replay and breaks the gap down by phase.")));
 }
 
 export function roomRules() {

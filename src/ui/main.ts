@@ -9,7 +9,7 @@ import { startEffects } from "./effects";
 import { setPrefs } from "./prefs";
 import { openKofi, trackUsage } from "./support";
 import logo from "./logo.png";
-import { homeView, queueList } from "./views/home";
+import { homeView, practiceQueue, queueList } from "./views/home";
 import { findView } from "./views/find";
 import { firstRace, raceList, raceOrder } from "./views/races";
 import { forgetRace, raceView } from "./views/race";
@@ -59,7 +59,7 @@ function render() {
   if (route.page === "race" && !s.races.some((r) => r.id === (route as { id: number }).id)) route = { page: "races" };
   if (isCompanion) { app.className = "companion"; mount(app, companionView(s, render)); commitKeys(); return; }
   if (!s.settings.onboarded) { lastPage = null; mount(app, welcomeView(s, render)); commitKeys(); return; }
-  const waiting = s.queue.filter((q) => q.status === "queued" || q.status === "downloaded").length;
+  const waiting = practiceQueue(s).filter((q) => q.practice?.step !== "analyze").length;
   const openRace = (id: number) => go({ page: "race", id });
   const raceId = route.page === "race" ? route.id : route.page === "races" ? firstRace(s) : null;
   const view = route.page === "home" ? homeView(s, { find: () => go({ page: "find" }), race: openRace, redraw: render })

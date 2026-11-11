@@ -6,6 +6,7 @@ import { basename, dirname, join } from "node:path";
 import { unzipSync, strFromU8 } from "fflate";
 import { decodeRrf, ReplayError, type ReplayMeta } from "./replay/decode";
 import { mergeRunners } from "./replay/merge";
+import { REPLAY_EXPORT_VERSION, requiresReplayVerification } from "./replay/size";
 import { analyzeRace, ANALYSIS_VERSION, type RaceAnalysis } from "./detect/analyze";
 import { quickRace } from "./detect/quick";
 import type { Finding } from "./detect/explain";
@@ -55,6 +56,12 @@ export interface RaceSummary {
   quick: boolean;
 }
 
+export interface PracticeProgress {
+  step: "download-player" | "play-seed" | "download-private" | "analyze";
+  raceId: number | null;
+  updatedAt: number;
+}
+
 export interface AppState {
   settings: Settings;
   instance: Instance | null;
@@ -62,7 +69,7 @@ export interface AppState {
   gate: GateState;
   you: { elo: number | null; rank: number | null; checkedAt: number | null };
   index: { matches: number; scanning: boolean; error: string | null; apiLeft: number };
-  queue: QueueRow[];
+  queue: (QueueRow & { practice?: PracticeProgress })[];
   races: RaceSummary[];
   insights: Insights;
   tiers: Record<Exclude<Tier, "manual" | "player">, [number, number]> | null;
@@ -141,12 +148,12 @@ export class Service extends EventEmitter {
   start() {
     this.locateInstance();
     // Reread every replay if the sorting rules changed
-    const LIBRARY_VERSION = 3;
+    const LIBRARY_VERSION = 4;
     const fresh = this.store.get<number>("libraryVersion", 1) !== LIBRARY_VERSION;
     this.rescanLibrary(fresh);
     if (fresh) this.store.set("libraryVersion", LIBRARY_VERSION);
     this.pool();
-    if (this.settings().autoRace) this.pairRuns(); // Reanalyses anything from an older detector version
+    if (this.settings().autoRace) this.pairRuns(fresh); // Also rebuild exports when the library format changes
     this.adapt(); // Tier shifts come from race history so a stale stored value fixes itself
     this.timers.push(setInterval(() => this.rescanLibrary(), 60_000));
     if (this.opts.offline) return;
@@ -472,7 +479,7 @@ export class Service extends EventEmitter {
       });
       let kind: RunKind;
       // Our race files are "vs <name> <yyyy-mm-dd> <hhmm>.rrf". A replay you just named "vs someone" isn't one
-      if (/^vs .+ \d{4}-\d{2}-\d{2} \d{4}\.rrf$/.test(basename(p)) || this.store.races().some((r) => r.race_file === p && r.your_file !== r.their_file)) kind = "race";
+      if (meta.stratasReplayVersion || /^vs .+ \d{4}-\d{2}-\d{2} \d{4}\.rrf$/.test(basename(p)) || this.store.races().some((r) => r.race_file === p && r.your_file !== r.their_file)) kind = "race";
       else if (meta.symmetricKey || (meta.version ?? 0) < 40) { kind = "unreadable"; row.error = "made before MCSR Ranked 6.0.1 (encrypted)"; }
       else if (me && meta.players.some((x) => x.uuid === me)) kind = meta.players.length === 1 ? "practice" : "ranked";
       else kind = "reference";
@@ -603,7 +610,10 @@ export class Service extends EventEmitter {
         const key = `${run.file}|${ref.file}|${them.uuid}`;
         current.add(key);
         const old = this.store.raceByKey(key);
-        if (!force && old && !old.error && JSON.parse(old.analysis || "{}").analysisVersion === ANALYSIS_VERSION) continue;
+        const previous = JSON.parse(old?.analysis || "{}");
+        const needsSizeMatch = requiresReplayVerification(this.instance.modVersion) || (run.version ?? 0) >= 41 || (ref.version ?? 0) >= 41;
+        if (!force && old && !old.error && previous.analysisVersion === ANALYSIS_VERSION &&
+          (!needsSizeMatch || previous.replayExportVersion === REPLAY_EXPORT_VERSION)) continue;
         this.buildRace(run, ref, them, q?.tier ?? null, key);
         // Ranked's match list can lag behind the replay, a run that never killed the dragon is a forfeit too
         const built = this.store.raceByKey(key);
@@ -614,6 +624,7 @@ export class Service extends EventEmitter {
         if (q) this.store.setQueue(q.match_id, { status: "raced" });
         // The full race replaces the quick one from Ranked's splits
         if (run.match_id && !this.store.raceByKey(key)?.error) for (const r of this.store.races()) if (r.key.startsWith(`quick|${run.match_id}|`)) this.store.deleteRace(r.id);
+        if (!old && built && !built.error && (run.date ?? run.mtime) >= this.startedAt - 10 * 60_000) this.announce(built.id);
       }
     }
     // Prefer our pooled copy, then Ranked's temp-replay, over a renamed copy of the same match
@@ -747,7 +758,9 @@ export class Service extends EventEmitter {
       const yb = new Uint8Array(readFileSync(run.file)), tb = new Uint8Array(readFileSync(ref.file));
       // Fully decode both first and refuse anything that doesn't decode cleanly
       decodeRrf(yb); decodeRrf(tb);
-      const merged = mergeRunners([{ bytes: yb, uuid: me }, { bytes: tb, uuid: them.uuid }]);
+      const merged = mergeRunners([{ bytes: yb, uuid: me }, { bytes: tb, uuid: them.uuid }], {
+        matchSourceSize: requiresReplayVerification(this.instance?.modVersion ?? null) ? true : undefined,
+      });
       const replay = decodeRrf(merged.bytes);
       const analysis = analyzeRace(replay, me, them.uuid, { leave: this.leaveGoals() });
       const d = new Date(run.mtime);
@@ -756,7 +769,8 @@ export class Service extends EventEmitter {
       writeFileSync(out, merged.bytes);
       this.indexFile(out);
       this.setGate("ok", "Replays from this version decode completely");
-      this.store.putRace({ ...base, race_file: out, final_gap: analysis.finalGap, analysis: JSON.stringify(analysis), error: null });
+      this.store.putRace({ ...base, race_file: out, final_gap: analysis.finalGap,
+        analysis: JSON.stringify({ ...analysis, replayExportVersion: merged.meta.stratasReplayVersion ?? 0 }), error: null });
       this.log(`Game ready: ${name.replace(/\.rrf$/, "")} (${fmtDur(analysis.finalGap)} ${analysis.finalGap >= 0 ? "behind" : "ahead"})`);
     } catch (e) {
       const msg = (e as Error).message;
@@ -813,6 +827,28 @@ export class Service extends EventEmitter {
 
   state(): AppState {
     const races = this.store.races();
+    const runs = new Map(this.store.runs().map((r) => [r.file, r]));
+    const links = this.store.get<Record<string, number>>("quickLinks", {});
+    const dropped = new Set(this.store.get<number[]>("droppedForfeits", []));
+    const privateMatches = this.store.get<ApiMatch[]>("myPrivate", []).filter((m) => !dropped.has(m.id));
+    const progress = (q: QueueRow): PracticeProgress => {
+      if (q.status === "queued" || !q.file) return { step: "download-player", raceId: null, updatedAt: q.added_at };
+      const related = races.filter((r) => r.your_file !== r.their_file && r.their_uuid === q.player_uuid &&
+        (r.their_file === `api:${q.match_id}` || runs.get(r.their_file)?.match_id === q.match_id));
+      const latestMatch = privateMatches.filter((m) => links[m.id] === q.match_id).sort((a, b) => b.date - a.date)[0];
+      // An API-only result can mark the queue entry "raced" before its replay exists.
+      // Keep that run on Practice until its full replay has been downloaded.
+      const latestRace = related.find((r) => !latestMatch ||
+        r.your_file === `api:${latestMatch.id}` || runs.get(r.your_file)?.match_id === latestMatch.id ||
+        (runs.get(r.your_file)?.date ?? 0) > latestMatch.date * 1000);
+      if (latestRace) {
+        const local = runs.has(latestRace.your_file);
+        return { step: local ? "analyze" : "download-private", raceId: latestRace.id,
+          updatedAt: latestRace.created_at };
+      }
+      if (latestMatch) return { step: "download-private", raceId: null, updatedAt: latestMatch.date * 1000 };
+      return { step: "play-seed", raceId: null, updatedAt: q.added_at };
+    };
     const shift = this.store.get<TierShift>("tierShift", { next: 0, stretch: 0, ceiling: 0 });
     const lib = { practice: 0, ranked: 0, reference: 0, unreadable: 0 };
     for (const r of this.store.runs()) if (r.kind in lib) lib[r.kind as keyof typeof lib]++;
@@ -823,7 +859,7 @@ export class Service extends EventEmitter {
       gate: this.gate(),
       you: this.you,
       index: { matches: this.store.matchCount(), scanning: this.scanner.busy, error: this.scanner.lastError, apiLeft: this.api.remaining() },
-      queue: this.store.queue().filter((q) => q.status !== "skipped"),
+      queue: this.store.queue().filter((q) => q.status !== "skipped").map((q) => ({ ...q, practice: progress(q) })),
       races: races.map((r) => {
         const a = r.error ? null : (JSON.parse(r.analysis) as RaceAnalysis);
         return { id: r.id, createdAt: r.created_at, theirName: r.their_name, theirElo: r.their_elo, tier: r.tier, finalGap: r.final_gap,

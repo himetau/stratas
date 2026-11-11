@@ -2,6 +2,16 @@
 
 What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
 
+## 1.6.0
+
+- Mixed replays work with Ranked 6.0.11 and 6.0.12's replay verification. Your runs and the opponent's recorded actions stay unchanged.
+- Existing mixed replays rebuild automatically when replay verification is needed. Renamed Stratas replays stay out of your match history.
+- Replays containing the newer dragon zero-cycle record decode correctly.
+- The CLI can repair an existing mixed replay using an untouched original from the same seed: `npm run cli -- repair mixed.rrf original.rrf fixed.rrf`.
+- A run you didn't finish says where you stopped and how far behind you were at that point. Its last phase is named after where you were, not "Run end".
+- The Practice page tracks downloading their replay, playing the seed, downloading your private-room replay, and analyzing the run, with a short instruction and a link to your finished run.
+- Plainer wording on the welcome screen and a few other pages.
+
 ## 1.5.1
 
 - The Find page looks back 5 days instead of 36 hours, so a player's wins from the last few days show up, newest first. Newer runs are still preferred when picking by Elo.

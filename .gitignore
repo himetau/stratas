@@ -5,3 +5,5 @@ src/ui/dev/cast
 *.db
 *.db-*
 release
+/artifacts/
+__pycache__/

@@ -273,7 +273,7 @@ export function raceView(id: number, rerender: () => void, yourElo: number | nul
   const chartPanel = panel(null, { cls: "race-graph" }, header, chart, strip);
   // Built from Ranked's splits, say what's missing and whether the full race is still coming
   const quick = a.quick ? h("div", { class: "notice" }, h("span", null, a.quick.ironPick
-    ? "Splits from Ranked only. Once your replay is saved this turns into the full race: both of you in one replay, and where and why you lost time."
+    ? "Splits from Ranked's API only. When Ranked saves your replay, this becomes the merged replay with a per-phase breakdown."
     : "Splits from Ranked only. You reset before getting an iron pickaxe, so Ranked didn't save a replay of this run.")) : null;
   const page = h("div", { class: "page race-page" },
     quick,

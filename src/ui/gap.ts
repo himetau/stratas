@@ -282,7 +282,8 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
       onclick: () => savePrefs({ [k]: !p[k] }) }, LAYER_LABEL[k])));
   }
   function drawPills() {
-    const shortName = (s: (typeof segments)[number]) => ({ "To fort": "To fortress", "To bastion": "To bastion" })[sentence(s.segShort)] ?? sentence(s.segShort);
+    const shortName = (s: (typeof segments)[number]) => s.splitName === "Run end" && s.reportPhase ? sentence(s.reportPhase)
+      : ({ "To fort": "To fortress", "To bastion": "To bastion", "Run end": "Unfinished" })[sentence(s.segShort)] ?? sentence(s.segShort);
     // Adjacent segments with the same name are one phase (fortress through blind travel)
     const groups: { name: string; segs: typeof segments }[] = [];
     for (const s of segments) {
@@ -327,7 +328,9 @@ export function gapChart(a: RaceAnalysis, opts: { seedType?: string | null; sele
       if (b.change !== null) kids.push(h("span", { class: toneCls(b.change) }, gapText(b.change)));
       kids.push(h("button", { class: "btn sm ghost", onclick: () => pick(null) }, "Whole run", h("span", { class: "kbd" }, "ESC")));
     } else {
-      kids.push(h("b", null, a.you.finished ? `Finished ${clock(a.you.endTicks / 20)}` : "Didn't finish"), h("span", { class: toneCls(a.finalGap) }, gapText(a.finalGap)));
+      if (a.you.finished) kids.push(h("b", null, `Finished ${clock(a.you.endTicks / 20)}`), h("span", { class: toneCls(a.finalGap) }, gapText(a.finalGap)));
+      else kids.push(h("b", null, `Didn't finish, ${a.you.quit ? "left" : "stopped"} at ${clock(segments.at(-1)?.you1 ?? a.you.endTicks / 20)}`),
+        h("span", { class: toneCls(a.finalGap) }, `${gapText(a.finalGap)} at that point`));
     }
     status.replaceChildren(...kids);
     status.title = b ? "" : "Hover a phase for detail, click to zoom";

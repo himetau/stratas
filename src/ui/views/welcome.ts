@@ -35,16 +35,16 @@ function intro(_s: AppState, rerender: () => void) {
   const item = (title: string, text: string) => h("li", null, h("b", null, title), h("span", { class: "dim" }, text));
   return [
     h("div", { class: "wl-brand" }, h("img", { src: logo, alt: "" }), h("h1", null, "Stratas")),
-    h("p", { class: "wl-lead" }, "Practice MCSR Ranked seeds against a player at any Elo, then watch both runs in one replay and see where the time went."),
+    h("p", { class: "wl-lead" }, "Compare against any player in a private room. Stratas combines both replays into one file and gives you detailed information about every segment, while letting you view the replay."),
     h("h2", null, "What it looks at"),
     h("ul", { class: "wl-list" },
       isWeb
-        ? item("Replays you add", "They stay in this browser. Nothing gets uploaded, the page reads them right here.")
-        : item("Your Ranked replays", "Read from your MCSR Ranked instance folder. They never leave your computer."),
+        ? item("Replays you add", "Read in this browser. Not uploaded.")
+        : item("Your Ranked replays", "Read from your MCSR Ranked instance folder. Not uploaded."),
       item("Ranked's public API", "Match history and Elo, the same things anyone can see on a Ranked profile."),
       item("Minecraft skins", "For the little heads next to names."),
       isWeb ? null : item("GitHub", "To check for a new version of Stratas."),
-      item("No account, no tracking", "There's nothing to sign up for, and Stratas doesn't collect anything about you.")),
+      item("No account, no telemetry", "No sign-up. Stratas collects nothing about you.")),
     h("div", { class: "wl-actions" }, btn("Get started", () => next(rerender), { primary: true, key: "Enter" })),
   ];
 }
@@ -101,7 +101,7 @@ function setup(s: AppState, rerender: () => void, finish: () => Promise<void>) {
       h("span", { class: "nm" }, label));
   return [
     h("h1", null, "A few settings"),
-    h("p", { class: "wl-lead" }, "The ones worth picking now. Everything else is in Settings."),
+    h("p", { class: "wl-lead" }, "You can change these later in Settings."),
     isWeb
       ? row("Your replays", "The browser can't see your Ranked folder, so add .rrf files here or drop them anywhere. Ranked keeps them in your instance's replays folder.", btn("Add replays", pickReplays, { sm: true }))
       : row("Ranked instance", s.instance ? `Found: ${s.instances.find((i) => i.path === (st.instancePath ?? s.instance?.root))?.name ?? s.instance.root}` : "Not found. Pick the instance folder you play Ranked in.",

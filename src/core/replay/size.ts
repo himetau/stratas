@@ -1,0 +1,84 @@
+// Ranked 6.0.11 verifies ZipEntry.getSize() for replay.rpd against the source match.
+import { strToU8, unzipSync, zipSync } from "fflate";
+import { constants, zstdCompressSync, zstdDecompressSync } from "node:zlib";
+import { checkReadable, readRrf, ReplayError, splitChunks, type ReplayMeta } from "./decode";
+
+export interface SizeReference { meta: ReplayMeta; rpd: Uint8Array }
+export const REPLAY_EXPORT_VERSION = 1;
+
+export function requiresReplayVerification(version: string | null): boolean {
+  const [major = 0, minor = 0, patch = 0] = (version ?? "").split(".").map(Number);
+  return major > 6 || major === 6 && (minor > 0 || minor === 0 && patch >= 11);
+}
+
+function pack(bodies: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(bodies.reduce((n, b) => n + 4 + b.length, 0));
+  const view = new DataView(out.buffer);
+  let offset = 0;
+  for (const body of bodies) {
+    view.setUint32(offset, body.length);
+    out.set(body, offset + 4);
+    offset += 4 + body.length;
+  }
+  return out;
+}
+
+/** Fit real chunks to an original payload size without adding or removing records. */
+export function matchReplaySize(rpd: Uint8Array, meta: ReplayMeta, references: SizeReference[]) {
+  const candidates = references.filter(({ meta: ref }) => {
+    if (ref.overworldSeed !== meta.overworldSeed || ref.netherSeed !== meta.netherSeed || ref.theEndSeed !== meta.theEndSeed) return false;
+    // Race verification also sends the first player's UUID; keep that identity intact.
+    return ref.matchId != null || ref.raceId != null && ref.players[0]?.uuid === meta.players[0]?.uuid;
+  });
+  let bodies = splitChunks(rpd).map((c) => c.body);
+  if (!bodies.length) throw new ReplayError("cannot size-match a replay without chunks");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const reference = candidates.find((ref) => {
+      const gap = ref.rpd.length - rpd.length;
+      return gap === 0 || gap >= 8;
+    });
+    if (reference) {
+      const gap = reference.rpd.length - rpd.length;
+      if (gap) {
+        // A skippable frame follows a normal Zstd frame INSIDE its length-prefixed
+        // chunk. The Java and Node decoders discard it before reading any records.
+        const padded = new Uint8Array(bodies[0].length + gap);
+        padded.set(bodies[0]);
+        const view = new DataView(padded.buffer);
+        view.setUint32(bodies[0].length, 0x184d2a50, true);
+        view.setUint32(bodies[0].length + 4, gap - 8, true);
+        bodies[0] = padded;
+        rpd = pack(bodies);
+      }
+      return {
+        rpd,
+        meta: { ...meta, matchId: reference.meta.matchId, raceId: reference.meta.raceId ?? null, stratasReplayVersion: REPLAY_EXPORT_VERSION },
+      };
+    }
+    if (!attempt && candidates.length) {
+      // Also strips padding left by a previous export. Higher compression can
+      // make a mix that exceeds both original sizes fit without dropping events.
+      bodies = bodies.map((body) => {
+        const compressed = new Uint8Array(zstdCompressSync(zstdDecompressSync(body), {
+          params: { [constants.ZSTD_c_compressionLevel]: 19 },
+        }));
+        return compressed.length < body.length ? compressed : body;
+      });
+      rpd = pack(bodies);
+    }
+  }
+  throw new ReplayError(`mixed replay payload (${rpd.length} bytes) cannot fit an original replay size (${candidates.map((r) => r.rpd.length).join(", ") || "no matching source"}); use the original full replays`);
+}
+
+/** Repair an existing mix using an untouched original from the same seed. */
+export function repairReplay(bytes: Uint8Array, referenceBytes: Uint8Array): Uint8Array {
+  const replay = readRrf(bytes), reference = readRrf(referenceBytes);
+  checkReadable(replay.meta);
+  checkReadable(reference.meta);
+  const fitted = matchReplaySize(replay.rpd, replay.meta, [reference]);
+  return zipSync({
+    ...unzipSync(bytes),
+    "replay.rpd": [fitted.rpd, { level: 0 }],
+    "meta.json": strToU8(JSON.stringify(fitted.meta)),
+  });
+}

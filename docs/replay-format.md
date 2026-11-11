@@ -69,7 +69,7 @@ Reverse-engineered on 2026-10-16 from MCSR Ranked 6.0.1–6.0.3 (`com.mcsrranked
 | 82–85 | DRAGON_PHASE / HEALTH / CRYSTAL / DEATH | u8 |
 | 86 | DRAGON_DEATH_PROGRESS | i16, u8 |
 | 87 | DRAGON_NODES | n u8, n × i64 |
-| 88 | DRAGON_ZERO | u8 (1 = nothing more), else f32, u8, 3 × f32, u8 |
+| 88 | DRAGON_ZERO | u8 (1 = nothing more, 2 = f32 since 6.0.11), else f32, u8, 3 × f32, u8 |
 | 89 | DRAGON_DAMAGE | u8, i16 |
 | 90 | DRAGON_TARGET | u8 (0 = none), else 3 × f32 |
 | 91 | DRAGON_PATH | u8, n u8, n × (u8, and i64 if that u8 is 255) |
@@ -83,6 +83,26 @@ Item, block state, entity, effect and menu ids are vanilla 1.16.1 raw ids (see `
 ## Combining runs
 - A chunk only contains one player's data, so you can put runners from different files with the same seed into one `.rrf`. Copy their chunks byte for byte, interleave them by first tick, and write a `meta.json` with both players and `symmetricKey: null`. Ranked's My replays loads files like this (tested in-game on 2026-10-16).
 - To shift a runner in time, add the offset to every absolute tick, then recompress (`retimeChunk`).
+
+### Ranked 6.0.11–6.0.12 size verification
+
+The installed 6.0.11 client's `ReplayProcessor` sends `p$rep_verify` with the match ID and `ZipEntry.getSize()` of **`replay.rpd`**, not the outer `.rrf` size. Race replays instead send the race ID and the first player's UUID. Playback still needs a connected Ranked socket and the server's acceptance; matching the size is not an offline playback mode.
+
+Stratas fits a mixed payload to one of the original full replay payloads and uses that source's `matchId`/`raceId`. A Zstandard skippable frame (`0x184d2a50`, little-endian length, zero-filled bytes) is appended **inside a length-prefixed compressed chunk**, and the chunk length is updated. This changes no decompressed records, ticks, player tracks or timelines. Node's decoder and the `zstd-jni` bundled with 6.0.11 both accept this framing. Do not append zeros directly to `replay.rpd`, or pad only the outer ZIP.
+
+If a mix is too large, Stratas tries recompressing the chunks at level 19. If neither source has room, export fails instead of dropping events. References must have the same three seeds. Race references must also retain their first player's UUID. Desktop exports enable this for 6.0.11+, and the CLI `race` command enables it explicitly.
+
+To repair an existing mixed replay, keep the untouched full original and write a new file:
+
+```sh
+npm run cli -- repair 'mixed.rrf' 'original.rrf' 'size-fixed.rrf'
+```
+
+The repair command refuses to overwrite an existing output. An export carries `stratasReplayVersion: 1` so Stratas recognizes renamed mixed replays. The exported match ID may belong to the opponent's source match; the library retains the actual practice match separately. Stored analyses carry `replayExportVersion` so old exports rebuild when verification becomes necessary, including after a mod update.
+
+The user confirmed the repaired mayRNG replay plays in-game on 6.0.12 (2026-11-11). Its payload is 760,708 bytes with match ID 14864645. All 158 decompressed chunks and both event streams match the original mix. A comparison of the official 6.0.11 and 6.0.12 binaries found the same replay loader, verification request and compression decoder.
+
+The browser shim can read skippable frames and pad existing compressed chunks, but its encoder writes raw Zstandard blocks and cannot provide the desktop's stronger-compression fallback. If neither source size can hold a browser export, use the desktop app.
 
 ## Known Replay Pitfalls
 - **Position records only when moving:** Ranked only emits `PLAYER_POSITION*` / `PLAYER_POS*` when the player moves. Standing still at a trade spot or in a portal leaves a multi-second gap in `track`; the player was still at the prior coordinate until `nextRecord.t - 1`.

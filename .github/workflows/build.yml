@@ -6,6 +6,7 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -107,4 +108,9 @@ jobs:
           printf '%s\n' "Website: **[stratas.lol](https://stratas.lol)**, or [try it in your browser](https://stratas.lol/app/) without installing anything." "" \
             "Windows: \`Stratas-Setup.exe\`. Until it's signed, Windows shows a \"Windows protected your PC\" popup: click More info, then Run anyway." "" \
             "Linux: \`Stratas.AppImage\`. Already on 1.1.0 or newer? Click the update button in the app."; } > notes.md
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Stratas ${GITHUB_REF_NAME#v}" --notes-file notes.md --generate-notes *.exe *.AppImage *.blockmap latest*.yml
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Stratas ${GITHUB_REF_NAME#v}" --notes-file notes.md
+            gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber *.exe *.AppImage *.blockmap latest*.yml
+          else
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Stratas ${GITHUB_REF_NAME#v}" --notes-file notes.md --generate-notes *.exe *.AppImage *.blockmap latest*.yml
+          fi

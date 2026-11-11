@@ -55,7 +55,7 @@ function usualRun(i: Insights) {
 /** A card per habit */
 function habitCards(i: Insights, open: (id: number) => void) {
   if (!i.habits.length) return panel(null, null, h("div", { class: "p-head" }, h("h2", null, "What to practice")),
-    h("p", { class: "dim", style: "margin:0" }, i.races < 3 ? "A few more games and the things that keep costing you time show up here." : "Nothing keeps costing you time right now."));
+    h("p", { class: "dim", style: "margin:0" }, i.races < 3 ? "Needs at least 3 analysed games." : "Nothing keeps costing you time right now."));
   const card = (hb: Insights["habits"][number]) => h("div", { class: "pt-card" },
     h("div", { class: "pt-card-top" }, h("span", { class: "dim" }, structIcon(phaseIconKey(hb.phase, null)), hb.phase),
       hb.trend ? h("span", { class: `pt-trend ${hb.trend}` }, hb.trend === "better" ? "getting better" : hb.trend === "worse" ? "getting worse" : "steady") : null),
@@ -111,5 +111,5 @@ export function patternsView(s: AppState, open: (id: number) => void) {
       i.usual !== null ? h("span", null, "you usually finish ", h("b", { class: deltaClass(i.usual) }, `${fmtDelta(i.usual)} ${i.usual > 0 ? "behind" : "ahead"}`)) : null,
       i.recent.length > 1 ? recentBars(i, open) : null),
     i.races ? [usualRun(i), habitCards(i, open), sideCards(i), bests(i, open)]
-      : panel(null, null, h("div", { class: "empty" }, h("b", null, "No games yet"), "Practice a few seeds and your patterns show up here.")));
+      : panel(null, null, h("div", { class: "empty" }, h("b", null, "No games yet"), "Patterns come from analysed games. Play a queued seed first.")));
 }

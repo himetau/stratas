@@ -32,6 +32,7 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     svc.start();
     svc.store.enqueue({ match_id: 14182329, player_uuid: CHAV, player_name: "Chavron", opponent_name: "cyoshi", date: Math.floor(Date.now() / 1000),
       time: 785002, seed_type: "VILLAGE", bastion_type: "STABLES", elo: 1390, tier: "next", reason: "test" });
+    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("download-player");
 
     // 1. Download their replay in Ranked (lands in My Replays under the name you typed)
     writeFileSync(join(mc, "mcsrranked", "replay", "chav.rrf"), solo(CHAV, { matchId: 14182329 }));
@@ -40,9 +41,11 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(q.status).toBe("downloaded");
     expect(q.overworld_seed).toBe("-3566570342730286256");
     expect(q.nether_seed).toBe("198406064683359");
+    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("play-seed");
 
     // 2. Copy the seed and play it solo in a private room. Ranked's API has the splits right away
     svc.practicing(14182329);
+    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("play-seed");
     const notes: { id: number | null; title: string; body: string }[] = [];
     svc.on("newGame", (n) => notes.push(n));
     const splits = (uuid: string, ms: [string, number][]) => ms.map(([type, time]) => ({ uuid, type, time }));
@@ -59,12 +62,14 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(quick.finalGap).toBeCloseTo((950000 - 785002) / 1000, 1);
     expect(svc.race(quick.id)!.analysis!.splits.map((s) => s.name)).toEqual(["Entered the Nether", "Entered Bastion", "Defeated the Dragon"]);
     expect(svc.store.queueRow(14182329)!.status).toBe("raced");
+    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice).toMatchObject({ step: "download-private", raceId: quick.id });
     expect(notes.map((n) => n.title)).toEqual(["vs Chavron · splits"]);
 
     // 3. Ranked saves your replay, the full race replaces the quick one
-    writeFileSync(join(mc, "mcsrranked", "temp-replay", "99999999.rrf"), solo(ME, { matchId: 99999999, matchType: 3 }));
+    writeFileSync(join(mc, "mcsrranked", "temp-replay", "99999999.rrf"), solo(ME, { matchId: 99999999, matchType: 3, date: Date.now() }));
     svc.rescanLibrary();
     expect(svc.state().races.some((r) => r.quick)).toBe(false);
+    expect(notes.map((n) => n.title)).toEqual(["vs Chavron · splits", expect.stringMatching(/^vs Chavron · \+2:39$/)]);
 
     const st = svc.state();
     const race = st.races.find((r) => r.kind === "race")!;
@@ -76,6 +81,22 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(readdirSync(join(mc, "mcsrranked", "replay")).some((f) => f.startsWith("vs Chavron "))).toBe(true);
     expect(st.gate.status).toBe("ok");
     expect(svc.race(race.id)!.analysis!.losses.length).toBeGreaterThan(3);
+    expect(st.queue.find((q) => q.match_id === 14182329)?.practice).toMatchObject({ step: "analyze", raceId: race.id });
+  });
+
+  it("tracks a newer private match before its replay or splits arrive", () => {
+    const previous = svc.store.get<unknown[]>("myPrivate", []);
+    const links = svc.store.get<Record<string, number>>("quickLinks", {});
+    try {
+      svc.store.set("myPrivate", [{ id: 99999997, type: 3, date: Math.floor(Date.now() / 1000) + 60,
+        seedType: null, bastionType: null, players: [{ uuid: ME, nickname: "cyoshi" }],
+        result: { uuid: ME, time: 800000 }, forfeited: false }]);
+      svc.store.set("quickLinks", { ...links, 99999997: 14182329 });
+      expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice).toMatchObject({ step: "download-private", raceId: null });
+    } finally {
+      svc.store.set("myPrivate", previous); svc.store.set("quickLinks", links);
+    }
+    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("analyze");
   });
 
   it("pops up a ranked game you just played and keeps the newest ones", () => {

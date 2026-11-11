@@ -220,6 +220,8 @@ details.card.flash { animation: card-flash 1.4s ease-out; }
 /* notices and toast */
 .notice { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--warn); border-left-width: 3px; border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg-raised) 92%, var(--warn)); font-size: 12.5px; }
+.notice.next { border-color: var(--accent); background: color-mix(in srgb, var(--bg-raised) 92%, var(--accent)); }
+.notice .warn { color: var(--warn); }
 .notice.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bg-raised) 92%, var(--bad)); }
 .toast { max-width: 420px; position: fixed; bottom: 22px; right: 22px; padding: 10px 14px 10px 18px; border: 0; clip-path: var(--notch);
   background: var(--bg-high); box-shadow: inset 4px 0 0 var(--accent); font-size: 12px; opacity: 0; transform: translateY(8px); transition: all .16s; z-index: 50; }

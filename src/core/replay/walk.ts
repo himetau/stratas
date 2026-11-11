@@ -34,7 +34,7 @@ export function recordLength(type: number, b: Uint8Array, i: number): number {
     }
     case 64: return 7 + 2 * (b[i + 6] & 63);
     case 87: return 1 + 8 * b[i];
-    case 88: return b[i] === 1 ? 1 : 19;
+    case 88: return b[i] === 1 ? 1 : b[i] === 2 ? 5 : 19;
     case 90: return b[i] === 0 ? 1 : 13;
     case 91: { i += 1; const n = b[i++]; for (let k = 0; k < n; k++) { if (b[i++] === 255) i += 8; } return i - s; }
     case 103: return 6 + 3 * b[i + 5];
