@@ -8,7 +8,7 @@
   <a href="#match-analysis"><b>Match analysis</b></a> ·
   <a href="#what-makes-it-different"><b>Why it's different</b></a> ·
   <a href="#screenshots"><b>Screenshots</b></a> ·
-  <a href="#download-it"><b>Download it</b></a> ·
+  <a href="#downloading-it"><b>Download it</b></a> ·
   <a href="#support-me"><b>Support me</b></a> ·
   <a href="https://discord.gg/K3NxjhJRD"><b>Discord</b></a>
 </p>
