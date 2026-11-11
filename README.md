@@ -130,8 +130,6 @@ npm run typecheck
 npm run snapshot && npm run ui:dev   # the UI in a browser with test data
 ```
 
-Notes on the replay format are in `docs/replay-format.md`.
-
 </details>
 
 <br>
