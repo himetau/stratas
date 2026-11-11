@@ -29,8 +29,8 @@ Stratas finds a run from a player at the elo you picked, or from one player you 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/readme/card-practice.png" alt="Picking opponents by elo"></td>
-    <td width="50%"><img src="docs/readme/card-race.png" alt="Your gap to them over the whole run"></td>
+    <td width="50%"><img src="docs/readme/card-practice.png" alt="Find runs by Elo"></td>
+    <td width="50%"><img src="docs/readme/card-race.png" alt="Time difference"></td>
   </tr>
 </table>
 
@@ -56,12 +56,12 @@ Analyse your match and it gives you detailed information about every segment. Ev
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/readme/card-bastion.png" alt="Zoomed into the bastion"></td>
-    <td width="50%"><img src="docs/readme/card-breakdown.png" alt="Where the time went"></td>
+    <td width="50%"><img src="docs/readme/card-bastion.png" alt="Phase detail"></td>
+    <td width="50%"><img src="docs/readme/card-breakdown.png" alt="Time loss breakdown"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/readme/card-what-to-practice.png" alt="What you should practice"></td>
-    <td width="50%"><img src="docs/readme/card-themes.png" alt="Themes and colours"></td>
+    <td width="50%"><img src="docs/readme/card-what-to-practice.png" alt="Patterns"></td>
+    <td width="50%"><img src="docs/readme/card-themes.png" alt="Themes"></td>
   </tr>
 </table>
 
