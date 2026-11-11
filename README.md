@@ -4,11 +4,11 @@
 
 <p align="center">
   <a href="https://stratas.lol"><b>stratas.lol</b></a> ·
-  <a href="#why-stratas"><b>Why</b></a> ·
-  <a href="#what-does-it-do"><b>What it does</b></a> ·
+  <a href="#replay-mixing"><b>Replay mixing</b></a> ·
+  <a href="#match-analysis"><b>Match analysis</b></a> ·
   <a href="#why-its-different"><b>Why it's different</b></a> ·
-  <a href="#a-look-inside"><b>A look inside</b></a> ·
-  <a href="#get-it-running"><b>Download it</b></a> ·
+  <a href="#screenshots"><b>Screenshots</b></a> ·
+  <a href="#download-it"><b>Download it</b></a> ·
   <a href="#support-me"><b>Support me</b></a> ·
   <a href="https://discord.gg/K3NxjhJRD"><b>Discord</b></a>
 </p>
@@ -23,7 +23,7 @@
 
 <br>
 
-## Why Stratas?
+## Replay mixing
 
 Stratas lets you practice against **any** elo or player you want, in the same seed, in a new way.
 
@@ -38,13 +38,13 @@ It finds a run from a player at the elo you picked, or from one player you type 
 
 <br>
 
-## What else does it do?
+## Match analysis
 
-It can analyze the match and give you detailed information about every segment. Every private room game, and every ranked game once you download the replay.
+Analyze your match and it gives you detailed information about every segment. Every private room game, and every ranked game once you download the replay.
 
 <p align="center"><img src="docs/readme/splits.png" width="100%" alt="The splits overview in Stratas: every split against Frieren, and where the time went in the stronghold"></p>
 
-## Why it's different
+## What makes it different
 
 - Ranked only lets you watch the people from your own match. Stratas lets you put **anyone's run in the same seed** into your replay, at whatever Elo you want, so you can see exactly where you lost or gained time.
 - It doesn't just tell you that you lost 40 seconds in the bastion, it tells you why, like 7 piglins being stuck on gold. 
@@ -54,7 +54,7 @@ It can analyze the match and give you detailed information about every segment. 
 
 <br>
 
-## Previews
+## Screenshots
 
 <table>
   <tr>
