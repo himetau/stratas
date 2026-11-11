@@ -25,11 +25,11 @@
 
 ## Replay mixing
 
-It finds a run from a player at the elo you picked, or from one player you type in. Play the seed in a private room. Then Stratas **mixes the replays into one file**, so you open it in Ranked's own replay viewer. No VODs needed, it only uses Ranked's new replays.
+Stratas finds a run from a player at the elo you picked, or from one player you type in. Play the seed in a private room. Then Stratas **mixes the replays into one file**, so you open it in Ranked's own replay viewer. No VODs needed, it only uses Ranked's new replays.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/readme/card-practice.png" alt="Picking opponents by Elo"></td>
+    <td width="50%"><img src="docs/readme/card-practice.png" alt="Picking opponents by elo"></td>
     <td width="50%"><img src="docs/readme/card-race.png" alt="Your gap to them over the whole run"></td>
   </tr>
 </table>
@@ -44,7 +44,7 @@ Analyse your match and it gives you detailed information about every segment. Ev
 
 ## What makes it different
 
-- Ranked only lets you watch the people from your own match. Stratas lets you put **anyone's run in the same seed** into your replay, at whatever Elo you want, so you can see exactly where you lost or gained time.
+- Ranked only lets you watch the people from your own match. Stratas lets you put **anyone's run in the same seed** into your replay, at whatever elo you want, so you can see exactly where you lost or gained time.
 - It doesn't just tell you that you lost 40 seconds in the bastion, it tells you why, like 7 piglins being stuck on gold. 
 - After a few games it tells you **what you should practice**, from where you consistently lose time.
 - There's no mod and nothing to record. It just uses the replays Ranked already saves.
