@@ -631,9 +631,7 @@ function quickNotice(a: RaceAnalysis) {
     h(
       "span",
       null,
-      a.quick.ironPick
-        ? "Splits from Ranked's API only. When Ranked saves your replay, this becomes the merged replay with a per-phase breakdown."
-        : "Splits from Ranked only. You reset before getting an iron pickaxe, so Ranked didn't save a replay of this run.",
+      "Splits from Ranked's API only. Once your replay of this run is downloaded, this becomes the merged replay with a per-phase breakdown.",
     ),
   );
 }

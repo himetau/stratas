@@ -31,15 +31,13 @@ import { Store, type QueueRow, type RaceRow, type RunKind, type RunRow } from ".
 import { Api, type ApiMatch } from "./seeds/api";
 import { Scanner } from "./seeds/scanner";
 import {
-  adaptTiers,
   pickPlayer,
   pickRuns,
   RECENT_HOURS,
-  tierBands,
+  TIER_BANDS,
   type Pick,
   type PickOptions,
   type Tier,
-  type TierShift,
 } from "./seeds/picker";
 import {
   findInstances,
@@ -338,7 +336,6 @@ export class Service extends EventEmitter {
     if (this.settings().autoRace) {
       this.pairRuns(fresh);
     }
-    this.adapt();
     this.timers.push(setInterval(() => this.rescanLibrary(), 60_000));
     if (this.opts.offline) {
       return;
@@ -1013,8 +1010,8 @@ export class Service extends EventEmitter {
     this.store.set("practicing", { matchId, at: Date.now() });
   }
 
-  /** Your private room runs on a queued seed, compared split by split from Ranked's API. Shows right after you play,
-   *  and is all there is when Ranked doesn't save the replay (no iron pickaxe) */
+  /** Your private room runs on a queued seed, compared split by split from Ranked's API.
+   *  Shows right after you play, before your replay is downloaded. */
   private async quickRaces() {
     const me = this.settings().uuid;
     if (!me) {
@@ -1108,9 +1105,7 @@ export class Service extends EventEmitter {
         this.emit("newGame", {
           id: made.id,
           title: `vs ${q.player_name} · splits`,
-          body: analysis.quick?.ironPick
-            ? "From Ranked's splits. The full breakdown comes once both replays are in"
-            : "No iron pickaxe, so Ranked didn't save a replay. Splits only",
+          body: "From Ranked's splits. The full breakdown comes once both replays are in",
         });
       }
     }
@@ -1132,7 +1127,6 @@ export class Service extends EventEmitter {
     this.racePracticeRuns(this.instance.modVersion, force, currentKeys);
     this.analyzeRankedRuns(me, force, currentKeys);
     this.dropDuplicateRaces(currentKeys);
-    this.adapt();
   }
 
   /** Ranks copies of a replay: the pool copy first, then Ranked's temp-replay, then any other. */
@@ -1570,10 +1564,6 @@ export class Service extends EventEmitter {
     );
   }
 
-  private adapt() {
-    this.store.set("tierShift", adaptTiers(this.store.races()));
-  }
-
   race(id: number): { row: RaceRow; analysis: RaceAnalysis | null } | null {
     const row = this.store.race(id);
     if (!row) {
@@ -1636,7 +1626,6 @@ export class Service extends EventEmitter {
       }
       return { step: "play-seed", raceId: null, updatedAt: q.added_at };
     };
-    const shift = this.store.get<TierShift>("tierShift", { next: 0, stretch: 0, ceiling: 0 });
     const lib = { practice: 0, ranked: 0, reference: 0, unreadable: 0 };
     for (const r of runs.values()) {
       if (r.kind in lib) {
@@ -1686,7 +1675,7 @@ export class Service extends EventEmitter {
             analysis: JSON.parse(r.analysis) as RaceAnalysis,
           })),
       ),
-      tiers: this.you.elo !== null ? tierBands(this.you.elo, shift) : null,
+      tiers: this.you.elo !== null ? TIER_BANDS : null,
       library: lib,
       myGames: this.myGames(),
       log: this.logLines.slice(-40),

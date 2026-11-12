@@ -1,5 +1,4 @@
-// Picks stronger players' runs to race. Auto uses 3 tiers above your Elo that adapt to results, manual is an Elo range
-import type { MatchRow, RaceRow, Store } from "../store";
+import type { MatchRow, Store } from "../store";
 import { hasReplay, type Api } from "./api";
 import { fmtTime } from "../detect/names";
 
@@ -7,10 +6,11 @@ export type Tier = "next" | "stretch" | "ceiling" | "manual" | "player";
 /** The 3 auto levels, the ones with an Elo band */
 type Band = Exclude<Tier, "manual" | "player">;
 const TIER_WEIGHT: Record<Band, number> = { next: 0.6, stretch: 0.3, ceiling: 0.1 };
-const DEFAULT_BANDS: Record<Band, [number, number]> = {
-  next: [100, 250],
-  stretch: [400, 700],
-  ceiling: [0, 0],
+/** Elo range of each auto level: Emerald, Diamond and Netherite players */
+export const TIER_BANDS: Record<Band, [number, number]> = {
+  next: [1200, 1499],
+  stretch: [1500, 1999],
+  ceiling: [2000, 4000],
 };
 
 export interface PickFilters {
@@ -34,67 +34,6 @@ export interface Pick {
   match: MatchRow;
   tier: Tier;
   reason: string;
-}
-
-export interface TierShift {
-  next: number;
-  stretch: number;
-  ceiling: number;
-}
-
-/** How far each tier can shift from its default */
-const SHIFT_LIMIT: Record<keyof TierShift, [number, number]> = {
-  next: [-50, 250],
-  stretch: [-250, 400],
-  ceiling: [-250, 600],
-};
-
-/** Elo bands for all 3 tiers with the learned shifts. Always ordered next < stretch < ceiling */
-export function tierBands(elo: number, shift: TierShift): Record<Band, [number, number]> {
-  // Round edges to 50s since a band gets shown by where it starts ("1400+")
-  const r = (x: number) => Math.round(x / 50) * 50;
-  const next: [number, number] = [
-    r(elo + DEFAULT_BANDS.next[0] + shift.next),
-    r(elo + DEFAULT_BANDS.next[1] + shift.next),
-  ];
-  const s0 = Math.max(r(elo + DEFAULT_BANDS.stretch[0] + shift.stretch), next[1]);
-  const stretch: [number, number] = [
-    s0,
-    Math.max(r(elo + DEFAULT_BANDS.stretch[1] + shift.stretch), s0 + 150),
-  ];
-  const ceiling: [number, number] = [
-    Math.max(r(Math.max(2000, elo + 800) + shift.ceiling), stretch[1]),
-    4000,
-  ];
-  return { next, stretch, ceiling };
-}
-export const tierBand = (tier: Band, elo: number, shift: TierShift): [number, number] =>
-  tierBands(elo, shift)[tier];
-
-/** Tier goes up when races vs it are close and getting closer, down when you keep losing by minutes.
- * Replayed over the whole race history in order, so reanalysing doesn't move it again */
-export function adaptTiers(races: RaceRow[]): TierShift {
-  const out: TierShift = { next: 0, stretch: 0, ceiling: 0 };
-  for (const tier of ["next", "stretch", "ceiling"] as const) {
-    const all = races
-      .filter((r) => r.tier === tier && !r.error)
-      .sort((a, b) => a.created_at - b.created_at || a.id - b.id)
-      .map((r) => r.final_gap);
-    const [lo, hi] = SHIFT_LIMIT[tier];
-    for (let k = 1; k <= all.length; k++) {
-      const gaps = all.slice(0, k).reverse(); // Newest first, as of race k
-      if (gaps.length >= 3) {
-        const recent = gaps.slice(0, 3).sort((a, b) => a - b);
-        if (recent[1] < 30 && gaps[0] <= gaps[1]) {
-          out[tier] = Math.min(out[tier] + 50, hi);
-        }
-      }
-      if (gaps.length >= 2 && gaps[0] > 120 && gaps[1] > 120) {
-        out[tier] = Math.max(out[tier] - 50, lo);
-      }
-    }
-  }
-  return out;
 }
 
 /** Which tiers to fill next to keep the mix near 60/30/10 */
@@ -204,7 +143,6 @@ export async function pickRuns(
   o: PickOptions,
 ): Promise<{ picks: Pick[]; notes: string[] }> {
   const notes: string[] = [];
-  const shift = store.get<TierShift>("tierShift", { next: 0, stretch: 0, ceiling: 0 });
   const races = store.races();
   const queue = store.queue();
   const taken = new Set(queue.map((q) => q.match_id));
@@ -229,9 +167,7 @@ export async function pickRuns(
 
   for (const tier of plan) {
     const [lo, hi] =
-      tier === "manual"
-        ? [o.minElo ?? yourElo, o.maxElo ?? yourElo + 500]
-        : tierBand(tier, yourElo, shift);
+      tier === "manual" ? [o.minElo ?? yourElo, o.maxElo ?? yourElo + 500] : TIER_BANDS[tier];
     const rows = store
       .candidates({
         minElo: lo,

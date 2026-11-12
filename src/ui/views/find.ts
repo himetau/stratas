@@ -23,7 +23,6 @@ const levelOf = (p: AppState["settings"]["pick"]): Level =>
 type Band = "next" | "stretch" | "ceiling";
 const BANDS: Band[] = ["next", "stretch", "ceiling"];
 const SHARE: Record<Band, number> = { next: 60, stretch: 30, ceiling: 10 };
-const plus = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 
 /** Your races vs a level and the average gap */
 function record(s: AppState, tier: string) {
@@ -77,8 +76,8 @@ function levelList(
       ? { minElo: hi, maxElo: lo }
       : { minElo: lo, maxElo: hi };
   };
-  const lo = Math.floor((you - 100) / 100) * 100;
-  const hi = Math.max(t.ceiling[0] + 300, t.stretch[1] + 300);
+  const lo = Math.floor((Math.min(you, t.next[0]) - 100) / 100) * 100;
+  const hi = Math.max(t.ceiling[0] + 300, you + 100);
   const X = (e: number) => ((Math.min(Math.max(e, lo), hi) - lo) / (hi - lo)) * 100;
   const seg = (k: string, a: number, b: number) =>
     h("i", {
@@ -146,7 +145,7 @@ function levelList(
         h(
           "span",
           { class: "dim" },
-          `mostly ${t.next[0]}+, some ${t.stretch[0]}+, now and then ${t.ceiling[0]}+`,
+          `mostly ${tierName("next")}, some ${tierName("stretch")}, now and then ${tierName("ceiling")}`,
         ),
       ),
       track(...BANDS.map((b) => seg(`tier-${b}`, t[b][0], t[b][1]))),
@@ -164,17 +163,14 @@ function levelList(
       const [a, z] = t[b];
       const top = z >= 4000;
       return row(b, `tier-${b}`, n + 1, [
-        h("span", { class: "lvl-name" }, `${a}+`),
+        h("span", { class: "lvl-name" }, tierName(b)),
         h(
           "span",
           { class: "lvl-what" },
-          h(
-            "span",
-            { class: "lvl-rel" },
-            top ? `${plus(a - you)} and up` : `${plus(a - you)} to ${plus(z - you)}`,
-          ),
           rank(a, "lv-rank"),
-          ...(top ? [] : [h("span", { class: "dim" }, "→"), rank(z, "lv-rank")]),
+          ...(top
+            ? [h("span", { class: "dim" }, "and up")]
+            : [h("span", { class: "dim" }, "→"), rank(z, "lv-rank")]),
         ),
         track(seg(`tier-${b}`, a, z)),
         h("span", { class: "lvl-rec" }, record(s, b)),
@@ -510,7 +506,7 @@ function results(s: AppState, rerender: () => void, queue: () => void) {
               h(
                 "td",
                 { class: x.tier !== "manual" && x.tier !== "player" ? `tier-${x.tier}` : "dim" },
-                tierName(s.tiers, x.tier),
+                tierName(x.tier),
               ),
               h(
                 "td",

@@ -127,20 +127,16 @@ export const setRankIcons = (x: Record<string, string>) => {
   rankIcons = x;
 };
 
-/** Level is named by the Elo it starts at ("1400+"), custom range is just "custom" */
-export function tierName(
-  tiers: Record<"next" | "stretch" | "ceiling", [number, number]> | null | undefined,
-  tier: string | null | undefined,
-): string {
-  if (tier === "manual") {
-    return "custom";
-  }
-  if (tier === "player") {
-    return "by name";
-  }
-  const b = tiers && tier && tier in tiers ? tiers[tier as "next" | "stretch" | "ceiling"] : null;
-  return b ? `${b[0]}+` : "";
-}
+const TIER_NAME: Record<string, string> = {
+  next: "Emerald",
+  stretch: "Diamond",
+  ceiling: "Netherite",
+  manual: "custom",
+  player: "by name",
+};
+
+/** Name of the level a run was picked from */
+export const tierName = (tier: string | null | undefined): string => TIER_NAME[tier ?? ""] ?? "";
 
 /** In-game rank icon + Elo, rank name in the tooltip */
 export function rank(elo: number | null | undefined, cls = "") {

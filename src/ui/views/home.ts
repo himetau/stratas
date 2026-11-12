@@ -13,6 +13,21 @@ type PracticeRun = AppState["queue"][number];
 type PracticeStep = NonNullable<PracticeRun["practice"]>["step"];
 const stage = (q: PracticeRun): PracticeStep =>
   q.practice?.step ?? (q.status === "queued" ? "download-player" : "play-seed");
+const seenFinished = new Set<number>();
+/** Takes a finished practice run off Practice once its analysed race is open */
+export function markPracticeSeen(s: AppState, raceId: number) {
+  for (const q of s.queue) {
+    if (
+      q.status === "raced" &&
+      stage(q) === "analyze" &&
+      q.practice?.raceId === raceId &&
+      !seenFinished.has(q.match_id)
+    ) {
+      seenFinished.add(q.match_id);
+      void g.queueStatus(q.match_id, "skipped");
+    }
+  }
+}
 export function practiceQueue(s: AppState): PracticeRun[] {
   const active = s.queue.filter(
     (q) =>
@@ -60,9 +75,6 @@ export function queueList(s: AppState, redraw: () => void, find: () => void) {
       },
       head({ uuid: q.player_uuid, name: q.player_name }, 24),
       h("span", { class: "t" }, q.player_name),
-      q.tier !== "manual" && q.tier !== "player"
-        ? h("span", { class: `v tier-${q.tier}` }, tierName(s.tiers, q.tier))
-        : h("span"),
       h(
         "span",
         { class: "s" },
@@ -103,7 +115,7 @@ export function queueList(s: AppState, redraw: () => void, find: () => void) {
 
 const STEP_TEXT: Partial<Record<PracticeStep, string>> = {
   "download-player": "Download the player's replay.",
-  "play-seed": "Play the seed in a private room.",
+  "play-seed": "Play the seed in a private room. This moves on once you finish the run.",
   "download-private": "Download your private room replay.",
 };
 
@@ -155,7 +167,7 @@ function pickedHow(s: AppState, q: PracticeRun) {
   if (q.tier === "player") {
     return "Picked by name";
   }
-  const tier = tierName(s.tiers, q.tier);
+  const tier = tierName(q.tier);
   return tier ? `${tier} pick` : "";
 }
 

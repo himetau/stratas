@@ -8,7 +8,7 @@ import { startEffects } from "./effects";
 import { setPrefs } from "./prefs";
 import { openKofi, trackUsage } from "./support";
 import logo from "./logo.png";
-import { homeView, practiceQueue, queueList } from "./views/home";
+import { homeView, markPracticeSeen, practiceQueue, queueList } from "./views/home";
 import { findView } from "./views/find";
 import { firstRace, raceList, raceOrder } from "./views/races";
 import { forgetRace, raceView } from "./views/race";
@@ -91,6 +91,7 @@ function pageView(s: AppState, raceId: number | null, openRace: (id: number) => 
           ),
         );
       }
+      markPracticeSeen(s, raceId);
       return raceView(raceId, render, s.you.elo);
     case "patterns":
       return patternsView(s, openRace);

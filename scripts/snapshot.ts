@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { mergeRunners } from "../src/core/replay/merge";
 import { Service } from "../src/core/service";
+import { TIER_BANDS } from "../src/core/seeds/picker";
 import type { ApiUserFull, MatchDetail, UserSeasonSummary } from "../src/core/profile/types";
 
 const CHAVRON = new Uint8Array(readFileSync("test/fixtures/chavron-14182329.rrf"));
@@ -295,8 +296,7 @@ void (async () => {
   }
   const state = svc.state();
   state.you = { elo: 1288, rank: 2538, checkedAt: Date.now() };
-  // These bands equal tierBands(1288) with no shift.
-  state.tiers = { next: [1400, 1550], stretch: [1700, 2000], ceiling: [2100, 4000] };
+  state.tiers = TIER_BANDS;
   state.index = { matches: 1834, scanning: false, error: null, apiLeft: 401 };
   const races = Object.fromEntries(state.races.map((r) => [r.id, svc.race(r.id)]));
   const profile = await svc.profile();

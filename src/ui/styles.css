@@ -1688,7 +1688,7 @@ canvas.sicon {
 .lvl {
   position: relative;
   display: grid;
-  grid-template-columns: 14px 86px minmax(0, 1fr) minmax(120px, 190px) 128px 34px;
+  grid-template-columns: 14px 108px minmax(0, 1fr) minmax(120px, 190px) 128px 34px;
   align-items: center;
   gap: 14px;
   padding: 10px 14px 10px 16px;
@@ -1793,9 +1793,6 @@ canvas.sicon {
   white-space: nowrap;
   overflow: hidden;
 }
-.lvl-rel {
-  color: var(--text);
-}
 .lvl-what .rank {
   margin: 0;
 }
@@ -1870,7 +1867,7 @@ canvas.sicon {
 }
 @media (max-width: 1000px) {
   .lvl {
-    grid-template-columns: 14px 76px minmax(0, 1fr) 110px;
+    grid-template-columns: 14px 108px minmax(0, 1fr) 110px;
   }
   .lvl-track,
   .lvl-share {
