@@ -85,7 +85,7 @@ export function repairReplay(bytes: Uint8Array, referenceBytes: Uint8Array): Uin
   const fitted = matchReplaySize(replay.rpd, replay.meta, [reference]);
   return zipSync({
     ...unzipSync(bytes),
-    "replay.rpd": [fitted.rpd, { level: 0 }],
+    "replay.rpd": fitted.rpd,
     "meta.json": strToU8(JSON.stringify(fitted.meta)),
   });
 }

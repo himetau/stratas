@@ -2,6 +2,10 @@
 
 What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
 
+## 1.6.2
+
+- Mixed replays take far less disk space. The padding Ranked's size check needs is now compressed, the way Ranked compresses its own replays.
+
 ## 1.6.1
 
 - A mixed replay that's bigger than both of its source replays now borrows the match ID of a bigger replay you have, so Ranked 6.0.11+ still plays it. This works on the website too.

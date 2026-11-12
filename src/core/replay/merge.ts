@@ -81,7 +81,7 @@ export function mergeRunners(sources: RunnerSource[], options: { matchSourceSize
   }
   timelines.sort((a, b) => b.time - a.time);
   const bytes = zipSync({
-    "replay.rpd": [rpd, { level: 0 }],
+    "replay.rpd": rpd,
     "meta.json": strToU8(JSON.stringify(meta)),
     "timelines.json": strToU8(JSON.stringify(timelines)),
   });
