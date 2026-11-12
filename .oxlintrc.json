@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": ["dist", "release", "artifacts"],
+  "rules": {
+    "curly": ["error", "all"],
+    "one-var": ["error", "never"],
+    "no-sequences": "error",
+    "no-unused-expressions": "error"
+  }
+}

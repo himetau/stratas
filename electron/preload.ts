@@ -1,5 +1,10 @@
-// IPC bridge between the UI and main
 import { contextBridge, ipcRenderer } from "electron";
+
+const listen =
+  <T>(channel: string) =>
+  (fn: (value: T) => void) => {
+    ipcRenderer.on(channel, (_e, value) => fn(value));
+  };
 
 const api = {
   state: () => ipcRenderer.invoke("state"),
@@ -25,24 +30,25 @@ const api = {
   suggestName: () => ipcRenderer.invoke("suggest-name"),
   lookupPlayer: (name: string) => ipcRenderer.invoke("lookup-player", name),
   matchElo: (uuid: string, id: number) => ipcRenderer.invoke("match:elo", uuid, id),
-  profileRefresh: (season?: number, pool?: number) => ipcRenderer.invoke("profile:refresh", season, pool),
+  profileRefresh: (season?: number, pool?: number) =>
+    ipcRenderer.invoke("profile:refresh", season, pool),
   copy: (text: string) => ipcRenderer.invoke("copy", text),
   reveal: (file: string) => ipcRenderer.invoke("reveal", file),
   openDir: (file: string) => ipcRenderer.invoke("open-dir", file),
   pickInstance: () => ipcRenderer.invoke("pick-instance"),
   companion: (id: number | null) => ipcRenderer.invoke("companion", id),
   openInMinecraft: (file: string) => ipcRenderer.invoke("open-mc", file),
+  launchRanked: () => ipcRenderer.invoke("launch-mc"),
   theme: () => ipcRenderer.invoke("theme"),
   update: () => ipcRenderer.invoke("update"),
   updateCheck: () => ipcRenderer.invoke("update:check"),
   updateInstall: () => ipcRenderer.invoke("update:install"),
-  onUpdate: (fn: (u: unknown) => void) => { ipcRenderer.on("update", (_e, u) => fn(u)); },
-  onTheme: (fn: (css: string) => void) => { ipcRenderer.on("theme", (_e, css) => fn(css)); },
-  onState: (fn: (s: unknown) => void) => { ipcRenderer.on("state", (_e, s) => fn(s)); },
-  onOpenRace: (fn: (id: number) => void) => { ipcRenderer.on("open:race", (_e, id) => fn(id)); },
-  onNewGame: (fn: (g: { id: number | null; title: string; body: string }) => void) => { ipcRenderer.on("new:game", (_e, g) => fn(g)); },
-  onCompanionRace: (fn: (id: number | null) => void) => { ipcRenderer.on("companion:race", (_e, id) => fn(id)); },
+  onUpdate: listen<unknown>("update"),
+  onTheme: listen<string>("theme"),
+  onState: listen<unknown>("state"),
+  onOpenRace: listen<number>("open:race"),
+  onNewGame: listen<{ id: number | null; title: string; body: string }>("new:game"),
+  onCompanionRace: listen<number | null>("companion:race"),
 };
 
 contextBridge.exposeInMainWorld("stratas", api);
-export type StratasBridge = typeof api;

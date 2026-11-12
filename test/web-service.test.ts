@@ -1,11 +1,13 @@
-// The whole loop again, but on the browser build's stand-ins for node:fs, node:sqlite and node:zlib
 import { describe, expect, it, vi } from "vitest";
 import { deepStrictEqual } from "node:assert";
 vi.mock("node:fs", async () => await import("../web/shims/fs"));
 vi.mock("node:sqlite", async () => await import("../web/shims/sqlite"));
 vi.mock("node:zlib", async () => await import("../web/shims/zlib"));
 // The site swaps node:path for path-browserify too, so paths are "/" on Windows like in a browser
-vi.mock("node:path", async () => { const p = (await import("path-browserify")).default; return { ...p, default: p }; });
+vi.mock("node:path", async () => {
+  const p = (await import("path-browserify")).default;
+  return { ...p, default: p };
+});
 import { readFile } from "node:fs/promises";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import initSqlJs from "sql.js";
@@ -18,10 +20,12 @@ import { Service } from "../src/core/service";
 
 const ME = "fba98cacdc6a495eba271ee046dcbba9";
 const CHAV = "e1b919fe90b044b484ff93979e8308a4";
+const readChavron = async () =>
+  new Uint8Array(await readFile(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)));
 
 describe("browser build: the whole loop in memory", () => {
   it("reads size-matched replay padding with the browser decoder", async () => {
-    const original = new Uint8Array(await readFile(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)));
+    const original = await readChavron();
     const solo = mergeRunners([{ bytes: original, uuid: ME }], { matchSourceSize: false });
     const repaired = repairReplay(solo.bytes, original);
     expect(readRrf(repaired).rpd.length).toBe(readRrf(original).rpd.length);
@@ -29,10 +33,15 @@ describe("browser build: the whole loop in memory", () => {
   });
 
   it("their replay -> seeds -> your replay -> mixed replay you can download", async () => {
-    const CHAVRON = new Uint8Array(await readFile(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)));
+    const CHAVRON = await readChavron();
     const solo = (uuid: string, patch: Record<string, unknown>) => {
       const files = unzipSync(mergeRunners([{ bytes: CHAVRON, uuid }]).bytes);
-      return zipSync({ ...files, "meta.json": strToU8(JSON.stringify({ ...JSON.parse(strFromU8(files["meta.json"])), ...patch })) });
+      return zipSync({
+        ...files,
+        "meta.json": strToU8(
+          JSON.stringify({ ...JSON.parse(strFromU8(files["meta.json"])), ...patch }),
+        ),
+      });
     };
     useSqlJs(await initSqlJs(), null);
     const mc = "/ranked/minecraft";
@@ -41,14 +50,28 @@ describe("browser build: the whole loop in memory", () => {
     const svc = new Service("/data/stratas.db", { offline: true });
     svc.store.set("settings", { nickname: "cyoshi", uuid: ME, instancePath: "/ranked" });
     svc.start();
-    svc.store.enqueue({ match_id: 14182329, player_uuid: CHAV, player_name: "Chavron", opponent_name: "cyoshi", date: Math.floor(Date.now() / 1000),
-      time: 785002, seed_type: "VILLAGE", bastion_type: "STABLES", elo: 1390, tier: "next", reason: "test" });
+    svc.store.enqueue({
+      match_id: 14182329,
+      player_uuid: CHAV,
+      player_name: "Chavron",
+      opponent_name: "cyoshi",
+      date: Math.floor(Date.now() / 1000),
+      time: 785002,
+      seed_type: "VILLAGE",
+      bastion_type: "STABLES",
+      elo: 1390,
+      tier: "next",
+      reason: "test",
+    });
 
     writeFileSync(`${mc}/mcsrranked/replay/chav.rrf`, solo(CHAV, { matchId: 14182329 }));
     svc.rescanLibrary();
     expect(svc.store.queueRow(14182329)!.overworld_seed).toBe("-3566570342730286256");
 
-    writeFileSync(`${mc}/mcsrranked/replay/mine.rrf`, solo(ME, { matchId: 99999999, matchType: 3 }));
+    writeFileSync(
+      `${mc}/mcsrranked/replay/mine.rrf`,
+      solo(ME, { matchId: 99999999, matchType: 3 }),
+    );
     svc.rescanLibrary();
     const race = svc.state().races.find((r) => r.kind === "race")!;
     expect(race.error).toBeNull();

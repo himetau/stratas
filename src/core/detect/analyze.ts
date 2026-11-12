@@ -1,4 +1,3 @@
-// Race analysis, you vs them on the same seed in one replay
 import type { Replay } from "../replay/decode";
 import { alignRuns, type GapPoint } from "./align";
 import { buildActivities } from "./activity";
@@ -10,16 +9,28 @@ import { buildSteps, type Step, type StepKind } from "./steps";
 import { findWindows } from "./windows";
 import { phaseWhy, type Part } from "./why";
 import { dragonFight, type DragonFight } from "./end";
-import { blazeBedBlasts, overworldCrafts, pearlsThrown, precrafts, tradeSummary, type Blast, type CraftScreen, type Precraft, type TradeItem } from "./stats";
-
-/** From entering the End to the end of the run */
-const endSpan = (r: Run): [number, number] | undefined => { const e = r.mark("end"); return e === undefined ? undefined : [e, r.end]; };
-
-export { DEFAULT_LEAVE, type LeaveGoals } from "./findings";
+import {
+  blazeBedBlasts,
+  overworldCrafts,
+  pearlsThrown,
+  precrafts,
+  tradeSummary,
+  type Blast,
+  type CraftScreen,
+  type Precraft,
+  type TradeItem,
+} from "./stats";
 
 export const ANALYSIS_VERSION = 44;
 
-export interface RunnerInfo { uuid: string; name: string; elo: number | null; finished: boolean; endTicks: number; quit?: boolean }
+export interface RunnerInfo {
+  uuid: string;
+  name: string;
+  elo: number | null;
+  finished: boolean;
+  endTicks: number;
+  quit?: boolean;
+}
 
 export interface Claim {
   file: string;
@@ -87,14 +98,26 @@ export interface RunStats {
 }
 
 function runStats(s: Side): RunStats {
-  const r = s.run, l = r.mark("bastion_left"), f = r.mark("fortress");
+  const r = s.run;
+  const l = r.mark("bastion_left");
+  const f = r.mark("fortress");
   const ts = tradeSummary(r);
   return {
     precrafts: precrafts(s),
     owCrafts: overworldCrafts(s),
     pearlsToFort: l !== undefined && f !== undefined && f > l ? pearlsThrown(r, l, f) : [],
     blasts: blazeBedBlasts(s),
-    trades: ts && { n: ts.barters.length, needed: ts.needed, noneNeeded: ts.noneNeeded, got: ts.got, left: ts.left, leftWith: ts.leftWith, used: ts.used, items: ts.barters.map((b) => b.items), pickups: ts.pickups },
+    trades: ts && {
+      n: ts.barters.length,
+      needed: ts.needed,
+      noneNeeded: ts.noneNeeded,
+      got: ts.got,
+      left: ts.left,
+      leftWith: ts.leftWith,
+      used: ts.used,
+      items: ts.barters.map((b) => b.items),
+      pickups: ts.pickups,
+    },
   };
 }
 
@@ -119,12 +142,27 @@ export interface PhaseReport {
   steps: { you: Step[]; them: Step[] };
 }
 
-export const PHASE_ORDER = ["Overworld", "Nether travel", "Fortress", "Bastion", "Bastion to fortress", "Fortress to stronghold", "Bastion to blind", "After the bastion", "Stronghold", "End"];
+export const PHASE_ORDER = [
+  "Overworld",
+  "Nether travel",
+  "Fortress",
+  "Bastion",
+  "Bastion to fortress",
+  "Fortress to stronghold",
+  "Bastion to blind",
+  "After the bastion",
+  "Stronghold",
+  "End",
+];
 
 /** Each phase's time span for one runner */
 export function phaseSpans(r: Run): Map<string, [number, number][]> {
   const out = new Map<string, [number, number][]>();
-  const push = (name: string, a: number, b: number) => { if (b > a) out.set(name, [...(out.get(name) ?? []), [a, b]]); };
+  const push = (name: string, a: number, b: number) => {
+    if (b > a) {
+      out.set(name, [...(out.get(name) ?? []), [a, b]]);
+    }
+  };
   push("Overworld", 0, r.marks[0]?.t ?? r.end);
   r.marks.forEach((m, i) => push(r.phaseAfter(i), m.t, r.marks[i + 1]?.t ?? r.end));
   return out;
@@ -132,112 +170,247 @@ export function phaseSpans(r: Run): Map<string, [number, number][]> {
 
 export function phaseChanges(you: Run, them: Run, finalGap: number) {
   const out: { name: string; change: number }[] = [];
-  let prevGap = 0, phase = "Overworld";
+  let prevGap = 0;
+  let phase = "Overworld";
   you.marks.forEach((m, i) => {
     const b = them.mark(m.key);
-    if (b === undefined) return;
+    if (b === undefined) {
+      return;
+    }
     const gap = (m.t - b) / 20;
     out.push({ name: phase, change: gap - prevGap });
-    prevGap = gap; phase = you.phaseAfter(i);
+    prevGap = gap;
+    phase = you.phaseAfter(i);
   });
-  if (phase !== "Finished") out.push({ name: phase, change: finalGap - prevGap });
+  if (phase !== "Finished") {
+    out.push({ name: phase, change: finalGap - prevGap });
+  }
   const merged: { name: string; change: number }[] = [];
-  for (const p of out) { const last = merged.find((x) => x.name === p.name); if (last) last.change += p.change; else merged.push({ ...p }); }
+  for (const p of out) {
+    const last = merged.find((x) => x.name === p.name);
+    if (last) {
+      last.change += p.change;
+    } else {
+      merged.push({ ...p });
+    }
+  }
   return merged;
 }
 
-function buildReport(phases: { name: string; change: number }[], Y: Side, T: Side, finalGap: number, goals: LeaveGoals): PhaseReport[] {
-  const ys = phaseSpans(Y.run), ts = phaseSpans(T.run);
-  const names = [...new Set([...phases.map((p) => p.name), ...ys.keys()])].filter((n) => n !== "Finished").sort((a, b) => PHASE_ORDER.indexOf(a) - PHASE_ORDER.indexOf(b));
+/** A phase can come in pieces (fortress, blind, Eye Spy), so this spans all of them */
+function wholeSpan(spans?: [number, number][]): [number, number] | undefined {
+  return spans?.length ? [spans[0][0], spans.at(-1)![1]] : undefined;
+}
+
+function spanSeconds(span?: [number, number]): number | null {
+  return span ? (span[1] - span[0]) / 20 : null;
+}
+
+function buildReport(
+  phases: { name: string; change: number }[],
+  Y: Side,
+  T: Side,
+  finalGap: number,
+  goals: LeaveGoals,
+): PhaseReport[] {
+  const ys = phaseSpans(Y.run);
+  const ts = phaseSpans(T.run);
+  const names = [...new Set([...phases.map((p) => p.name), ...ys.keys()])]
+    .filter((n) => n !== "Finished")
+    .sort((a, b) => PHASE_ORDER.indexOf(a) - PHASE_ORDER.indexOf(b));
   return names.map((phase) => {
-    // A phase can come in pieces (fortress, blind, Eye Spy), take it whole
-    const whole = (xs?: [number, number][]) => (xs?.length ? [xs[0][0], xs.at(-1)![1]] as [number, number] : undefined);
-    const y = whole(ys.get(phase)), t = whole(ts.get(phase));
-    // Unfinished last phase ends where the gap curve ends
+    const y = wholeSpan(ys.get(phase));
+    const t = wholeSpan(ts.get(phase));
+    const unfinished = !!y && y[1] === Y.run.end && !Y.run.finished;
     let tEnd = t;
     let change = phases.find((p) => p.name === phase)?.change ?? null;
-    const len = (sp?: [number, number]) => (sp ? (sp[1] - sp[0]) / 20 : null);
-    if (t && y && y[1] === Y.run.end && !Y.run.finished) {
-      // Compare up to where they were when your run ended
+    if (t && y && unfinished) {
+      // Their span is cut where they were when your run ended.
       const cut = y[1] - finalGap * 20;
       tEnd = [t[0], Math.min(t[1], Math.max(t[0], cut))];
-      // They did the whole phase faster than you spent in it, so you're at least that much slower
-      if (cut >= t[1]) change = len(y)! > len(t)! ? len(y)! - len(t)! : null;
+      if (cut >= t[1]) {
+        const youSecs = spanSeconds(y)!;
+        const themSecs = spanSeconds(t)!;
+        change = youSecs > themSecs ? youSecs - themSecs : null;
+      }
     }
-    // They stopped here (quit or replay ended), nothing to compare
-    const theirsCut = !!t && t[1] >= T.run.end && !T.run.finished && !(y && y[1] >= Y.run.end && !Y.run.finished);
-    if (theirsCut) change = null;
-    const r = phaseNotes(phase, Y, T, y, theirsCut ? undefined : tEnd, goals);
-    return { phase, change, unfinished: !!y && y[1] === Y.run.end && !Y.run.finished, theirsEnded: theirsCut, you: len(y), them: len(t),
-      why: theirsCut ? [] : phaseWhy(phase, Y, T, y, tEnd, change, goals), ...r };
+    const theirsEnded =
+      !!t && t[1] >= T.run.end && !T.run.finished && !(y && y[1] >= Y.run.end && !Y.run.finished);
+    if (theirsEnded) {
+      change = null;
+    }
+    const detail = phaseNotes(phase, Y, T, y, theirsEnded ? undefined : tEnd, goals);
+    return {
+      phase,
+      change,
+      unfinished,
+      theirsEnded,
+      you: spanSeconds(y),
+      them: spanSeconds(t),
+      why: theirsEnded ? [] : phaseWhy(phase, Y, T, y, tEnd, goals),
+      ...detail,
+    };
   });
 }
 
+const ROD_GOAL = 6;
+
 /** Where "6 Blaze Rods" happened between the splits */
 function withRods(splits: RaceAnalysis["splits"], you: Run, them: Run): RaceAnalysis["splits"] {
-  const y = you.rodsAt(ROD_GOAL), t = them.rodsAt(ROD_GOAL);
-  if (y === null && t === null) return splits;
+  const y = you.rodsAt(ROD_GOAL);
+  const t = them.rodsAt(ROD_GOAL);
+  if (y === null && t === null) {
+    return splits;
+  }
   const at = y ?? t!;
   const i = splits.findIndex((s) => (s.you ?? s.them ?? Infinity) > at);
   const row = { name: `${ROD_GOAL} Blaze Rods`, you: y, them: t };
   return i < 0 ? [...splits, row] : [...splits.slice(0, i), row, ...splits.slice(i)];
 }
-export const ROD_GOAL = 6;
 
-export function analyzeRace(replay: Replay, youUuid: string, themUuid: string, opts: { leave?: LeaveGoals; debugClaims?: boolean; file?: string } = {}): RaceAnalysis {
-  const mk = (uuid: string) => {
+/** From entering the End to the end of the run */
+function endSpan(r: Run): [number, number] | undefined {
+  const e = r.mark("end");
+  return e === undefined ? undefined : [e, r.end];
+}
+
+function buildSide(r: Run): Side {
+  const tl = buildActivities(r);
+  const facts = new Facts(r);
+  return { run: r, tl, facts, steps: buildSteps(r, tl, facts) };
+}
+
+function runnerInfo(replay: Replay, r: Run): RunnerInfo {
+  const player = replay.meta.players.find((p) => p.uuid === r.uuid);
+  return {
+    uuid: r.uuid,
+    name: r.name,
+    finished: r.finished,
+    endTicks: r.end,
+    quit: r.quit,
+    elo: (player?.eloRate as number | null | undefined) ?? null,
+  };
+}
+
+function blazeKillTimes(s: Side): number[] {
+  return s.facts.kills.filter((k) => k.entity === "blaze").map((k) => k.t);
+}
+
+function evidenceTicks(at?: { you?: number; them?: number }): number[] {
+  return [at?.you, at?.them].filter((t): t is number => t !== undefined);
+}
+
+function signedSeconds(seconds: number): string {
+  return `${seconds >= 0 ? "+" : ""}${seconds.toFixed(1)}s`;
+}
+
+/** Every why, note and step of the report as one flat list, for checking claims against the replay */
+function buildClaims(
+  report: PhaseReport[],
+  file: string,
+  youUuid: string,
+  themUuid: string,
+): Claim[] {
+  const claims: Claim[] = [];
+  for (const p of report) {
+    for (const w of p.why) {
+      claims.push({
+        file,
+        uuid: youUuid,
+        phase: p.phase,
+        line: `${w.label}: ${w.text}`,
+        claim: `why:${w.key} (${signedSeconds(w.seconds)})`,
+        evidenceTicks: evidenceTicks(w.at),
+      });
+    }
+    for (const n of p.notes) {
+      claims.push({
+        file,
+        uuid: youUuid,
+        phase: p.phase,
+        line: n.text,
+        claim: `note (${n.seconds !== null ? signedSeconds(n.seconds) : "info"})`,
+        evidenceTicks: evidenceTicks(n.at),
+      });
+    }
+    for (const s of p.steps.you) {
+      claims.push({
+        file,
+        uuid: youUuid,
+        phase: p.phase,
+        line: s.text,
+        claim: `step:you:${s.kind}`,
+        evidenceTicks: [s.t0, s.t1],
+      });
+    }
+    for (const s of p.steps.them) {
+      claims.push({
+        file,
+        uuid: themUuid,
+        phase: p.phase,
+        line: s.text,
+        claim: `step:them:${s.kind}`,
+        evidenceTicks: [s.t0, s.t1],
+      });
+    }
+  }
+  return claims;
+}
+
+export function analyzeRace(
+  replay: Replay,
+  youUuid: string,
+  themUuid: string,
+  opts: { leave?: LeaveGoals; debugClaims?: boolean; file?: string } = {},
+): RaceAnalysis {
+  const runOf = (uuid: string) => {
     const ev = replay.events.get(uuid);
-    if (!ev) throw new Error(`no data for player ${uuid} in this replay`);
+    if (!ev) {
+      throw new Error(`no data for player ${uuid} in this replay`);
+    }
     const p = replay.meta.players.find((x) => x.uuid === uuid);
     return new Run(uuid, p?.nickname ?? uuid, ev, replay.timelines);
   };
-  const you = mk(youUuid), them = mk(themUuid);
+  const you = runOf(youUuid);
+  const them = runOf(themUuid);
   const goals = opts.leave ?? DEFAULT_LEAVE;
-  const side = (r: Run): Side => { const tl = buildActivities(r), facts = new Facts(r); return { run: r, tl, facts, steps: buildSteps(r, tl, facts) }; };
-  const Y = side(you), T = side(them);
+  const Y = buildSide(you);
+  const T = buildSide(them);
   const { points, matched, total } = alignRuns(you, them);
   const findings = findWindows(points).map((w) => explainWindow(Y, T, w));
-  const both = you.finished && them.finished;
-  const fin = (r: Run) => r.mark("finish") ?? r.end;
-  const finalGap = both ? (fin(you) - fin(them)) / 20 : points.at(-1)![1];
-  const info = (r: Run): RunnerInfo => ({
-    uuid: r.uuid, name: r.name, finished: r.finished, endTicks: r.end, quit: r.quit,
-    elo: (replay.meta.players.find((p) => p.uuid === r.uuid)?.eloRate as number | null | undefined) ?? null,
-  });
+  const finishTick = (r: Run) => r.mark("finish") ?? r.end;
+  const finalGap =
+    you.finished && them.finished ? (finishTick(you) - finishTick(them)) / 20 : points.at(-1)![1];
   const phases = phaseChanges(you, them, finalGap);
-  const keys = [...you.marks, ...them.marks].sort((a, b) => a.t - b.t).map((m) => m.key).filter((k, i, a) => a.indexOf(k) === i);
+  const keys = [
+    ...new Set([...you.marks, ...them.marks].sort((a, b) => a.t - b.t).map((m) => m.key)),
+  ];
   const report = buildReport(phases, Y, T, finalGap, goals);
-  let claims: Claim[] | undefined;
-  if (opts.debugClaims) {
-    const file = opts.file ?? String(replay.meta.matchId ?? "");
-    claims = [];
-    for (const p of report) {
-      for (const w of p.why) {
-        const ticks = [w.at?.you, w.at?.them].filter((t): t is number => t !== undefined);
-        claims.push({ file, uuid: youUuid, phase: p.phase, line: `${w.label}: ${w.text}`, claim: `why:${w.key} (${w.seconds >= 0 ? "+" : ""}${w.seconds.toFixed(1)}s)`, evidenceTicks: ticks });
-      }
-      for (const n of p.notes) {
-        const ticks = [n.at?.you, n.at?.them].filter((t): t is number => t !== undefined);
-        claims.push({ file, uuid: youUuid, phase: p.phase, line: n.text, claim: `note (${n.seconds !== null ? (n.seconds >= 0 ? "+" : "") + n.seconds.toFixed(1) + "s" : "info"})`, evidenceTicks: ticks });
-      }
-      for (const s of p.steps.you) {
-        claims.push({ file, uuid: youUuid, phase: p.phase, line: s.text, claim: `step:you:${s.kind}`, evidenceTicks: [s.t0, s.t1] });
-      }
-      for (const s of p.steps.them) {
-        claims.push({ file, uuid: themUuid, phase: p.phase, line: s.text, claim: `step:them:${s.kind}`, evidenceTicks: [s.t0, s.t1] });
-      }
-    }
-  }
+  const claims = opts.debugClaims
+    ? buildClaims(report, opts.file ?? String(replay.meta.matchId ?? ""), youUuid, themUuid)
+    : undefined;
   return {
     analysisVersion: ANALYSIS_VERSION,
     createdAt: Date.now(),
     seed: { overworld: replay.meta.overworldSeed, nether: replay.meta.netherSeed },
-    you: info(you), them: info(them),
-    finalGap, matchedSeconds: matched, totalSeconds: total, curve: points,
+    you: runnerInfo(replay, you),
+    them: runnerInfo(replay, them),
+    finalGap,
+    matchedSeconds: matched,
+    totalSeconds: total,
+    curve: points,
     rods: { you: you.rodTimes(), them: them.rodTimes() },
     stats: { you: runStats(Y), them: runStats(T) },
-    blazeKills: { you: Y.facts.kills.filter((k) => k.entity === "blaze").map((k) => k.t), them: T.facts.kills.filter((k) => k.entity === "blaze").map((k) => k.t) },
-    splits: withRods(keys.map((k) => ({ name: (you.marks.find((m) => m.key === k) ?? them.marks.find((m) => m.key === k))!.label, you: you.mark(k) ?? null, them: them.mark(k) ?? null })), you, them),
+    blazeKills: { you: blazeKillTimes(Y), them: blazeKillTimes(T) },
+    splits: withRods(
+      keys.map((k) => ({
+        name: (you.marks.find((m) => m.key === k) ?? them.marks.find((m) => m.key === k))!.label,
+        you: you.mark(k) ?? null,
+        them: them.mark(k) ?? null,
+      })),
+      you,
+      them,
+    ),
     phases,
     report,
     end: { you: dragonFight(Y, endSpan(you)), them: dragonFight(T, endSpan(them)) },

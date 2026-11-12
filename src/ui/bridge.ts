@@ -1,4 +1,3 @@
-// Typed access to the preload bridge
 import type { AppState, Settings } from "../core/service";
 import type { RaceAnalysis } from "../core/detect/analyze";
 import type { Pick, PickOptions } from "../core/seeds/picker";
@@ -41,7 +40,9 @@ export interface Bridge {
   /** The name that shows up most in your replays, only asked for on the welcome screen */
   suggestName(): Promise<string | null>;
   /** Checks a name on Ranked */
-  lookupPlayer(name: string): Promise<{ nickname: string; uuid: string; elo: number | null; rank: number | null } | null>;
+  lookupPlayer(
+    name: string,
+  ): Promise<{ nickname: string; uuid: string; elo: number | null; rank: number | null } | null>;
   /** The player's Elo going into a match and what they gained */
   matchElo(uuid: string, matchId: number): Promise<{ elo: number; change: number } | null>;
   profileRefresh(season?: number, pool?: number): Promise<ProfileData>;
@@ -51,7 +52,8 @@ export interface Bridge {
   /** Folder picker for an instance the scan didn't find, null if cancelled */
   pickInstance(): Promise<string | null>;
   companion(id: number | null): Promise<void>;
-  openInMinecraft(file: string): Promise<{ ok: boolean; message: string }>;
+  openInMinecraft(file: string): Promise<{ ok: boolean; message: string; canLaunch?: boolean }>;
+  launchRanked(): Promise<{ ok: boolean; message: string }>;
   theme(): Promise<{ css: string; file: string; found: boolean }>;
   onTheme(fn: (css: string) => void): void;
   update(): Promise<UpdateState>;
@@ -68,5 +70,17 @@ export interface Bridge {
 }
 
 /** Looked up on use so the browser preview can install its mock first */
-export const g: Bridge = new Proxy({} as Bridge, { get: (_t, k) => (window as unknown as { stratas: Record<string | symbol, unknown> }).stratas[k] });
-export type { AppState, Settings, RaceAnalysis, Pick, PickOptions, QueueRow, RaceRow, ProfileData, MatchDetail };
+export const g: Bridge = new Proxy({} as Bridge, {
+  get: (_t, k) => (window as unknown as { stratas: Record<string | symbol, unknown> }).stratas[k],
+});
+export type {
+  AppState,
+  Settings,
+  RaceAnalysis,
+  Pick,
+  PickOptions,
+  QueueRow,
+  RaceRow,
+  ProfileData,
+  MatchDetail,
+};

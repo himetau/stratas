@@ -1,62 +1,41 @@
 import type { Note, Side } from "../findings";
 import { fmtTime } from "../names";
 import type { Mechanic, Occurrence } from "./index";
+import { isBed, overworldWindow, sumCounts } from "./overworld";
 
-const isBed = (item?: string) => Boolean(item && (item === "bed" || item.endsWith("_bed")));
+const positiveBedCount = (delta: Record<string, number> = {}) =>
+  Object.entries(delta)
+    .filter(([k, n]) => isBed(k) && n > 0)
+    .reduce((sum, [, n]) => sum + n, 0);
 
 export const overworldVillageMechanic: Mechanic = {
   key: "overworld_village",
   phase: ["Overworld"],
   detect(s: Side, span?: [number, number]): Occurrence[] {
-    const nether = s.run.mark("nether");
-    const from = span ? span[0] : 0;
-    const to = span ? span[1] : (nether ?? s.run.end);
-    const inOverworld = (t: number, w?: number) =>
-      t >= from && t <= to && (nether === undefined || t <= nether) && (w === undefined || w === 0);
+    const win = overworldWindow(s, span);
+    const overworldActions = s.run.actions.filter((a) => win.contains(a.t0, a.w));
 
     const golemKill = s.facts.kills.find(
-      (k) => k.entity === "iron_golem" && inOverworld(k.t, s.run.posAt(k.t).w),
+      (k) => k.entity === "iron_golem" && win.contains(k.t, s.run.posAt(k.t).w),
     );
     const golemTick = golemKill ? golemKill.t : null;
-    const golemHits = s.run.actions.filter(
-      (a) => a.kind === "hit" && a.what === "iron_golem" && inOverworld(a.t0, a.w),
-    );
+    const golemHits = overworldActions.filter((a) => a.kind === "hit" && a.what === "iron_golem");
 
-    const hayMined = s.run.actions.filter(
-      (a) => a.kind === "mine" && a.item === "hay_block" && inOverworld(a.t0, a.w),
-    );
-    const hayPicked = s.run.actions.filter(
-      (a) => a.kind === "pickup" && a.item === "hay_block" && inOverworld(a.t0, a.w),
-    );
-    const hayMinedCount = hayMined.reduce((sum, a) => sum + (a.count ?? 1), 0);
-    const hayPickedCount = hayPicked.reduce((sum, a) => sum + (a.count ?? 1), 0);
-    const hayCount = Math.max(hayMinedCount, hayPickedCount);
+    const hayMined = overworldActions.filter((a) => a.kind === "mine" && a.item === "hay_block");
+    const hayPicked = overworldActions.filter((a) => a.kind === "pickup" && a.item === "hay_block");
+    const hayCount = Math.max(sumCounts(hayMined), sumCounts(hayPicked));
 
-    const bedMined = s.run.actions.filter(
-      (a) => a.kind === "mine" && isBed(a.item) && inOverworld(a.t0, a.w),
+    const bedMined = overworldActions.filter((a) => a.kind === "mine" && isBed(a.item));
+    const bedPicked = overworldActions.filter((a) => a.kind === "pickup" && isBed(a.item));
+    const bedChests = overworldActions.filter(
+      (a) => a.kind === "chest" && positiveBedCount(a.delta) > 0,
     );
-    const bedPicked = s.run.actions.filter(
-      (a) => a.kind === "pickup" && isBed(a.item) && inOverworld(a.t0, a.w),
-    );
-    const bedChests = s.run.actions.filter(
-      (a) =>
-        a.kind === "chest" &&
-        inOverworld(a.t0, a.w) &&
-        Object.entries(a.delta ?? {}).some(([k, n]) => isBed(k) && n > 0),
-    );
-    const bedMinedCount = bedMined.reduce((sum, a) => sum + (a.count ?? 1), 0);
-    const bedPickedCount = bedPicked.reduce((sum, a) => sum + (a.count ?? 1), 0);
-    const bedChestCount = bedChests.reduce(
-      (sum, a) =>
-        sum +
-        Object.entries(a.delta ?? {})
-          .filter(([k, n]) => isBed(k) && n > 0)
-          .reduce((acc, [, n]) => acc + n, 0),
-      0,
-    );
-    const beds = Math.max(bedMinedCount, bedPickedCount) + bedChestCount;
+    const bedChestCount = bedChests.reduce((sum, a) => sum + positiveBedCount(a.delta), 0);
+    const beds = Math.max(sumCounts(bedMined), sumCounts(bedPicked)) + bedChestCount;
 
-    if (golemTick === null && hayCount === 0 && beds === 0) return [];
+    if (golemTick === null && hayCount === 0 && beds === 0) {
+      return [];
+    }
 
     const starts: number[] = [];
     const ends: number[] = [];
@@ -76,9 +55,15 @@ export const overworldVillageMechanic: Mechanic = {
     const t0 = Math.min(...starts);
     const t1 = Math.max(...ends);
     const parts: string[] = [];
-    if (golemTick !== null) parts.push(`iron golem at ${fmtTime(golemTick)}`);
-    if (hayCount > 0) parts.push(`${hayCount} hay`);
-    if (beds > 0) parts.push(`${beds} bed${beds === 1 ? "" : "s"}`);
+    if (golemTick !== null) {
+      parts.push(`iron golem at ${fmtTime(golemTick)}`);
+    }
+    if (hayCount > 0) {
+      parts.push(`${hayCount} hay`);
+    }
+    if (beds > 0) {
+      parts.push(`${beds} bed${beds === 1 ? "" : "s"}`);
+    }
 
     return [
       {
@@ -93,13 +78,17 @@ export const overworldVillageMechanic: Mechanic = {
   compare(y: Occurrence[], t: Occurrence[]): Note | null {
     const golemOf = (xs: Occurrence[]): number | null => {
       for (const x of xs) {
-        if (typeof x.meta?.golemTick === "number") return x.meta.golemTick;
+        if (typeof x.meta?.golemTick === "number") {
+          return x.meta.golemTick;
+        }
       }
       return null;
     };
     const yg = golemOf(y);
     const tg = golemOf(t);
-    if (yg === null && tg === null) return null;
+    if (yg === null && tg === null) {
+      return null;
+    }
     const yf = yg !== null ? fmtTime(yg) : "—";
     const tf = tg !== null ? fmtTime(tg) : "—";
     return {

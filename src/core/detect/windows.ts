@@ -1,38 +1,62 @@
-// Cuts the gap curve into stretches where you lost or gained time
 import type { GapPoint } from "./align";
 
-export interface GapWindow { from: GapPoint; to: GapPoint; jump: boolean }
+export interface GapWindow {
+  from: GapPoint;
+  to: GapPoint;
+  jump: boolean;
+}
 
-const TURN = 3;       // A reversal this big (s) ends a stretch
-const MIN_CHANGE = 6; // Stretches smaller than this (s) aren't worth a finding
-const MAX_STEP = 20;  // Seconds with no confident match = a jump (death, other route)
+/** A gap reversal of this many seconds ends a stretch. */
+const TURN = 3;
+/** A stretch whose gap changes less than this many seconds is not worth a finding. */
+const MIN_CHANGE = 6;
+/** Seconds with no confident match count as a jump, like a death or another route. */
+const MAX_STEP = 20;
 
+/** Cuts the gap curve into stretches where you lost or gained time. */
 export function findWindows(pts: GapPoint[]): GapWindow[] {
   const out: GapWindow[] = [];
-  if (pts.length < 2) return out;
-  const close = (a: GapPoint, b: GapPoint, jump = false) => {
-    if (Math.abs(b[1] - a[1]) >= MIN_CHANGE && b[0] > a[0]) out.push({ from: a, to: b, jump });
+  if (pts.length < 2) {
+    return out;
+  }
+  const addWindow = (a: GapPoint, b: GapPoint, jump = false) => {
+    if (Math.abs(b[1] - a[1]) >= MIN_CHANGE && b[0] > a[0]) {
+      out.push({ from: a, to: b, jump });
+    }
   };
-  let start = pts[0], ext = pts[0], dir = 0;
+  let start = pts[0];
+  let extreme = pts[0];
+  let dir = 0;
   for (let k = 1; k < pts.length; k++) {
-    const prev = pts[k - 1], p = pts[k];
+    const prev = pts[k - 1];
+    const p = pts[k];
     if (p[0] - prev[0] > MAX_STEP) {
-      close(start, prev);
-      close(prev, p, true);
-      start = ext = p; dir = 0;
+      addWindow(start, prev);
+      addWindow(prev, p, true);
+      start = p;
+      extreme = p;
+      dir = 0;
       continue;
     }
-    const d = p[1] - ext[1];
+    const d = p[1] - extreme[1];
     if (dir === 0) {
-      if (Math.abs(p[1] - start[1]) >= TURN) { dir = Math.sign(p[1] - start[1]); ext = p; }
+      if (Math.abs(p[1] - start[1]) >= TURN) {
+        dir = Math.sign(p[1] - start[1]);
+        extreme = p;
+      }
     } else if (dir * d > 0) {
-      ext = p;
+      extreme = p;
     } else if (dir * d <= -TURN) {
-      close(start, ext);
-      start = ext; ext = p; dir = Math.sign(p[1] - start[1]);
+      addWindow(start, extreme);
+      start = extreme;
+      extreme = p;
+      dir = Math.sign(p[1] - start[1]);
     }
   }
-  close(start, dir === 0 ? pts.at(-1)! : ext);
-  if (dir !== 0 && ext !== pts.at(-1)) close(ext, pts.at(-1)!);
+  const last = pts.at(-1)!;
+  addWindow(start, dir === 0 ? last : extreme);
+  if (dir !== 0 && extreme !== last) {
+    addWindow(extreme, last);
+  }
   return out;
 }

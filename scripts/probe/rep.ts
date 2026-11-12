@@ -1,13 +1,7 @@
-// Full phase report for a replay. npx tsx scripts/probe/rep.ts <file> <uuid> [from|them] [to]
 import { analyzeRace } from "../../src/core/detect/analyze";
-import { fmtTime, loadReplay, parseBound, resolvePlayer } from "./_shared";
+import { fmtTime, loadReplay, parseBound, probeArgs, resolvePlayer } from "./_shared";
 
-const [file, who, arg3, arg4] = process.argv.slice(2);
-if (!file) {
-  console.error("Usage: npx tsx scripts/probe/rep.ts <file> <uuid> [from|them] [to]");
-  process.exit(1);
-}
-
+const [file, who, arg3, arg4] = probeArgs("scripts/probe/rep.ts <file> <uuid> [from|them] [to]");
 const rep = loadReplay(file);
 const you = resolvePlayer(rep, who);
 const allUuids = [...rep.events.keys()];
@@ -27,26 +21,50 @@ if (arg3) {
   }
 }
 
-const a = analyzeRace(rep, you.uuid, themUuid, { debugClaims: Boolean(process.env.CLAIMS), file });
-console.log(`=== ${a.you.name} (${a.you.uuid}) vs ${a.them.name} (${a.them.uuid}) · finalGap ${a.finalGap >= 0 ? "+" : ""}${a.finalGap.toFixed(1)}s ===`);
-console.log("Splits:", a.splits.map((s) => `${s.name}: ${s.you !== null ? fmtTime(s.you) : "—"} vs ${s.them !== null ? fmtTime(s.them) : "—"}`).join(" | "));
+const timeOr = (ticks: number | null | undefined, missing: string) =>
+  ticks != null ? fmtTime(ticks) : missing;
+const secondsOrDash = (seconds: number | null) =>
+  seconds !== null ? `${seconds.toFixed(1)}s` : "—";
+const signed = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
 
+const a = analyzeRace(rep, you.uuid, themUuid, { debugClaims: Boolean(process.env.CLAIMS), file });
+console.log(
+  `=== ${a.you.name} (${a.you.uuid}) vs ${a.them.name} (${a.them.uuid}) · finalGap ${signed(a.finalGap)}s ===`,
+);
+const splits = a.splits.map((s) => `${s.name}: ${timeOr(s.you, "—")} vs ${timeOr(s.them, "—")}`);
+console.log("Splits:", splits.join(" | "));
+
+const showSteps = process.env.STEPS || fromTick > 0 || toTick < Infinity;
 for (const p of a.report) {
-  const sp = you.run.marks;
-  void sp;
-  console.log(`\n### ${p.phase}  change ${p.change !== null ? (p.change >= 0 ? "+" : "") + p.change.toFixed(1) : "—"}  you ${p.you !== null ? p.you.toFixed(1) + "s" : "—"}  them ${p.them !== null ? p.them.toFixed(1) + "s" : "—"}${p.unfinished ? " [unfinished]" : ""}${p.theirsEnded ? " [theirsEnded]" : ""}`);
+  const change = p.change !== null ? signed(p.change) : "—";
+  const flags = `${p.unfinished ? " [unfinished]" : ""}${p.theirsEnded ? " [theirsEnded]" : ""}`;
+  console.log(
+    `\n### ${p.phase}  change ${change}  you ${secondsOrDash(p.you)}  them ${secondsOrDash(p.them)}${flags}`,
+  );
   for (const w of p.why) {
-    console.log(`  {${w.seconds.toFixed(0).padStart(4)}} ${w.label} [${w.at?.you != null ? fmtTime(w.at.you) : "-"} / ${w.at?.them != null ? fmtTime(w.at.them) : "-"}]: ${w.text}`);
+    console.log(
+      `  {${w.seconds.toFixed(0).padStart(4)}} ${w.label} [${timeOr(w.at?.you, "-")} / ${timeOr(w.at?.them, "-")}]: ${w.text}`,
+    );
   }
   for (const n of p.notes) {
-    console.log(`  [${n.seconds === null ? "  " : n.seconds.toFixed(0).padStart(2)}] ${n.text}${n.at?.you != null || n.at?.them != null ? ` @(${n.at?.you != null ? fmtTime(n.at.you) : "-"}/${n.at?.them != null ? fmtTime(n.at.them) : "-"})` : ""}`);
+    const seconds = n.seconds === null ? "  " : n.seconds.toFixed(0).padStart(2);
+    const at =
+      n.at?.you != null || n.at?.them != null
+        ? ` @(${timeOr(n.at?.you, "-")}/${timeOr(n.at?.them, "-")})`
+        : "";
+    console.log(`  [${seconds}] ${n.text}${at}`);
   }
-  if (process.env.STEPS || fromTick > 0 || toTick < Infinity) {
-    for (const s of p.steps.you.filter((x) => x.t1 >= fromTick && x.t0 <= toTick)) {
-      console.log(`    Y ${fmtTime(s.t0)}–${fmtTime(s.t1)} (${s.t0}..${s.t1}) [${s.kind}] ${s.text}`);
-    }
-    for (const s of p.steps.them.filter((x) => x.t1 >= fromTick && x.t0 <= toTick)) {
-      console.log(`    T ${fmtTime(s.t0)}–${fmtTime(s.t1)} (${s.t0}..${s.t1}) [${s.kind}] ${s.text}`);
+  if (!showSteps) {
+    continue;
+  }
+  for (const [side, steps] of [
+    ["Y", p.steps.you],
+    ["T", p.steps.them],
+  ] as const) {
+    for (const s of steps.filter((x) => x.t1 >= fromTick && x.t0 <= toTick)) {
+      console.log(
+        `    ${side} ${fmtTime(s.t0)}–${fmtTime(s.t1)} (${s.t0}..${s.t1}) [${s.kind}] ${s.text}`,
+      );
     }
   }
 }
@@ -54,6 +72,8 @@ for (const p of a.report) {
 if (process.env.CLAIMS && a.claims) {
   console.log(`\n=== Claims (${a.claims.length}) ===`);
   for (const c of a.claims) {
-    console.log(`  [${c.phase}] ${c.line} :: ${c.claim} (ticks: ${c.evidenceTicks.slice(0, 8).join(",")})`);
+    console.log(
+      `  [${c.phase}] ${c.line} :: ${c.claim} (ticks: ${c.evidenceTicks.slice(0, 8).join(",")})`,
+    );
   }
 }

@@ -5,7 +5,9 @@ In Minecraft 1.16.1 RSG and MCSR Ranked (Piglin Brutes absent prior to 1.16.2; *
 ---
 
 ## 1. Upper Ramparts, Triple Chests, & Gold Blocks
+
 Unlike Bridge, Housing, and Treasure (which generate 2 ramparts), Stables always generates **3 adjacent upper ramparts** (`ramparts_1`, `ramparts_2`, `ramparts_3`). Each slot independently rolls one of three upper templates:
+
 - **Triple Chest (`ramparts_1`):** Contains **3 `generic` loot chests** (1 double + 1 single separated by 4 blocks, player level `Y=72` vs `Y=73` in Bridge/Housing) and **4 guaranteed Gold Blocks** hidden in the lower room directly beneath the chests.
 - **Double / Lantern (`ramparts_2`):** Contains **2 `generic` chests** (1 upper, 1 in the lower staircase room) and **0 Gold Blocks**.
 - **Single / Diagonal (`ramparts_3`):** Contains **1 `generic` chest** and **0 Gold Blocks** (features a misleading piglin-snout wall with no gold behind it).
@@ -14,7 +16,9 @@ Unlike Bridge, Housing, and Treasure (which generate 2 ramparts), Stables always
 ---
 
 ## 2. Good Gap vs. Bad Gap (Lower Stable Wings)
+
 The two lower stable sides (Left and Right) connect below the ramparts and roll either a **Good Gap** or a **Bad Gap**, supplemented by modular inner/outer large and small stable stalls:
+
 - **Good Gap:** Identified from the rampart staircase by mining the top-right check block (air/open corridor behind it) or spotting the recessed two-layered lower room. Contains **up to 4 Gold Blocks** in the back wall cavity plus **up to 6 additional exposed/semi-hidden Gold Blocks** across adjacent stable stalls (`small_stables`/`large_stables`, where individual gold blocks generate at a 50% structure-processor roll `[uncertain: exact average yield typically ~4–7 gold blocks per good gap]`), alongside 1–2 chests.
 - **Bad Gap:** Solid blackstone wall at the staircase check spot and lacks the lower gold room. Contains **0 Gold Blocks** in the main gap connector and only a single chest (though outer/inner stable stalls can still roll isolated 50% gold blocks and `hoglin_stable` chests).
 - **Core Routes:**
@@ -25,6 +29,7 @@ The two lower stable sides (Left and Right) connect below the ramparts and roll 
 ---
 
 ## 3. Piglin Density, Stuck Spots, & Hoglin Hazards
+
 - **Piglin Density:** Stables has lower natural piglin concentration than Housing or Bridge. A Triple Chest rampart spawns ~8 piglins (`6+2` structure mob markers), while Double (`2+1`) and Single (`1+1`) ramparts are sparse. Most bartering relies on pulling upper-rampart piglins down via chest/gold-block aggro (16-block radius) and merging them with lower stable piglins (`1–2` per inner/outer stall).
 - **Stuck Piglin Spots (Blocks & Slabs):** Because Stables pieces (`inner_0..4`, `outer_0..4`) are heavily weathered with **Blackstone Slabs, Stairs, Blackstone Walls, and Basalt pillars**, piglins frequently get stuck on half-slab ledges, stair corners, or behind 1-block wall posts when pathfinding toward thrown gold. Runners must break overhanging slabs/walls or throw backup ingots onto upper ledges so stuck piglins contribute to trades `[uncertain: exact count of stuck piglins varies by inner/outer stall roll, typically 2–5 per wing]`.
 - **Hoglin Hazards:** Both `large_stables` and `small_stables` pieces spawn persistent **Hoglins** in the lower stalls and courtyard. Hoglins deal high knockback (launching players into lava bits or off broken ramparts) and cannot be distracted by gold. Keep a 2-block pillar, door, or 1x2 wall buffer while mining lower stall gold and collecting barter drops.
@@ -32,6 +37,7 @@ The two lower stable sides (Left and Right) connect below the ramparts and roll 
 ---
 
 ## 4. Chest Expectations (Obsidian & String) & Exit Routes
+
 - **Chest Loot Distinction (`generic` vs. `hoglin_stable`):**
   - **Upper Rampart Chests (`bastion_other` / `generic`):** Roll general bastion loot—good for **Obsidian** (`4–6` per roll), **String** (`4–16` for bed crafting), Gold/Iron ingots, and spectral arrows, though diluted by chains/bone blocks.
   - **Lower Stable Chests (`bastion_hoglin_stable`):** Located in `large_stables/inner` pieces; pull from a dedicated pool with **Crying Obsidian** (`1–5`), **String** (`3–8`), **Gold Ingots**, Cooked Porkchops, Saddles, and Soul Speed books, plus a high-tier pool (Diamond Shovel/Pickaxe, Ancient Debris, Golden Apples), **but 0 regular Obsidian** in the `hoglin_stable` table itself.
@@ -43,6 +49,7 @@ The two lower stable sides (Left and Right) connect below the ramparts and roll 
 ---
 
 ## Sources & References
+
 - **MCSR Wiki (`mcsr.miraheze.org/wiki/Bastion_routing`):** Stables 3-rampart identification, `Y=72` triple chest height, and `1/2/3` chest rampart counts.
 - **Minecraft Wiki (`minecraft.wiki/w/Bastion_Remnant/Structure`):** Blueprints for `hoglin_stable/ramparts_1..3`, `large_stables`, `small_stables`, and `bastion_hoglin_stable` vs. `bastion_other` loot tables.
 - **MCSR Ranked & Community Routing Guides (Meebie, HiTrippy, Silverr, Rowl, Chloe/Pavkin):** Good/Bad Gap identification checks, Hourglass routing, and slab/stall piglin pathfinding manipulation in 1.16.1.

@@ -1,6 +1,6 @@
 {
   "name": "stratas",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "private": true,
   "description": "Mix your MCSR Ranked private room replays with a player at any Elo you pick, then watch them side by side.",
   "type": "module",
@@ -19,7 +19,11 @@
     "ui:dev": "vite",
     "dist": "npm run build && electron-builder --publish never",
     "web:dev": "vite --config vite.web.config.ts",
-    "web:build": "vite build --config vite.web.config.ts"
+    "web:build": "vite build --config vite.web.config.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix && prettier --write ."
   },
   "dependencies": {
     "electron-updater": "^6.8.9",
@@ -34,7 +38,9 @@
     "esbuild": "^0.28.2",
     "events": "^3.3.0",
     "fzstd": "^0.1.1",
+    "oxlint": "1.93.0",
     "path-browserify": "^1.0.1",
+    "prettier": "3.10.1",
     "sql.js": "^1.15.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",

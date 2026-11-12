@@ -6,15 +6,21 @@ import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { mergeRunners } from "../src/core/replay/merge";
 import { Service } from "../src/core/service";
 
-const CHAVRON = new Uint8Array(readFileSync(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)));
+const CHAVRON = new Uint8Array(
+  readFileSync(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)),
+);
 const ME = "fba98cacdc6a495eba271ee046dcbba9";
 const CHAV = "e1b919fe90b044b484ff93979e8308a4";
 
-/** Single runner replay, like one from somewhere else */
-function solo(uuid: string, patch: Record<string, unknown>) {
-  const files = unzipSync(mergeRunners([{ bytes: CHAVRON, uuid }]).bytes);
+function withMeta(replay: Uint8Array, patch: Record<string, unknown>) {
+  const files = unzipSync(replay);
   const meta = { ...JSON.parse(strFromU8(files["meta.json"])), ...patch };
   return zipSync({ ...files, "meta.json": strToU8(JSON.stringify(meta)) });
+}
+
+/** Returns a single runner replay, like one from somewhere else. */
+function solo(uuid: string, patch: Record<string, unknown>) {
+  return withMeta(mergeRunners([{ bytes: CHAVRON, uuid }]).bytes, patch);
 }
 
 describe("service: the whole loop on a fake Ranked folder", () => {
@@ -26,13 +32,28 @@ describe("service: the whole loop on a fake Ranked folder", () => {
   mkdirSync(join(mc, "mcsrranked", "temp-replay"), { recursive: true });
   const svc = new Service(":memory:", { offline: true, poolDir: join(root, "games") });
   svc.store.set("settings", { nickname: "cyoshi", uuid: ME, instancePath: root });
-  afterAll(() => { svc.stop(); rmSync(root, { recursive: true, force: true }); });
+  afterAll(() => {
+    svc.stop();
+    rmSync(root, { recursive: true, force: true });
+  });
+  const chavronPractice = () => svc.state().queue.find((q) => q.match_id === 14182329)?.practice;
 
   it("downloaded run -> seeds -> your private-room run -> quick splits -> race file + analysis", async () => {
     svc.start();
-    svc.store.enqueue({ match_id: 14182329, player_uuid: CHAV, player_name: "Chavron", opponent_name: "cyoshi", date: Math.floor(Date.now() / 1000),
-      time: 785002, seed_type: "VILLAGE", bastion_type: "STABLES", elo: 1390, tier: "next", reason: "test" });
-    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("download-player");
+    svc.store.enqueue({
+      match_id: 14182329,
+      player_uuid: CHAV,
+      player_name: "Chavron",
+      opponent_name: "cyoshi",
+      date: Math.floor(Date.now() / 1000),
+      time: 785002,
+      seed_type: "VILLAGE",
+      bastion_type: "STABLES",
+      elo: 1390,
+      tier: "next",
+      reason: "test",
+    });
+    expect(chavronPractice()?.step).toBe("download-player");
 
     // 1. Download their replay in Ranked (lands in My Replays under the name you typed)
     writeFileSync(join(mc, "mcsrranked", "replay", "chav.rrf"), solo(CHAV, { matchId: 14182329 }));
@@ -41,35 +62,102 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(q.status).toBe("downloaded");
     expect(q.overworld_seed).toBe("-3566570342730286256");
     expect(q.nether_seed).toBe("198406064683359");
-    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("play-seed");
+    expect(chavronPractice()?.step).toBe("play-seed");
 
     // 2. Copy the seed and play it solo in a private room. Ranked's API has the splits right away
     svc.practicing(14182329);
-    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("play-seed");
+    expect(chavronPractice()?.step).toBe("play-seed");
     const notes: { id: number | null; title: string; body: string }[] = [];
     svc.on("newGame", (n) => notes.push(n));
-    const splits = (uuid: string, ms: [string, number][]) => ms.map(([type, time]) => ({ uuid, type, time }));
+    const splits = (uuid: string, ms: [string, number][]) =>
+      ms.map(([type, time]) => ({ uuid, type, time }));
     const now = Math.floor(Date.now() / 1000);
-    const detail = (id: number, uuid: string, name: string, time: number, timelines: { uuid: string; type: string; time: number }[]) => ({
-      id, type: id === 14182329 ? 2 : 3, date: now + 5, seed: null, seedType: null, bastionType: null, players: [{ uuid, nickname: name, eloRate: null, eloRank: null }],
-      result: { uuid, time }, forfeited: false, timelines, completions: [{ uuid, time }], changes: [] });
-    svc.store.putMatchDetail(detail(99999999, ME, "cyoshi", 950000, splits(ME, [["story.enter_the_nether", 120000], ["story.iron_tools", 60000], ["nether.find_bastion", 170000], ["projectelo.timeline.dragon_death", 950000]])) as never);
-    svc.store.putMatchDetail(detail(14182329, CHAV, "Chavron", 785002, splits(CHAV, [["story.enter_the_nether", 100000], ["nether.find_bastion", 140000], ["projectelo.timeline.dragon_death", 785002]])) as never);
-    svc.store.set("myPrivate", [{ id: 99999999, type: 3, date: now + 5, seedType: null, bastionType: null, players: [{ uuid: ME, nickname: "cyoshi" }], result: { uuid: ME, time: 950000 }, forfeited: false }]);
+    const detail = (
+      id: number,
+      uuid: string,
+      name: string,
+      time: number,
+      timelines: { uuid: string; type: string; time: number }[],
+    ) => ({
+      id,
+      type: id === 14182329 ? 2 : 3,
+      date: now + 5,
+      seed: null,
+      seedType: null,
+      bastionType: null,
+      players: [{ uuid, nickname: name, eloRate: null, eloRank: null }],
+      result: { uuid, time },
+      forfeited: false,
+      timelines,
+      completions: [{ uuid, time }],
+      changes: [],
+    });
+    svc.store.putMatchDetail(
+      detail(
+        99999999,
+        ME,
+        "cyoshi",
+        950000,
+        splits(ME, [
+          ["story.enter_the_nether", 120000],
+          ["story.iron_tools", 60000],
+          ["nether.find_bastion", 170000],
+          ["projectelo.timeline.dragon_death", 950000],
+        ]),
+      ) as never,
+    );
+    svc.store.putMatchDetail(
+      detail(
+        14182329,
+        CHAV,
+        "Chavron",
+        785002,
+        splits(CHAV, [
+          ["story.enter_the_nether", 100000],
+          ["nether.find_bastion", 140000],
+          ["projectelo.timeline.dragon_death", 785002],
+        ]),
+      ) as never,
+    );
+    svc.store.set("myPrivate", [
+      {
+        id: 99999999,
+        type: 3,
+        date: now + 5,
+        seedType: null,
+        bastionType: null,
+        players: [{ uuid: ME, nickname: "cyoshi" }],
+        result: { uuid: ME, time: 950000 },
+        forfeited: false,
+      },
+    ]);
     await (svc as unknown as { quickRaces(): Promise<void> }).quickRaces();
     const quick = svc.state().races.find((r) => r.quick)!;
     expect(quick.theirName).toBe("Chavron");
     expect(quick.finalGap).toBeCloseTo((950000 - 785002) / 1000, 1);
-    expect(svc.race(quick.id)!.analysis!.splits.map((s) => s.name)).toEqual(["Entered the Nether", "Entered Bastion", "Defeated the Dragon"]);
+    expect(svc.race(quick.id)!.analysis!.splits.map((s) => s.name)).toEqual([
+      "Entered the Nether",
+      "Entered Bastion",
+      "Defeated the Dragon",
+    ]);
     expect(svc.store.queueRow(14182329)!.status).toBe("raced");
-    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice).toMatchObject({ step: "download-private", raceId: quick.id });
+    expect(chavronPractice()).toMatchObject({
+      step: "download-private",
+      raceId: quick.id,
+    });
     expect(notes.map((n) => n.title)).toEqual(["vs Chavron · splits"]);
 
     // 3. Ranked saves your replay, the full race replaces the quick one
-    writeFileSync(join(mc, "mcsrranked", "temp-replay", "99999999.rrf"), solo(ME, { matchId: 99999999, matchType: 3, date: Date.now() }));
+    writeFileSync(
+      join(mc, "mcsrranked", "temp-replay", "99999999.rrf"),
+      solo(ME, { matchId: 99999999, matchType: 3, date: Date.now() }),
+    );
     svc.rescanLibrary();
     expect(svc.state().races.some((r) => r.quick)).toBe(false);
-    expect(notes.map((n) => n.title)).toEqual(["vs Chavron · splits", expect.stringMatching(/^vs Chavron · \+2:39$/)]);
+    expect(notes.map((n) => n.title)).toEqual([
+      "vs Chavron · splits",
+      expect.stringMatching(/^vs Chavron · \+2:39$/),
+    ]);
 
     const st = svc.state();
     const race = st.races.find((r) => r.kind === "race")!;
@@ -78,37 +166,52 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(race.tier).toBe("next");
     expect(Math.round(race.finalGap)).toBe(159);
     expect(svc.store.queueRow(14182329)!.status).toBe("raced");
-    expect(readdirSync(join(mc, "mcsrranked", "replay")).some((f) => f.startsWith("vs Chavron "))).toBe(true);
+    expect(
+      readdirSync(join(mc, "mcsrranked", "replay")).some((f) => f.startsWith("vs Chavron ")),
+    ).toBe(true);
     expect(st.gate.status).toBe("ok");
     expect(svc.race(race.id)!.analysis!.losses.length).toBeGreaterThan(3);
-    expect(st.queue.find((q) => q.match_id === 14182329)?.practice).toMatchObject({ step: "analyze", raceId: race.id });
+    expect(st.queue.find((q) => q.match_id === 14182329)?.practice).toMatchObject({
+      step: "analyze",
+      raceId: race.id,
+    });
   });
 
   it("tracks a newer private match before its replay or splits arrive", () => {
     const previous = svc.store.get<unknown[]>("myPrivate", []);
     const links = svc.store.get<Record<string, number>>("quickLinks", {});
     try {
-      svc.store.set("myPrivate", [{ id: 99999997, type: 3, date: Math.floor(Date.now() / 1000) + 60,
-        seedType: null, bastionType: null, players: [{ uuid: ME, nickname: "cyoshi" }],
-        result: { uuid: ME, time: 800000 }, forfeited: false }]);
+      svc.store.set("myPrivate", [
+        {
+          id: 99999997,
+          type: 3,
+          date: Math.floor(Date.now() / 1000) + 60,
+          seedType: null,
+          bastionType: null,
+          players: [{ uuid: ME, nickname: "cyoshi" }],
+          result: { uuid: ME, time: 800000 },
+          forfeited: false,
+        },
+      ]);
       svc.store.set("quickLinks", { ...links, 99999997: 14182329 });
-      expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice).toMatchObject({ step: "download-private", raceId: null });
+      expect(chavronPractice()).toMatchObject({
+        step: "download-private",
+        raceId: null,
+      });
     } finally {
-      svc.store.set("myPrivate", previous); svc.store.set("quickLinks", links);
+      svc.store.set("myPrivate", previous);
+      svc.store.set("quickLinks", links);
     }
-    expect(svc.state().queue.find((q) => q.match_id === 14182329)?.practice?.step).toBe("analyze");
+    expect(chavronPractice()?.step).toBe("analyze");
   });
 
   it("pops up a ranked game you just played and keeps the newest ones", () => {
     const games: { id: number; title: string }[] = [];
     svc.on("newGame", (g) => games.push(g));
     svc.store.set("settings", { ...svc.settings(), poolSize: 2 });
-    /** Your Ranked game, both players in one replay, played `ago` ms ago */
-    const game = (id: number, ago: number) => {
-      const files = unzipSync(CHAVRON);
-      const meta = { ...JSON.parse(strFromU8(files["meta.json"])), matchId: id, matchType: 2, date: Date.now() - ago };
-      return zipSync({ ...files, "meta.json": strToU8(JSON.stringify(meta)) });
-    };
+    /** Returns your Ranked game with both players in one replay, played `ago` ms ago. */
+    const game = (id: number, ago: number) =>
+      withMeta(CHAVRON, { matchId: id, matchType: 2, date: Date.now() - ago });
     const temp = join(mc, "mcsrranked", "temp-replay");
     writeFileSync(join(temp, "20000001.rrf"), game(20000001, 3 * 3600_000));
     writeFileSync(join(temp, "20000002.rrf"), game(20000002, 2 * 3600_000));
@@ -119,17 +222,20 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(games.map((g) => g.title)).toEqual([expect.stringMatching(/^vs Chavron · \+2:39$/)]);
     // Games stay in games/ forever, no poolSize eviction
     const pooled = readdirSync(join(root, "games")).sort();
-    expect(pooled).toEqual(expect.arrayContaining(["20000001.rrf", "20000002.rrf", "20000003.rrf"]));
+    expect(pooled).toEqual(
+      expect.arrayContaining(["20000001.rrf", "20000002.rrf", "20000003.rrf"]),
+    );
     const keys = svc.store.races().map((r) => r.key);
     expect(keys.some((k) => k.startsWith("match|20000001|"))).toBe(true);
     expect(keys.some((k) => k.startsWith("match|20000002|"))).toBe(true);
     expect(keys.some((k) => k.startsWith("match|20000003|"))).toBe(true);
   });
 
-  it("treats a replay you named \"vs someone\" as your game, not a Stratas race file", () => {
-    const files = unzipSync(CHAVRON);
-    const meta = { ...JSON.parse(strFromU8(files["meta.json"])), matchId: 20000009, matchType: 2, date: Date.now() };
-    writeFileSync(join(mc, "mcsrranked", "replay", "vs nei1019V.rrf"), zipSync({ ...files, "meta.json": strToU8(JSON.stringify(meta)) }));
+  it('treats a replay you named "vs someone" as your game, not a Stratas race file', () => {
+    writeFileSync(
+      join(mc, "mcsrranked", "replay", "vs nei1019V.rrf"),
+      withMeta(CHAVRON, { matchId: 20000009, matchType: 2, date: Date.now() }),
+    );
     svc.rescanLibrary();
     expect(svc.store.run(join(mc, "mcsrranked", "replay", "vs nei1019V.rrf"))!.kind).toBe("ranked");
     expect(svc.store.races().some((r) => r.key.startsWith("match|20000009|"))).toBe(true);
@@ -137,13 +243,27 @@ describe("service: the whole loop on a fake Ranked folder", () => {
 
   it("deletes forfeited private room runs from after the setting got turned on, not older ones", async () => {
     const before = svc.state().races.filter((r) => r.kind === "race").length;
-    await svc.updateSettings({ prefs: { ...svc.settings().prefs, dropForfeits: true, dropForfeitsSince: 0 } });
+    await svc.updateSettings({
+      prefs: { ...svc.settings().prefs, dropForfeits: true, dropForfeitsSince: 0 },
+    });
     expect(svc.settings().prefs.dropForfeitsSince).toBeGreaterThan(Date.now() - 60_000); // The ui's copy doesn't count
     const now = Math.floor(Date.now() / 1000);
-    const priv = (id: number) => ({ id, type: 3, date: now, seedType: null, bastionType: null, players: [{ uuid: ME, nickname: "cyoshi" }], result: { uuid: null, time: 0 }, forfeited: true });
+    const priv = (id: number) => ({
+      id,
+      type: 3,
+      date: now,
+      seedType: null,
+      bastionType: null,
+      players: [{ uuid: ME, nickname: "cyoshi" }],
+      result: { uuid: null, time: 0 },
+      forfeited: true,
+    });
     // The old run from the first test was a forfeit too, but from before
     svc.store.set("myPrivate", [priv(99999999), priv(99999998)]);
-    writeFileSync(join(mc, "mcsrranked", "temp-replay", "99999998.rrf"), solo(ME, { matchId: 99999998, matchType: 3, date: Date.now() + 1000 }));
+    writeFileSync(
+      join(mc, "mcsrranked", "temp-replay", "99999998.rrf"),
+      solo(ME, { matchId: 99999998, matchType: 3, date: Date.now() + 1000 }),
+    );
     svc.rescanLibrary();
     expect(svc.state().races.filter((r) => r.kind === "race").length).toBe(before);
     expect(readdirSync(join(root, "games"))).not.toContain("99999998.rrf");
@@ -167,14 +287,21 @@ describe("service: version gate", () => {
     try {
       svc.store.set("settings", { nickname: "cyoshi", uuid: ME, instancePath: root });
       svc.store.set("gate", {
-        "6.0.12": { status: "failed", detail: "mixed replay payload (619485 bytes) cannot fit an original replay size (347920, 596462); use the original full replays" },
+        "6.0.12": {
+          status: "failed",
+          detail:
+            "mixed replay payload (619485 bytes) cannot fit an original replay size (347920, 596462); use the original full replays",
+        },
         "6.0.4": { status: "failed", detail: "unknown record format" },
       });
       svc.start();
       expect(svc.state().gate.status).toBe("unverified");
-      expect(svc.store.get<Record<string, unknown>>("gate", {})).toEqual({ "6.0.4": { status: "failed", detail: "unknown record format" } });
+      expect(svc.store.get<Record<string, unknown>>("gate", {})).toEqual({
+        "6.0.4": { status: "failed", detail: "unknown record format" },
+      });
     } finally {
-      svc.stop(); rmSync(root, { recursive: true, force: true });
+      svc.stop();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

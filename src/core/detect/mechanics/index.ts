@@ -1,4 +1,3 @@
-// Mechanic registry. Each mechanic is its own file here and gets added to MECHANICS
 import type { Note, Side, Span } from "../findings";
 import { overworldLavaPortalMechanic } from "./overworld-lava-portal";
 import { overworldRuinedPortalMechanic } from "./overworld-ruined-portal";
@@ -48,14 +47,18 @@ export const MECHANICS: Mechanic[] = [
 export function runMechanicNotes(phase: string, Y: Side, T: Side, ys: Span, ts: Span): Note[] {
   const out: Note[] = [];
   for (const m of MECHANICS) {
-    if (!m.phase.includes(phase) && !m.phase.includes("*")) continue;
-    if (!m.compare) continue;
+    if (!m.compare || (!m.phase.includes(phase) && !m.phase.includes("*"))) {
+      continue;
+    }
     const yo = m.detect(Y, ys);
     const to = ts ? m.detect(T, ts) : [];
-    if (!yo.length && !to.length) continue;
+    if (!yo.length && !to.length) {
+      continue;
+    }
     const res = m.compare(yo, to, Y, T, ys, ts);
-    if (res) out.push(res);
+    if (res) {
+      out.push(res);
+    }
   }
   return out;
 }
-

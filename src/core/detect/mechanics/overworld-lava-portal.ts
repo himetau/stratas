@@ -1,6 +1,8 @@
 import type { Note, Side } from "../findings";
-import { fmtTime } from "../names";
+import { fmtDur, fmtTime } from "../names";
 import type { Mechanic, Occurrence } from "./index";
+
+const dur = (t: number) => fmtDur(t / 20);
 
 export const overworldLavaPortalMechanic: Mechanic = {
   key: "overworld_lava_portal",
@@ -8,12 +10,18 @@ export const overworldLavaPortalMechanic: Mechanic = {
   detect(s: Side, span?: [number, number]): Occurrence[] {
     const nether = s.run.mark("nether");
     const ops = s.facts.buckets.filter((b) => {
-      if (nether !== undefined && b.t >= nether) return false;
-      if (span && (b.t < span[0] || b.t > span[1])) return false;
+      if (nether !== undefined && b.t >= nether) {
+        return false;
+      }
+      if (span && (b.t < span[0] || b.t > span[1])) {
+        return false;
+      }
       return true;
     });
     const lavaEmptied = ops.filter((b) => b.op === "empty" && b.fluid === "lava").length;
-    if (lavaEmptied < 1) return [];
+    if (lavaEmptied === 0) {
+      return [];
+    }
     const waterEmptied = ops.filter((b) => b.op === "empty" && b.fluid === "water").length;
     const totalOps = ops.length;
     const t0 = ops[0].t;
@@ -24,13 +32,15 @@ export const overworldLavaPortalMechanic: Mechanic = {
         t0,
         t1,
         value,
-        text: `Lava portal build at ${fmtTime(t0)}: ${fmtTime(value)} (${lavaEmptied} lava, ${waterEmptied} water)`,
+        text: `Lava portal build at ${fmtTime(t0)}: ${dur(value)} (${lavaEmptied} lava, ${waterEmptied} water)`,
         meta: { lavaEmptied, waterEmptied, totalOps },
       },
     ];
   },
   compare(y: Occurrence[], t: Occurrence[]): Note | null {
-    if (!y.length || !t.length) return null;
+    if (!y.length || !t.length) {
+      return null;
+    }
     const yo = y[0];
     const to = t[0];
     const yDur = yo.value ?? yo.t1 - yo.t0;
@@ -44,10 +54,12 @@ export const overworldLavaPortalMechanic: Mechanic = {
 
     const durDiffers = Math.abs(yDur - tDur) >= 60;
     const opsDiffer = yLava !== tLava || yWater !== tWater || yTotal !== tTotal;
-    if (!durDiffers && !opsDiffer) return null;
+    if (!durDiffers && !opsDiffer) {
+      return null;
+    }
 
     return {
-      text: `Lava portal build: ${fmtTime(yDur)} (${yLava} lava, ${yWater} water) vs ${fmtTime(tDur)} (${tLava} lava, ${tWater} water)`,
+      text: `Lava portal build: ${dur(yDur)} (${yLava} lava, ${yWater} water) vs ${dur(tDur)} (${tLava} lava, ${tWater} water)`,
       seconds: null,
       at: { you: yo.t0, them: to.t0 },
     };

@@ -1,13 +1,14 @@
-// node:zlib for the browser build, just the zstd the replay format uses. fzstd decompresses. Mixed replays get written
-// as zstd frames with uncompressed blocks: still valid zstd that any decoder reads, just not smaller
 import { decompress } from "fzstd";
 
 // Matches Node's parameter key. This raw-block encoder ignores compression levels.
 export const constants = { ZSTD_c_compressionLevel: 100 };
 
-export function zstdDecompressSync(b: Uint8Array): Uint8Array { return decompress(b); }
+export function zstdDecompressSync(b: Uint8Array): Uint8Array {
+  return decompress(b);
+}
 
 const BLOCK = 128 * 1024;
+/** Writes a valid zstd frame of raw, uncompressed blocks, so the output is no smaller than the input. */
 export function zstdCompressSync(raw: Uint8Array): Uint8Array {
   const blocks = Math.max(1, Math.ceil(raw.length / BLOCK));
   const out = new Uint8Array(4 + 1 + 4 + blocks * 3 + raw.length);
@@ -19,7 +20,9 @@ export function zstdCompressSync(raw: Uint8Array): Uint8Array {
   for (let i = 0; i < blocks; i++) {
     const part = raw.subarray(i * BLOCK, Math.min(raw.length, (i + 1) * BLOCK));
     const head = (i === blocks - 1 ? 1 : 0) | (part.length << 3); // Raw block, last flag on the final one
-    out[o] = head & 0xff; out[o + 1] = (head >> 8) & 0xff; out[o + 2] = (head >> 16) & 0xff;
+    out[o] = head & 0xff;
+    out[o + 1] = (head >> 8) & 0xff;
+    out[o + 2] = (head >> 16) & 0xff;
     out.set(part, o + 3);
     o += 3 + part.length;
   }

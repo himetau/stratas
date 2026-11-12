@@ -14,16 +14,27 @@
     <meta property="og:image" content="https://stratas.lol/social.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Stratas: replay mixer and detailed analysis for MCSR Ranked" />
+    <meta
+      property="og:image:alt"
+      content="Stratas: replay mixer and detailed analysis for MCSR Ranked"
+    />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#ffb2ba" />
     <link rel="icon" href="./favicon.png" />
-    <link rel="preload" href="./DepartureMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link
+      rel="preload"
+      href="./DepartureMono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="./landing.css" />
   </head>
   <body>
     <header class="top">
-      <a class="brand" href="./"><img src="../packaging/icon-64.png" alt="" width="28" height="28" /> Stratas</a>
+      <a class="brand" href="./"
+        ><img src="../packaging/icon-64.png" alt="" width="28" height="28" /> Stratas</a
+      >
       <nav>
         <a href="#download">Download</a>
         <a href="./app/">Try it in your browser</a>
@@ -34,12 +45,27 @@
 
     <main>
       <section class="hero">
-        <img class="hero-art" src="../docs/readme/hero.svg" alt="Stratas: replay mixer and analysis for MCSR Ranked" />
+        <img
+          class="hero-art"
+          src="../docs/readme/hero.svg"
+          alt="Stratas: replay mixer and analysis for MCSR Ranked"
+        />
         <h1>Mix your private room replay with another player.</h1>
-        <p class="lead">Pick a player or an Elo range and play their seed in a private room. Stratas merges both runs into one replay for Ranked's viewer and compares them split by split.</p>
+        <p class="lead">
+          Pick a player or an Elo range and play their seed in a private room. Stratas merges both
+          runs into one replay for Ranked's viewer and compares them split by split.
+        </p>
         <div class="cta">
-          <a class="btn primary" href="https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe">Download for Windows</a>
-          <a class="btn" href="https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage">Download for Linux</a>
+          <a
+            class="btn primary"
+            href="https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe"
+            >Download for Windows</a
+          >
+          <a
+            class="btn"
+            href="https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage"
+            >Download for Linux</a
+          >
           <a class="btn ghost" href="./app/">Try it in your browser</a>
         </div>
         <p class="small">Free. Nothing gets uploaded, your replays stay on your computer.</p>
@@ -47,7 +73,11 @@
       </section>
 
       <section class="shots">
-        <img src="../docs/readme/splits.png" alt="Every split against your opponent, and where the time went" loading="lazy" />
+        <img
+          src="../docs/readme/splits.png"
+          alt="Every split against your opponent, and where the time went"
+          loading="lazy"
+        />
       </section>
 
       <section class="gallery">
@@ -60,28 +90,54 @@
       <section class="get" id="download">
         <h2>Get it</h2>
         <div class="cta">
-          <a class="btn primary" href="https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe">Windows</a>
-          <a class="btn" href="https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage">Linux</a>
+          <a
+            class="btn primary"
+            href="https://github.com/himetau/stratas/releases/latest/download/Stratas-Setup.exe"
+            >Windows</a
+          >
+          <a
+            class="btn"
+            href="https://github.com/himetau/stratas/releases/latest/download/Stratas.AppImage"
+            >Linux</a
+          >
           <a class="btn ghost" href="./app/">Try it in your browser</a>
         </div>
-        <p class="small">The browser version can't see your Ranked folder, so you add replays yourself. The app does it all on its own.</p>
-        <p class="small">Questions, bugs or runs to show off? Come say hi on <a href="https://discord.gg/K3NxjhJRD">Discord</a>.</p>
-        <p class="small">Windows warns you first because it isn't signed yet: More info, then Run anyway. Signing is on the way through <a href="https://signpath.org">SignPath Foundation</a>.</p>
+        <p class="small">
+          The browser version can't see your Ranked folder, so you add replays yourself. The app
+          does it all on its own.
+        </p>
+        <p class="small">
+          Questions, bugs or runs to show off? Come say hi on
+          <a href="https://discord.gg/K3NxjhJRD">Discord</a>.
+        </p>
+        <p class="small">
+          Windows warns you first because it isn't signed yet: More info, then Run anyway. Signing
+          is on the way through <a href="https://signpath.org">SignPath Foundation</a>.
+        </p>
       </section>
     </main>
 
     <footer>
-      made with 🩷 by cyoshi · <a href="https://discord.gg/K3NxjhJRD">Discord</a> · <a href="https://github.com/himetau/stratas">GitHub</a> · <a href="https://github.com/himetau/stratas/blob/main/LICENSE">GPL-3.0</a> · <a href="https://ko-fi.com/cyoshi">Ko-fi</a> · not affiliated with MCSR Ranked or Mojang
+      made with 🩷 by cyoshi · <a href="https://discord.gg/K3NxjhJRD">Discord</a> ·
+      <a href="https://github.com/himetau/stratas">GitHub</a> ·
+      <a href="https://github.com/himetau/stratas/blob/main/LICENSE">GPL-3.0</a> ·
+      <a href="https://ko-fi.com/cyoshi">Ko-fi</a> · not affiliated with MCSR Ranked or Mojang
     </footer>
     <script type="module">
       const freshDownloadsWhenCounterStarted = 146;
       const shownWhenCounterStarted = 130;
       const blockmapsFetchedPerUpdate = 2;
-      const countOf = (assets, test) => assets.filter((a) => test(a.name)).reduce((sum, a) => sum + a.download_count, 0);
+      const countOf = (assets, test) =>
+        assets.filter((a) => test(a.name)).reduce((sum, a) => sum + a.download_count, 0);
       try {
-        const releases = await (await fetch("https://api.github.com/repos/himetau/stratas/releases?per_page=100")).json();
+        const releases = await (
+          await fetch("https://api.github.com/repos/himetau/stratas/releases?per_page=100")
+        ).json();
         const assets = releases.flatMap((r) => r.assets);
-        const installers = countOf(assets, (n) => n === "Stratas-Setup.exe" || n === "Stratas.AppImage");
+        const installers = countOf(
+          assets,
+          (n) => n === "Stratas-Setup.exe" || n === "Stratas.AppImage",
+        );
         const updates = countOf(assets, (n) => n.endsWith(".blockmap")) / blockmapsFetchedPerUpdate;
         const fresh = Math.round(installers - updates);
         const el = document.getElementById("downloads");

@@ -13,7 +13,8 @@ import { computeTrends } from "../src/core/features";
 import { Store } from "../src/core/store";
 import type { Side } from "../src/core/detect/findings";
 
-const corpus = (name: string) => decodeRrf(new Uint8Array(readFileSync(new URL(`./fixtures/corpus/${name}`, import.meta.url))));
+const corpus = (name: string) =>
+  decodeRrf(new Uint8Array(readFileSync(new URL(`./fixtures/corpus/${name}`, import.meta.url))));
 const makeSide = (rep: ReturnType<typeof decodeRrf>, uuid: string): Side => {
   const p = rep.meta.players.find((x) => x.uuid === uuid);
   const run = new Run(uuid, p?.nickname ?? uuid, rep.events.get(uuid)!, rep.timelines);
@@ -24,9 +25,15 @@ const makeSide = (rep: ReturnType<typeof decodeRrf>, uuid: string): Side => {
 };
 
 const ME = "fba98cacdc6a495eba271ee046dcbba9";
+const CHAV = "e1b919fe90b044b484ff93979e8308a4";
+const NEI = "16a45c3e54c84de3ac259b960342062b";
+const RUPER = "eb4fc9846c3644709091b177a5f18c28";
+const SEEDOOSE = "e0007fa8bc5f419bb88a5fc6566309bd";
 
 describe("corpus manifest & claims", () => {
-  const manifest = JSON.parse(readFileSync(new URL("./fixtures/corpus/manifest.json", import.meta.url), "utf8"));
+  const manifest = JSON.parse(
+    readFileSync(new URL("./fixtures/corpus/manifest.json", import.meta.url), "utf8"),
+  );
 
   it("has at least 12 runs in the v40+ corpus", () => {
     expect(manifest.runCount).toBeGreaterThanOrEqual(12);
@@ -35,7 +42,10 @@ describe("corpus manifest & claims", () => {
 
   it("emits structured claims behind debugClaims", () => {
     const rep = corpus("14182329.rrf");
-    const a = analyzeRace(rep, ME, "e1b919fe90b044b484ff93979e8308a4", { debugClaims: true, file: "14182329.rrf" });
+    const a = analyzeRace(rep, ME, CHAV, {
+      debugClaims: true,
+      file: "14182329.rrf",
+    });
     expect(a.claims).toBeDefined();
     expect(a.claims!.length).toBeGreaterThan(20);
     expect(a.claims![0]).toMatchObject({ file: "14182329.rrf", uuid: ME });
@@ -52,11 +62,11 @@ describe("mechanic detectors on corpus runs", () => {
     const rAmmy = corpus("ref-ammy-14215217.rrf");
 
     const sCyoshi1418 = makeSide(r1418, ME);
-    const sChav1418 = makeSide(r1418, "e1b919fe90b044b484ff93979e8308a4");
+    const sChav1418 = makeSide(r1418, CHAV);
     const sCyoshi1423 = makeSide(r1423, ME);
     const sCyoshi14234 = makeSide(r14234, ME);
     const sCyoshiRuper = makeSide(rRuper, ME);
-    const sSeedoose = makeSide(rAmmy, "e0007fa8bc5f419bb88a5fc6566309bd");
+    const sSeedoose = makeSide(rAmmy, SEEDOOSE);
 
     const findMech = (k: string) => MECHANICS.find((m) => m.key === k)!;
 
@@ -98,26 +108,26 @@ describe("audit swarm bug regressions (Track B & Track H)", () => {
 
   it("does not charge stale Overworld leaf decay or End bed explosions as mining", () => {
     const r1423 = corpus("14232012.rrf");
-    const a1423 = analyzeRace(r1423, ME, "16a45c3e54c84de3ac259b960342062b");
+    const a1423 = analyzeRace(r1423, ME, NEI);
     const nt = a1423.report.find((p) => p.phase === "Nether travel")!;
     expect(nt.why.some((w) => w.label === "Mining on the way")).toBe(false);
 
     const rRuper = corpus("vs-ruper.rrf");
-    const aRuper = analyzeRace(rRuper, ME, "eb4fc9846c3644709091b177a5f18c28");
+    const aRuper = analyzeRace(rRuper, ME, RUPER);
     const end = aRuper.report.find((p) => p.phase === "End")!;
     expect(end.why.find((w) => w.label === "Mining")?.seconds ?? 0).toBeLessThan(10);
   });
 
   it("splits block placement clusters across pearl teleports and dimension changes", () => {
     const rRuper = corpus("vs-ruper.rrf");
-    const aRuper = analyzeRace(rRuper, ME, "eb4fc9846c3644709091b177a5f18c28");
+    const aRuper = analyzeRace(rRuper, ME, RUPER);
     const b2f = aRuper.report.find((p) => p.phase === "Bastion to fortress")!;
     expect(b2f.steps.you.some((s) => /Bridged 88 blocks/.test(s.text))).toBe(false);
   });
 
   it("does not count ender_eye loss on Overworld death as portal frame fills", () => {
     const rAmmy = corpus("ref-ammy-14215217.rrf");
-    const seedoose = makeSide(rAmmy, "e0007fa8bc5f419bb88a5fc6566309bd");
+    const seedoose = makeSide(rAmmy, SEEDOOSE);
     const ammy = makeSide(rAmmy, "6504ac9e57c14216871a5b220bac7a21");
     expect(seedoose.facts.framesFilled.length).toBe(0);
     expect(ammy.facts.framesFilled.length).toBeLessThanOrEqual(12);
@@ -129,9 +139,14 @@ describe("Elo benchmark atlas & Track F features", () => {
     const store = new Store(":memory:");
     const rows = extractSplitsFromTimeline(
       {
-        id: 1, type: 2, date: 1000, seedType: "VILLAGE", bastionType: "STABLES",
+        id: 1,
+        type: 2,
+        date: 1000,
+        seedType: "VILLAGE",
+        bastionType: "STABLES",
         players: [{ uuid: "u1", nickname: "p1", eloRate: 1550 }],
-        result: { uuid: "u1", time: 600_000 }, forfeited: false,
+        result: { uuid: "u1", time: 600_000 },
+        forfeited: false,
       },
       [
         { uuid: "u1", type: "story.enter_the_nether", time: 90_000 },
@@ -144,14 +159,19 @@ describe("Elo benchmark atlas & Track F features", () => {
       { ...rows[0], matchId: 2, uuid: "u2", fortress: 5000 },
       { ...rows[0], matchId: 3, uuid: "u3", fortress: 5400 },
     ]);
-    const stats = computeBandStats(store.splitsForBand(1500, 1700, null, "STABLES"), [1500, 1700], null, "STABLES");
+    const stats = computeBandStats(
+      store.splitsForBand(1500, 1700, null, "STABLES"),
+      [1500, 1700],
+      null,
+      "STABLES",
+    );
     expect(stats.count).toBe(3);
     expect(stats.medians.fortress).toBe(5200);
   });
 
   it("computes trends", () => {
     const r = corpus("vs-ruper.rrf");
-    const a = analyzeRace(r, ME, "eb4fc9846c3644709091b177a5f18c28");
+    const a = analyzeRace(r, ME, RUPER);
     const trends = computeTrends([
       { id: 1, createdAt: 1, analysis: a },
       { id: 2, createdAt: 2, analysis: a },

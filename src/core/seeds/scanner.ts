@@ -2,30 +2,42 @@
 import type { Store } from "../store";
 import type { Api } from "./api";
 
-const BACKFILL_DAYS = 5; // Covers the picker's RECENT_HOURS
+/** Backfill reaches far enough to cover the picker's RECENT_HOURS */
+const BACKFILL_DAYS = 5;
+const DAY_MS = 86_400_000;
+const MAX_NEW_PAGES = 6;
 
 export class Scanner {
   busy = false;
   lastError: string | null = null;
-  constructor(private store: Store, private api: Api) {}
+  constructor(
+    private store: Store,
+    private api: Api,
+  ) {}
 
   /** Catch up on new matches then backfill one page. Returns how many got added */
   async tick(): Promise<number> {
-    if (this.busy) return 0;
+    if (this.busy) {
+      return 0;
+    }
     this.busy = true;
     let added = 0;
     try {
       const newest = this.store.newestMatchId();
       let before: number | undefined;
-      for (let page = 0; page < 6; page++) {
+      for (let page = 0; page < MAX_NEW_PAGES; page++) {
         const ms = await this.api.matches(before);
-        if (!ms.length) break;
+        if (!ms.length) {
+          break;
+        }
         added += this.store.putMatches(ms);
         before = ms.at(-1)!.id;
-        if (!newest || before <= newest) break;
+        if (!newest || before <= newest) {
+          break;
+        }
       }
       const oldest = this.store.oldestMatch();
-      if (oldest && oldest.date * 1000 > Date.now() - BACKFILL_DAYS * 86400_000) {
+      if (oldest && oldest.date * 1000 > Date.now() - BACKFILL_DAYS * DAY_MS) {
         const ms = await this.api.matches(oldest.id);
         added += this.store.putMatches(ms);
       }

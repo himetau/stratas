@@ -5,13 +5,27 @@ const BASE = "https://api.mcsrranked.com";
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_PER_WINDOW = 420;
 const MIN_GAP_MS = 250;
+/** A request that never settles would block every request queued behind it */
+const REQUEST_TIMEOUT_MS = 15_000;
+const PAGE_PARAMS = ["type", "count", "before", "sort", "season"] as const;
 
-export interface ApiPlayer { uuid: string; nickname: string; eloRate: number | null; eloRank?: number | null; roleType?: number }
+export interface ApiPlayer {
+  uuid: string;
+  nickname: string;
+  eloRate: number | null;
+  eloRank?: number | null;
+  roleType?: number;
+}
 export interface ApiMatch {
   id: number;
   type: number;
   date: number;
-  seed?: { id: string | null; overworld: string | null; nether: string | null; variations?: string[] } | null;
+  seed?: {
+    id: string | null;
+    overworld: string | null;
+    nether: string | null;
+    variations?: string[];
+  } | null;
   seedType?: string | null;
   bastionType?: string | null;
   players: ApiPlayer[];
@@ -21,7 +35,12 @@ export interface ApiMatch {
   replayExists?: boolean | number;
   replayExist?: boolean | number;
 }
-export interface ApiUser { uuid: string; nickname: string; eloRate: number | null; eloRank: number | null }
+export interface ApiUser {
+  uuid: string;
+  nickname: string;
+  eloRate: number | null;
+  eloRank: number | null;
+}
 
 export class Api {
   private sent: number[] = [];
@@ -29,16 +48,30 @@ export class Api {
   constructor(private key: () => string | null = () => null) {}
 
   /** Requests left in this window, shown in the status bar */
-  remaining() { this.prune(); return MAX_PER_WINDOW - this.sent.length; }
-  private prune() { const now = Date.now(); while (this.sent.length && now - this.sent[0] > WINDOW_MS) this.sent.shift(); }
+  remaining() {
+    this.prune();
+    return MAX_PER_WINDOW - this.sent.length;
+  }
+  private prune() {
+    const now = Date.now();
+    while (this.sent.length && now - this.sent[0] > WINDOW_MS) {
+      this.sent.shift();
+    }
+  }
 
   private async slot() {
     for (;;) {
       this.prune();
       const now = Date.now();
       const last = this.sent.at(-1) ?? 0;
-      if (this.sent.length < MAX_PER_WINDOW && now - last >= MIN_GAP_MS) { this.sent.push(now); return; }
-      const wait = this.sent.length >= MAX_PER_WINDOW ? WINDOW_MS - (now - this.sent[0]) + 50 : MIN_GAP_MS - (now - last);
+      if (this.sent.length < MAX_PER_WINDOW && now - last >= MIN_GAP_MS) {
+        this.sent.push(now);
+        return;
+      }
+      const wait =
+        this.sent.length >= MAX_PER_WINDOW
+          ? WINDOW_MS - (now - this.sent[0]) + 50
+          : MIN_GAP_MS - (now - last);
       await new Promise((r) => setTimeout(r, wait));
     }
   }
@@ -46,12 +79,26 @@ export class Api {
   get<T>(path: string): Promise<T> {
     const run = async () => {
       await this.slot();
-      const headers: Record<string, string> = { "User-Agent": "Stratas (MCSR Ranked training tool)" };
+      const headers: Record<string, string> = {
+        "User-Agent": "Stratas (MCSR Ranked training tool)",
+      };
       const k = this.key();
-      if (k) headers["Private-Key"] = k;
-      const res = await fetch(BASE + path, { headers, signal: AbortSignal.timeout(15_000) }); // One stuck call would hold up the whole chain
-      const body = (await res.json().catch(() => null)) as { status?: string; data?: unknown } | null;
-      if (!res.ok || !body || body.status !== "success") throw new Error(`API ${path}: ${res.status} ${typeof body?.data === "string" ? body.data : ""}`.trim());
+      if (k) {
+        headers["Private-Key"] = k;
+      }
+      const res = await fetch(BASE + path, {
+        headers,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        status?: string;
+        data?: unknown;
+      } | null;
+      if (!res.ok || !body || body.status !== "success") {
+        throw new Error(
+          `API ${path}: ${res.status} ${typeof body?.data === "string" ? body.data : ""}`.trim(),
+        );
+      }
       return body.data as T;
     };
     const p = this.chain.then(run, run);
@@ -67,7 +114,9 @@ export class Api {
     return this.get<UserSeasonSummary>(`/users/${encodeURIComponent(id)}/seasons`);
   }
   matches(before?: number, count = 100) {
-    return this.get<ApiMatch[]>(`/matches?type=2&count=${count}${before ? `&before=${before}` : ""}`);
+    return this.get<ApiMatch[]>(
+      `/matches?type=2&count=${count}${before ? `&before=${before}` : ""}`,
+    );
   }
   match(id: number): Promise<MatchDetail> {
     return this.get<MatchDetail>(`/matches/${id}`);
@@ -77,11 +126,12 @@ export class Api {
     opts: { type?: number; count?: number; before?: number; sort?: string; season?: number } = {},
   ): Promise<MatchDetail[]> {
     const params = new URLSearchParams();
-    if (opts.type !== undefined) params.set("type", String(opts.type));
-    if (opts.count !== undefined) params.set("count", String(opts.count));
-    if (opts.before !== undefined) params.set("before", String(opts.before));
-    if (opts.sort !== undefined) params.set("sort", opts.sort);
-    if (opts.season !== undefined) params.set("season", String(opts.season));
+    for (const key of PAGE_PARAMS) {
+      const value = opts[key];
+      if (value !== undefined) {
+        params.set(key, String(value));
+      }
+    }
     const qs = params.toString();
     return this.get<MatchDetail[]>(`/users/${encodeURIComponent(id)}/matches${qs ? `?${qs}` : ""}`);
   }

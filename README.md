@@ -45,7 +45,7 @@ Analyse your match and it gives you detailed information about every segment. Ev
 ## What makes it different
 
 - Ranked only lets you watch the people from your own match. Stratas lets you put **anyone's run in the same seed** into your replay, at whatever elo you want, so you can see exactly where you lost or gained time.
-- It doesn't just tell you that you lost 40 seconds in the bastion, it tells you why, like 7 piglins being stuck on gold. 
+- It doesn't just tell you that you lost 40 seconds in the bastion, it tells you why, like 7 piglins being stuck on gold.
 - After a few games it tells you **what you should practice**, from where you consistently lose time.
 - There's no mod and nothing to record. It just uses the replays Ranked already saves.
 - Everything stays on your computer. It reads Ranked's files and adds the mixed replays to My replays, that's it.

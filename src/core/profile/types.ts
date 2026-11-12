@@ -1,11 +1,18 @@
-// All the Ranked profile types
 import type { ApiMatch, ApiUser } from "../seeds/api";
 import type { AtlasSplitKey } from "../seeds/atlas";
 import type { HabitTrend } from "../features";
 import type { MyGame } from "../service";
 
+/** Match type the Ranked API uses for ranked matches. */
+export const RANKED_MATCH_TYPE = 2;
+
 export interface SeasonResultEntry {
-  last: { eloRate: number | null; eloRank: number | null; phasePoint?: number; percentile?: number };
+  last: {
+    eloRate: number | null;
+    eloRank: number | null;
+    phasePoint?: number;
+    percentile?: number;
+  };
   highest?: number | null;
   lowest?: number | null;
   phaseHighest?: number | null;
@@ -126,7 +133,7 @@ export interface HeadToHeadEntry {
 }
 
 export interface RankedStats {
-  // Headline totals, from user.statistics if we have it, else the match window
+  // The headline totals come from user.statistics when present, else from the match window.
   played: number;
   wins: number;
   losses: number;
@@ -136,7 +143,7 @@ export interface RankedStats {
   currentStreak: number;
   bestWinStreak: number;
   bestTimeMs: number | null;
-  // Match window stats (up to 100 recent matches)
+  // The window stats cover up to 100 recent matches.
   windowPlayed: number;
   windowWins: number;
   windowLosses: number;
@@ -157,7 +164,6 @@ export interface RankedStats {
   forfeitRate: number;
   forfeits: { yours: number; theirs: number };
   deaths: { total: number; matches: number; perMatch: number };
-  // "More" stats
   sessions: SessionBucket[];
   currentSessionGames: number;
   currentSessionNetElo: number;
@@ -169,29 +175,35 @@ export type SplitSegmentKey = AtlasSplitKey;
 export interface SplitSegmentStat {
   key: SplitSegmentKey;
   label: string;
-  // Cumulative milestone times (ms)
+  // These are cumulative times to the milestone, in ms.
   bestMs: number | null;
   averageMs: number | null;
   medianMs: number | null;
-  // Segment duration, ms since the previous milestone
+  // The segment times are ms since the previous milestone.
   segmentBestMs: number | null;
   segmentAverageMs: number | null;
   segmentMedianMs: number | null;
   count: number;
-  // Percentiles 0-100, higher is faster than more of the pool
+  // Percentiles run 0-100, and higher is faster than more of the pool.
   worldPercentile: number | null;
   worldPctLabel: string;
   bandPercentile: number | null;
   bandPctLabel: string;
-  // Target is the median cumulative ms of the band above
+  /** Median cumulative ms of the next band up. */
   targetMs: number | null;
-  targetDeltaMs: number | null; // Your medianMs - targetMs, positive means you need to cut time
-  /** Median time to this split in your Elo band */
+  /** medianMs minus targetMs. Positive means you need to cut time. */
+  targetDeltaMs: number | null;
+  /** Median time to this split in your Elo band. */
   bandMedianMs: number | null;
-  /** Where the next rank's median sits in your Elo band, 0-100 higher is faster */
+  /** Where the next rank's median sits in your Elo band, 0-100, higher is faster. */
   targetPercentile: number | null;
-  /** Same comparisons but for just this segment (since the previous split) */
-  segment: { bandMedianMs: number | null; targetMs: number | null; percentile: number | null; targetPercentile: number | null };
+  /** The same comparisons for just this segment, since the previous split. */
+  segment: {
+    bandMedianMs: number | null;
+    targetMs: number | null;
+    percentile: number | null;
+    targetPercentile: number | null;
+  };
 }
 
 export interface SplitProfile {
@@ -207,7 +219,8 @@ export interface SplitProfile {
   speedScore: number | null;
 }
 
-export type Dimension = "winrate" | "clutch" | "closing" | "form" | "finishing" | "speed" | "survival";
+export type Dimension =
+  "winrate" | "clutch" | "closing" | "form" | "finishing" | "speed" | "survival";
 
 export interface ScorecardDetail {
   dimension: Dimension;
@@ -238,15 +251,19 @@ export interface TypeBreakdown {
 }
 
 export interface ProfileMatch extends MyGame {
-  eloRate: number | null; // Your pre-match Elo
-  eloAfter: number | null; // Your post-match Elo (eloRate + change)
-  change: number | null; // Your Elo change
+  /** Your pre-match Elo. */
+  eloRate: number | null;
+  /** Your post-match Elo, eloRate plus change. */
+  eloAfter: number | null;
+  /** Your Elo change. */
+  change: number | null;
   opponentEloAfter: number | null;
   opponentChange: number | null;
   bastionType: string | null;
   rawSeedType: string | null;
   hasDetail: boolean;
-  winChance: number | null; // 0-100 Elo win expectation vs opponent
+  /** Elo win expectation against the opponent, 0-100. */
+  winChance: number | null;
 }
 
 export interface PhaseLossStat {
@@ -255,7 +272,8 @@ export interface PhaseLossStat {
   averageLostSeconds: number;
   medianLostSeconds: number;
   totalLostSeconds: number;
-  history: number[]; // Per match change, oldest first, for sparklines
+  /** Change per match, oldest first. */
+  history: number[];
   worstRaceId: number | null;
   worstLossSeconds: number | null;
 }
@@ -281,7 +299,8 @@ export interface MechanicFreqStat {
   label: string;
   fires: number;
   totalMatches: number;
-  rate: number; // 0-100%
+  /** Percent of analyzed matches, 0-100. */
+  rate: number;
   totalSeconds: number;
   sampleText: string;
   raceId: number | null;
@@ -300,7 +319,8 @@ export interface GoalTarget {
   label: string;
   yourMedianMs: number;
   targetMedianMs: number;
-  secondsToCut: number; // Positive means seconds you need to save
+  /** Seconds you need to save. */
+  secondsToCut: number;
 }
 
 export interface Insight {
@@ -325,7 +345,7 @@ export interface MatchBreakdownRow {
   label: string;
   youMs: number | null;
   themMs: number | null;
-  /** youMs - themMs, negative means you're ahead */
+  /** youMs minus themMs. Negative means you are ahead. */
   deltaMs: number | null;
 }
 

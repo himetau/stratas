@@ -1,17 +1,11 @@
-// Stuff from replays. Habit trends, phase losses, cause counts
 import type { RaceAnalysis } from "../detect/analyze";
 import type { Note } from "../detect/findings";
 import type { Part } from "../detect/why";
-import { computeTrends } from "../features";
+import { computeTrends, median } from "../features";
 import type { RaceRow } from "../store";
-import type {
-  CauseLossStat,
-  MechanicFreqStat,
-  PhaseLossStat,
-  ReplayTrends,
-} from "./types";
+import type { CauseLossStat, MechanicFreqStat, PhaseLossStat, ReplayTrends } from "./types";
 
-export const CANONICAL_PHASE_ORDER = [
+const CANONICAL_PHASE_ORDER = [
   "Overworld",
   "Nether travel",
   "Bastion",
@@ -23,6 +17,8 @@ export const CANONICAL_PHASE_ORDER = [
   "Stronghold",
   "End",
 ] as const;
+
+const MAX_TOP_CAUSES = 12;
 
 interface AnalyzedRace {
   row: RaceRow;
@@ -39,11 +35,11 @@ interface MechanicMatcher {
   key: string;
   label: string;
   phases?: string[];
-  match: (text: string, phase: string) => boolean;
+  match: (text: string) => boolean;
 }
 
 const MECHANIC_MATCHERS: MechanicMatcher[] = [
-  // Mechanics registered in src/core/detect/mechanics/index.ts
+  // These match notes from the mechanics registered in src/core/detect/mechanics/index.ts.
   {
     key: "overworld_lava_portal",
     label: "Lava portal build",
@@ -82,9 +78,9 @@ const MECHANIC_MATCHERS: MechanicMatcher[] = [
   },
   {
     key: "overworld_iron_pickaxe",
-    label: "Iron pickaxe timing",
+    label: "Pickaxe timing",
     phases: ["Overworld"],
-    match: (t) => /^iron pickaxe\b/i.test(t),
+    match: (t) => /^(iron|golden|diamond) pickaxe\b/i.test(t),
   },
   {
     key: "nether_bridging",
@@ -93,9 +89,10 @@ const MECHANIC_MATCHERS: MechanicMatcher[] = [
   },
   {
     key: "bastion_gold_blocks",
-    label: "Gold blocks mined",
+    label: "Gold blocks",
     phases: ["Bastion"],
-    match: (t) => /^gold blocks mined\b|\bmined gold block\b|\bacquired \d+ gold block/i.test(t),
+    match: (t) =>
+      /^gold blocks(?: mined)?:|\bmined gold block\b|\bacquired \d+ gold block/i.test(t),
   },
   {
     key: "pearl_hangs",
@@ -108,7 +105,7 @@ const MECHANIC_MATCHERS: MechanicMatcher[] = [
     phases: ["Stronghold", "Fortress to stronghold"],
     match: (t) => /\bin the stronghold:/i.test(t),
   },
-  // Phase notes from src/core/detect/findings.ts
+  // These match the phase notes from src/core/detect/findings.ts.
   {
     key: "death_you",
     label: "Death",
@@ -165,22 +162,27 @@ const MECHANIC_MATCHERS: MechanicMatcher[] = [
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
-function median(xs: number[]): number {
-  if (!xs.length) return 0;
-  const s = [...xs].sort((a, b) => a - b);
-  const m = s.length >> 1;
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-}
+const sum = (xs: number[]): number => xs.reduce((acc, v) => acc + v, 0);
+
+const slugify = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 
 function isMatchRaceRow(r: RaceRow): boolean {
   return r.your_file === r.their_file || r.key.startsWith("match|");
 }
 
 function parseAnalyzedRace(row: RaceRow): AnalyzedRace | null {
-  if (row.error || !row.analysis) return null;
+  if (row.error || !row.analysis) {
+    return null;
+  }
   try {
     const analysis = JSON.parse(row.analysis) as RaceAnalysis;
-    if (!analysis || !Array.isArray(analysis.report)) return null;
+    if (!analysis || !Array.isArray(analysis.report)) {
+      return null;
+    }
     return { row, analysis };
   } catch {
     return null;
@@ -188,186 +190,145 @@ function parseAnalyzedRace(row: RaceRow): AnalyzedRace | null {
 }
 
 function phaseOrderIndex(phase: string): number {
-  const idx = CANONICAL_PHASE_ORDER.indexOf(
-    phase as (typeof CANONICAL_PHASE_ORDER)[number],
-  );
+  const idx = CANONICAL_PHASE_ORDER.indexOf(phase as (typeof CANONICAL_PHASE_ORDER)[number]);
   return idx >= 0 ? idx : CANONICAL_PHASE_ORDER.length;
 }
 
-function classifyNote(phase: string, note: Note): MechanicClassification | null {
-  const text = (note.text ?? "").trim();
-  if (!text) return null;
-
-  for (const m of MECHANIC_MATCHERS) {
-    if (m.phases && !m.phases.includes(phase)) continue;
-    if (m.match(text, phase)) {
-      return { key: m.key, label: m.label, phase };
-    }
-  }
-
-  // Second pass ignoring phase, a note can show up in the phase next to it
-  for (const m of MECHANIC_MATCHERS) {
-    if (m.match(text, phase)) {
-      return { key: m.key, label: m.label, phase };
-    }
-  }
-
-  // Fallback, strip timestamps and numbers so the same note groups together
+/** Groups a note no matcher knows by its text with times and counts stripped. */
+function genericNoteClass(phase: string, text: string): MechanicClassification {
   const colonIdx = text.indexOf(":");
-  const rawHead =
-    colonIdx > 0 && colonIdx <= 36 && !/^\d+:\d\d/.test(text)
-      ? text.slice(0, colonIdx)
-      : text;
-  const cleaned = rawHead
+  const head =
+    colonIdx > 0 && colonIdx <= 36 && !/^\d+:\d\d/.test(text) ? text.slice(0, colonIdx) : text;
+  const cleaned = head
     .replace(/\b\d+:\d\d(?:–\d+:\d\d)?\b/g, "")
-    .replace(/\b\d+(?:\.\d+)?\s*(?:s|blocks?|chests?|rods?|eyes?|beds?|trades?|piglins?|times?|tnt|iron|lava|water)\b/gi, "")
+    .replace(
+      /\b\d+(?:\.\d+)?\s*(?:s|blocks?|chests?|rods?|eyes?|beds?|trades?|piglins?|times?|tnt|iron|lava|water)\b/gi,
+      "",
+    )
     .replace(/\b\d+\b/g, "")
     .replace(/[()·,~—–-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
   const labelBase = cleaned || "Other note";
-  const label = labelBase.charAt(0).toUpperCase() + labelBase.slice(1);
-  const slug = labelBase
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  const phaseSlug = phase
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-
   return {
-    key: `note_${phaseSlug}_${slug || "other"}`,
-    label,
+    key: `note_${slugify(phase)}_${slugify(labelBase) || "other"}`,
+    label: labelBase.charAt(0).toUpperCase() + labelBase.slice(1),
     phase,
   };
 }
 
-function classifyWhyMechanic(phase: string, w: Part): { key: string; label: string; seconds: number; text: string } | null {
+function classifyNote(phase: string, note: Note): MechanicClassification | null {
+  const text = (note.text ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  // A note can land in the phase next to the one its matcher lists, so any phase matches second.
+  const matcher =
+    MECHANIC_MATCHERS.find((m) => (!m.phases || m.phases.includes(phase)) && m.match(text)) ??
+    MECHANIC_MATCHERS.find((m) => m.match(text));
+  if (matcher) {
+    return { key: matcher.key, label: matcher.label, phase };
+  }
+  return genericNoteClass(phase, text);
+}
+
+function classifyWhyMechanic(
+  phase: string,
+  w: Part,
+): { key: string; label: string; text: string } | null {
   const knownMechanic = MECHANIC_MATCHERS.find((m) => m.key === w.key);
   if (knownMechanic) {
-    return {
-      key: knownMechanic.key,
-      label: knownMechanic.label,
-      seconds: Math.max(0, w.seconds),
-      text: w.text,
-    };
+    return { key: knownMechanic.key, label: knownMechanic.label, text: w.text };
   }
   if (w.key === "back" && w.seconds > 0) {
-    return {
-      key: "stronghold_backtrack",
-      label: "Back in the Nether after blind",
-      seconds: w.seconds,
-      text: w.text,
-    };
+    return { key: "stronghold_backtrack", label: "Back in the Nether after blind", text: w.text };
   }
   if (w.key === "stop:Pie chart" && w.seconds > 0) {
-    return {
-      key: "pie_chart",
-      label: "Pie chart usage",
-      seconds: w.seconds,
-      text: `${w.label}: ${w.text}`,
-    };
+    return { key: "pie_chart", label: "Pie chart usage", text: `${w.label}: ${w.text}` };
   }
-  if (phase === "Bastion" && w.key === "trading") {
-    if (/\d+\s+stuck\b/i.test(w.text)) {
-      return {
-        key: "bastion_piglins_stuck",
-        label: "Piglins stuck on gold",
-        seconds: Math.max(0, w.seconds),
-        text: w.text,
-      };
-    }
-    if (/no piglin trading/i.test(w.text) && w.seconds > 0) {
-      return {
-        key: "bastion_trade_stall",
-        label: "Bastion trade stall",
-        seconds: Math.max(0, w.seconds),
-        text: w.text,
-      };
-    }
+  if (phase !== "Bastion" || w.key !== "trading") {
+    return null;
+  }
+  if (/\d+\s+stuck\b/i.test(w.text)) {
+    return { key: "bastion_piglins_stuck", label: "Piglins stuck on gold", text: w.text };
+  }
+  if (/no piglin trading/i.test(w.text) && w.seconds > 0) {
+    return { key: "bastion_trade_stall", label: "Bastion trade stall", text: w.text };
   }
   return null;
 }
 
-export function analyzeReplayTrends(
-  races: RaceRow[],
-): ReplayTrends {
-  // 1. Analysed Ranked matches, or all analysed races if there are none
-  const allParsed = races
-    .map(parseAnalyzedRace)
-    .filter((x): x is AnalyzedRace => x !== null);
+/** Analysed Ranked matches oldest first, or every analysed race when there are no matches. */
+function selectAnalyzedRaces(races: RaceRow[]): AnalyzedRace[] {
+  const allParsed = races.map(parseAnalyzedRace).filter((x): x is AnalyzedRace => x !== null);
   const matchParsed = allParsed.filter((x) => isMatchRaceRow(x.row));
-  const analyzed = (matchParsed.length > 0 ? matchParsed : allParsed).sort(
+  return (matchParsed.length > 0 ? matchParsed : allParsed).sort(
     (a, b) => a.row.created_at - b.row.created_at || a.row.id - b.row.id,
   );
+}
 
-  // 2. Avg seconds lost per phase
-  const phaseBuckets = new Map<
+function phaseLosses(analyzed: AnalyzedRace[]): PhaseLossStat[] {
+  const buckets = new Map<
     string,
-    {
-      changes: number[];
-      worstRaceId: number | null;
-      worstLossSeconds: number | null;
-    }
+    { changes: number[]; worstRaceId: number | null; worstLossSeconds: number | null }
   >();
 
   for (const { row, analysis } of analyzed) {
     for (const p of analysis.report ?? []) {
-      if (p.change === null || typeof p.change !== "number" || !Number.isFinite(p.change)) {
+      if (typeof p.change !== "number" || !Number.isFinite(p.change)) {
         continue;
       }
-      const bucket = phaseBuckets.get(p.phase) ?? {
+      const bucket = buckets.get(p.phase) ?? {
         changes: [],
         worstRaceId: null,
         worstLossSeconds: null,
       };
       bucket.changes.push(round1(p.change));
-      if (p.change > 0 && (bucket.worstLossSeconds === null || p.change > bucket.worstLossSeconds)) {
+      if (
+        p.change > 0 &&
+        (bucket.worstLossSeconds === null || p.change > bucket.worstLossSeconds)
+      ) {
         bucket.worstLossSeconds = p.change;
         bucket.worstRaceId = row.id;
       }
-      phaseBuckets.set(p.phase, bucket);
+      buckets.set(p.phase, bucket);
     }
   }
 
-  const phases: PhaseLossStat[] = [];
-  for (const [phase, bucket] of phaseBuckets.entries()) {
-    if (bucket.changes.length === 0) continue;
-    const sum = bucket.changes.reduce((acc, v) => acc + v, 0);
-    const avg = sum / bucket.changes.length;
-    const med = median(bucket.changes);
-    phases.push({
+  const phases: PhaseLossStat[] = [...buckets].map(([phase, bucket]) => {
+    const total = sum(bucket.changes);
+    return {
       phase,
       races: bucket.changes.length,
-      averageLostSeconds: round1(avg),
-      medianLostSeconds: round1(med),
-      totalLostSeconds: round1(sum),
+      averageLostSeconds: round1(total / bucket.changes.length),
+      medianLostSeconds: round1(median(bucket.changes)),
+      totalLostSeconds: round1(total),
       history: bucket.changes,
       worstRaceId: bucket.worstRaceId,
       worstLossSeconds: bucket.worstLossSeconds !== null ? round1(bucket.worstLossSeconds) : null,
-    });
-  }
+    };
+  });
 
-  phases.sort(
+  return phases.sort(
     (a, b) =>
       b.averageLostSeconds - a.averageLostSeconds ||
       phaseOrderIndex(a.phase) - phaseOrderIndex(b.phase),
   );
+}
 
-  // 3. Top `why` causes by total seconds
-  const causeBuckets = new Map<
+/** The `why` causes that cost the most seconds in total. */
+function topCauses(analyzed: AnalyzedRace[]): CauseLossStat[] {
+  const buckets = new Map<
     string,
     {
-      key: string;
       phase: string;
       label: string;
       losses: number[];
       worstRaceId: number;
       worstOpponent: string;
       worstSeconds: number;
-      worstAtTick?: number;
+      worstAtTick: number | undefined;
       worstText: string;
     }
   >();
@@ -375,54 +336,43 @@ export function analyzeReplayTrends(
   for (const { row, analysis } of analyzed) {
     for (const p of analysis.report ?? []) {
       for (const w of p.why ?? []) {
-        if (w.key === "step:other" || w.key === "rest") continue;
+        if (w.key === "step:other" || w.key === "rest") {
+          continue;
+        }
         if (typeof w.seconds !== "number" || !Number.isFinite(w.seconds) || w.seconds <= 0) {
           continue;
         }
-        const groupKey = `${p.phase}|${w.label}`;
-        const atTick = w.at?.you ?? w.at?.them;
-        const existing = causeBuckets.get(groupKey);
+        const key = `${p.phase}|${w.label}`;
+        const worst = {
+          worstRaceId: row.id,
+          worstOpponent: row.their_name,
+          worstSeconds: w.seconds,
+          worstAtTick: w.at?.you ?? w.at?.them,
+          worstText: w.text,
+        };
+        const existing = buckets.get(key);
         if (!existing) {
-          causeBuckets.set(groupKey, {
-            key: groupKey,
-            phase: p.phase,
-            label: w.label,
-            losses: [w.seconds],
-            worstRaceId: row.id,
-            worstOpponent: row.their_name,
-            worstSeconds: w.seconds,
-            ...(atTick !== undefined ? { worstAtTick: atTick } : {}),
-            worstText: w.text,
-          });
-        } else {
-          existing.losses.push(w.seconds);
-          if (w.seconds > existing.worstSeconds) {
-            existing.worstRaceId = row.id;
-            existing.worstOpponent = row.their_name;
-            existing.worstSeconds = w.seconds;
-            if (atTick !== undefined) {
-              existing.worstAtTick = atTick;
-            } else {
-              delete existing.worstAtTick;
-            }
-            existing.worstText = w.text;
-          }
+          buckets.set(key, { phase: p.phase, label: w.label, losses: [w.seconds], ...worst });
+          continue;
+        }
+        existing.losses.push(w.seconds);
+        if (w.seconds > existing.worstSeconds) {
+          Object.assign(existing, worst);
         }
       }
     }
   }
 
-  const topCauses: CauseLossStat[] = [...causeBuckets.values()]
-    .map((c) => {
-      const total = c.losses.reduce((acc, v) => acc + v, 0);
-      const count = c.losses.length;
+  return [...buckets]
+    .map(([key, c]) => {
+      const total = sum(c.losses);
       return {
-        key: c.key,
+        key,
         phase: c.phase,
         label: c.label,
-        occurrences: count,
+        occurrences: c.losses.length,
         totalSeconds: round1(total),
-        averageSeconds: round1(total / count),
+        averageSeconds: round1(total / c.losses.length),
         medianSeconds: round1(median(c.losses)),
         worstRaceId: c.worstRaceId,
         worstOpponent: c.worstOpponent,
@@ -437,108 +387,101 @@ export function analyzeReplayTrends(
         b.occurrences - a.occurrences ||
         b.averageSeconds - a.averageSeconds,
     )
-    .slice(0, 12);
+    .slice(0, MAX_TOP_CAUSES);
+}
 
-  // 4. How often each mechanic fires
-  const mechanicBuckets = new Map<
+/** How often each mechanic fires, from phase notes, `why` parts and note claims. */
+function mechanicFrequencies(analyzed: AnalyzedRace[]): MechanicFreqStat[] {
+  const buckets = new Map<
     string,
-    {
-      key: string;
-      phase: string;
-      label: string;
-      matchIds: Set<number>;
+    MechanicClassification & {
+      raceIds: Set<number>;
       totalSeconds: number;
-      bestSeconds: number;
+      sampleSeconds: number;
       sampleText: string;
       raceId: number | null;
     }
   >();
 
-  const recordMechanic = (
+  const record = (
     raceId: number,
-    phase: string,
-    key: string,
-    label: string,
+    mechanic: MechanicClassification,
     seconds: number,
     text: string,
     addSeconds: boolean,
   ) => {
     const lossSec = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
-    const existing = mechanicBuckets.get(key);
+    const existing = buckets.get(mechanic.key);
     if (!existing) {
-      mechanicBuckets.set(key, {
-        key,
-        phase,
-        label,
-        matchIds: new Set([raceId]),
+      buckets.set(mechanic.key, {
+        ...mechanic,
+        raceIds: new Set([raceId]),
         totalSeconds: addSeconds ? lossSec : 0,
-        bestSeconds: lossSec,
+        sampleSeconds: lossSec,
         sampleText: text,
         raceId,
       });
       return;
     }
-    existing.matchIds.add(raceId);
+    existing.raceIds.add(raceId);
     if (addSeconds) {
       existing.totalSeconds += lossSec;
     }
-    if (lossSec >= existing.bestSeconds) {
-      existing.bestSeconds = lossSec;
+    if (lossSec >= existing.sampleSeconds) {
+      existing.sampleSeconds = lossSec;
       existing.sampleText = text;
       existing.raceId = raceId;
-      existing.phase = phase;
+      existing.phase = mechanic.phase;
     }
   };
 
   for (const { row, analysis } of analyzed) {
-    const notedKeysInRace = new Set<string>();
+    const notedKeys = new Set<string>();
     for (const p of analysis.report ?? []) {
       for (const n of p.notes ?? []) {
-        const cls = classifyNote(p.phase, n);
-        if (!cls) continue;
-        const sec = typeof n.seconds === "number" && Number.isFinite(n.seconds) ? Math.max(0, n.seconds) : 0;
-        recordMechanic(row.id, cls.phase, cls.key, cls.label, sec, n.text, true);
-        notedKeysInRace.add(cls.key);
+        const mechanic = classifyNote(p.phase, n);
+        if (!mechanic) {
+          continue;
+        }
+        record(row.id, mechanic, n.seconds ?? 0, n.text, true);
+        notedKeys.add(mechanic.key);
       }
     }
     for (const p of analysis.report ?? []) {
       for (const w of p.why ?? []) {
-        const wm = classifyWhyMechanic(p.phase, w);
-        if (!wm) continue;
-        const alreadyNoted = notedKeysInRace.has(wm.key);
-        recordMechanic(
-          row.id,
-          p.phase,
-          wm.key,
-          wm.label,
-          wm.seconds,
-          wm.text,
-          !alreadyNoted,
-        );
-        notedKeysInRace.add(wm.key);
+        const mechanic = classifyWhyMechanic(p.phase, w);
+        if (!mechanic) {
+          continue;
+        }
+        const { key, label, text } = mechanic;
+        record(row.id, { key, label, phase: p.phase }, w.seconds, text, !notedKeys.has(key));
+        notedKeys.add(key);
       }
     }
     for (const c of analysis.claims ?? []) {
-      if (!c.claim.startsWith("note")) continue;
-      const cls = classifyNote(c.phase, { text: c.line, seconds: null });
-      if (!cls || notedKeysInRace.has(cls.key)) continue;
-      recordMechanic(row.id, cls.phase, cls.key, cls.label, 0, c.line, false);
-      notedKeysInRace.add(cls.key);
+      if (!c.claim.startsWith("note")) {
+        continue;
+      }
+      const mechanic = classifyNote(c.phase, { text: c.line, seconds: null });
+      if (!mechanic || notedKeys.has(mechanic.key)) {
+        continue;
+      }
+      record(row.id, mechanic, 0, c.line, false);
+      notedKeys.add(mechanic.key);
     }
   }
 
   const analyzedMatches = analyzed.length;
-  const mechanics: MechanicFreqStat[] = [...mechanicBuckets.values()]
+  return [...buckets.values()]
     .map((m) => {
-      const fires = m.matchIds.size;
-      const rate = analyzedMatches > 0 ? Math.round((fires / analyzedMatches) * 100) : 0;
+      const fires = m.raceIds.size;
       return {
         key: m.key,
         phase: m.phase,
         label: m.label,
         fires,
         totalMatches: analyzedMatches,
-        rate,
+        rate: analyzedMatches > 0 ? Math.round((fires / analyzedMatches) * 100) : 0,
         totalSeconds: round1(m.totalSeconds),
         sampleText: m.sampleText,
         raceId: m.raceId,
@@ -550,22 +493,19 @@ export function analyzeReplayTrends(
         b.totalSeconds - a.totalSeconds ||
         phaseOrderIndex(a.phase) - phaseOrderIndex(b.phase),
     );
+}
 
-  // 5. Trend over time per phase
+export function analyzeReplayTrends(races: RaceRow[]): ReplayTrends {
+  const analyzed = selectAnalyzedRaces(races);
   const trends = computeTrends(
-    analyzed.map((x) => ({
-      id: x.row.id,
-      createdAt: x.row.created_at,
-      analysis: x.analysis,
-    })),
+    analyzed.map((x) => ({ id: x.row.id, createdAt: x.row.created_at, analysis: x.analysis })),
     Math.min(4, Math.max(2, analyzed.length)),
   );
-
   return {
-    analyzedMatches,
-    phases,
-    topCauses,
-    mechanics,
+    analyzedMatches: analyzed.length,
+    phases: phaseLosses(analyzed),
+    topCauses: topCauses(analyzed),
+    mechanics: mechanicFrequencies(analyzed),
     trends,
   };
 }

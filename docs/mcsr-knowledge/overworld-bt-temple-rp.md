@@ -5,6 +5,7 @@ In MCSR Ranked (Minecraft 1.16.1 RSG filtered seed brackets), Buried Treasure (B
 ---
 
 ## 1. Buried Treasure (BT)
+
 Buried Treasure seeds spawn the player near a beach or ocean coast with a guaranteed buried chest nearby.
 
 - **Chunk `9, 9` Dig & Mapless Detection:** Buried Treasure chests always generate at chunk-relative coordinates **`X=9, Z=9`** (`Chunk: x 9 z` on the F3 debug screen). Runners locate the chunk via F3+G chunk borders or mapless C-counter / entity spikes (or a nearby shipwreck map) and dig down at `9, 9` beneath sand/gravel—stopping just before sandstone/stone to uncover the chest.
@@ -19,6 +20,7 @@ Buried Treasure seeds spawn the player near a beach or ocean coast with a guaran
 ---
 
 ## 2. Desert Temple
+
 Desert Temple seeds spawn the player in or adjacent to a desert biome containing a surface pyramid structure and an accessible lava pool.
 
 - **Pit Entry & TNT Trap Disarm:**
@@ -35,6 +37,7 @@ Desert Temple seeds spawn the player in or adjacent to a desert biome containing
 ---
 
 ## 3. Ruined Portal (RP)
+
 Ruined Portal seeds place the player near a surface or partially buried Nether portal frame with a loot chest and surrounding magma/lava.
 
 - **RP Chest Loot:**
@@ -49,6 +52,7 @@ Ruined Portal seeds place the player near a surface or partially buried Nether p
 ---
 
 ## Sources & References
+
 - **MCSR Ranked Wiki & Seed Filtering Documentation:** Overworld structure generation rules and balanced seed bracket definitions (`mcsrranked.com`).
 - **Minecraft Speedrunning Community Guides (MSRC / Couriway / Feinberg Metagame Guides):** Chunk `9, 9` mapless buried treasure mechanics, ocean ravine portal casting, and ruined portal crying obsidian manipulation in 1.16.1 RSG.
 - **Minecraft Wiki (Java Edition 1.16.1):** Structure loot tables (`buried_treasure`, `desert_pyramid`, `ruined_portal`).

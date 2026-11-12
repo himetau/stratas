@@ -1,28 +1,27 @@
-// Positions and actions per second. npx tsx scripts/probe/exit.ts <file> <uuid> [from] [to]
-import { fmtTime, loadReplay, parseBound, resolvePlayer } from "./_shared";
+import { fmtTime, loadReplay, parseBound, probeArgs, resolvePlayer } from "./_shared";
 
-const [file, who, rawFrom, rawTo] = process.argv.slice(2);
-if (!file) {
-  console.error("Usage: npx tsx scripts/probe/exit.ts <file> <uuid> [from] [to]");
-  process.exit(1);
-}
-
+const [file, who, rawFrom, rawTo] = probeArgs("scripts/probe/exit.ts <file> <uuid> [from] [to]");
 const rep = loadReplay(file);
 const { name, uuid, run } = resolvePlayer(rep, who);
-const b = run.mark("bastion") ?? 0;
-const l = run.mark("bastion_left") ?? run.end;
-const from = parseBound(rawFrom, Math.max(0, l - 600), run.end, "seconds");
-const to = parseBound(rawTo, Math.min(run.end, l + 400), run.end, "seconds");
+const bastionLeft = run.mark("bastion_left") ?? run.end;
+const from = parseBound(rawFrom, Math.max(0, bastionLeft - 600), run.end, "seconds");
+const to = parseBound(rawTo, Math.min(run.end, bastionLeft + 400), run.end, "seconds");
 
-console.log(`=== ${name} (${uuid}) positions & actions [${from}..${to}] (${fmtTime(from)}–${fmtTime(to)}) ===`);
+console.log(
+  `=== ${name} (${uuid}) positions & actions [${from}..${to}] (${fmtTime(from)}–${fmtTime(to)}) ===`,
+);
 console.log(`  marks: ${run.marks.map((m) => `${m.key}@${fmtTime(m.t)}(${m.t}t)`).join(" | ")}`);
-void b;
 
 for (let t = from; t <= to; t += 20) {
-  const q = run.posAt(t);
+  const pos = run.posAt(t);
   const moved = run.slice(t, t + 19).length;
-  const acts = run.actions
-    .filter((x) => x.t0 >= t && x.t0 < t + 20 && x.kind !== "damage")
-    .map((x) => `${x.kind}${x.item ? ":" + x.item : x.what ? ":" + x.what : ""}`);
-  console.log(`  ${fmtTime(t).padStart(5)} (${String(t).padStart(5)}t) [w${q.w}] ${Math.round(q.x)},${Math.round(q.y)},${Math.round(q.z)} (pts=${moved}) ${acts.join(" ")}`);
+  const actions = run.actions
+    .filter((a) => a.t0 >= t && a.t0 < t + 20 && a.kind !== "damage")
+    .map((a) => {
+      const detail = a.item || a.what;
+      return detail ? `${a.kind}:${detail}` : a.kind;
+    });
+  console.log(
+    `  ${fmtTime(t).padStart(5)} (${String(t).padStart(5)}t) [w${pos.w}] ${Math.round(pos.x)},${Math.round(pos.y)},${Math.round(pos.z)} (pts=${moved}) ${actions.join(" ")}`,
+  );
 }

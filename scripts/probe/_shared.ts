@@ -1,4 +1,3 @@
-// Shared helpers for the scripts/probe/*.ts scripts
 import { readFileSync } from "node:fs";
 import { decodeRrf, type Replay, type ReplayEvent } from "../../src/core/replay/decode";
 import { Run } from "../../src/core/detect/run";
@@ -6,48 +5,77 @@ import { fmtTime } from "../../src/core/detect/names";
 
 export { fmtTime };
 
+/** Returns the command line arguments, or exits with the usage line when the replay file is missing. */
+export function probeArgs(usage: string): string[] {
+  const args = process.argv.slice(2);
+  if (!args[0]) {
+    console.error(`Usage: npx tsx ${usage}`);
+    process.exit(1);
+  }
+  return args;
+}
+
 export function loadReplay(file: string): Replay {
   return decodeRrf(new Uint8Array(readFileSync(file)));
 }
 
-export function resolvePlayer(rep: Replay, query?: string): { uuid: string; name: string; events: ReplayEvent[]; run: Run } {
-  const entries = [...rep.events.entries()].map(([uuid, events]) => {
-    const p = rep.meta.players.find((x) => x.uuid === uuid);
-    const name = p?.nickname ?? uuid;
+export function resolvePlayer(
+  rep: Replay,
+  query?: string,
+): { uuid: string; name: string; events: ReplayEvent[]; run: Run } {
+  const players = [...rep.events.entries()].map(([uuid, events]) => {
+    const name = rep.meta.players.find((p) => p.uuid === uuid)?.nickname ?? uuid;
     return { uuid, name, events };
   });
-  if (!entries.length) throw new Error("No players in replay");
-  if (!query) {
-    const e = entries[0];
-    return { ...e, run: new Run(e.uuid, e.name, e.events, rep.timelines) };
+  if (!players.length) {
+    throw new Error("No players in replay");
   }
-  const q = query.toLowerCase();
-  const match =
-    entries.find((e) => e.uuid.toLowerCase() === q) ??
-    entries.find((e) => e.name.toLowerCase() === q) ??
-    entries.find((e) => e.uuid.toLowerCase().startsWith(q)) ??
-    entries.find((e) => e.name.toLowerCase().startsWith(q));
-  if (!match) {
-    throw new Error(`Player "${query}" not found. Available: ${entries.map((e) => `${e.name} (${e.uuid})`).join(", ")}`);
-  }
-  return { ...match, run: new Run(match.uuid, match.name, match.events, rep.timelines) };
+  const player = query ? findPlayer(players, query) : players[0];
+  return { ...player, run: new Run(player.uuid, player.name, player.events, rep.timelines) };
 }
 
-/** Time bound to ticks. "3:20", "200s" and "4000t" are all 4000. Plain numbers use defaultUnit,
- * except in seconds mode anything past the run end (+30s) is taken as ticks */
-export function parseBound(raw: string | undefined, fallback: number, runEndTicks: number, defaultUnit: "ticks" | "seconds" = "ticks"): number {
-  if (!raw || raw === "-" || raw === "end") return fallback;
+function findPlayer<P extends { uuid: string; name: string }>(players: P[], query: string): P {
+  const q = query.toLowerCase();
+  const match =
+    players.find((p) => p.uuid.toLowerCase() === q) ??
+    players.find((p) => p.name.toLowerCase() === q) ??
+    players.find((p) => p.uuid.toLowerCase().startsWith(q)) ??
+    players.find((p) => p.name.toLowerCase().startsWith(q));
+  if (!match) {
+    const available = players.map((p) => `${p.name} (${p.uuid})`).join(", ");
+    throw new Error(`Player "${query}" not found. Available: ${available}`);
+  }
+  return match;
+}
+
+/** Converts a time bound to ticks: "3:20", "200s" and "4000t" are all 4000.
+ *  A plain number uses defaultUnit, but in seconds mode a number past the run end plus 30 s counts as ticks. */
+export function parseBound(
+  raw: string | undefined,
+  fallback: number,
+  runEndTicks: number,
+  defaultUnit: "ticks" | "seconds" = "ticks",
+): number {
+  if (!raw || raw === "-" || raw === "end") {
+    return fallback;
+  }
   const s = raw.trim().toLowerCase();
   if (s.includes(":")) {
-    const [m, sec] = s.split(":").map(Number);
-    return Math.round((m * 60 + (sec || 0)) * 20);
+    const [minutes, seconds] = s.split(":").map(Number);
+    return Math.round((minutes * 60 + (seconds || 0)) * 20);
   }
-  if (s.endsWith("t")) return Math.round(Number(s.slice(0, -1)));
-  if (s.endsWith("s")) return Math.round(Number(s.slice(0, -1)) * 20);
+  if (s.endsWith("t")) {
+    return Math.round(Number(s.slice(0, -1)));
+  }
+  if (s.endsWith("s")) {
+    return Math.round(Number(s.slice(0, -1)) * 20);
+  }
   const n = Number(s);
-  if (!Number.isFinite(n)) return fallback;
-  if (defaultUnit === "seconds") {
-    return n > runEndTicks / 20 + 30 ? Math.round(n) : Math.round(n * 20);
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+  if (defaultUnit === "seconds" && n <= runEndTicks / 20 + 30) {
+    return Math.round(n * 20);
   }
   return Math.round(n);
 }

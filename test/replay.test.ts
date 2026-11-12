@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { zstdCompressSync, zstdDecompressSync } from "node:zlib";
 import { zipSync, strToU8 } from "fflate";
-import { decodeRrf, readRrf, splitChunks, ReplayError, type Replay } from "../src/core/replay/decode";
+import {
+  decodeRrf,
+  readRrf,
+  splitChunks,
+  ReplayError,
+  type Replay,
+} from "../src/core/replay/decode";
 import { mergeRunners, retimeChunk } from "../src/core/replay/merge";
 import { recordLength } from "../src/core/replay/walk";
 
@@ -14,6 +20,15 @@ const CHAV = "e1b919fe90b044b484ff93979e8308a4";
 
 const counts = (r: Replay) => Object.fromEntries([...r.events].map(([u, e]) => [u, e.length]));
 
+/** Wraps raw records in one length-prefixed zstd chunk, the layout of replay.rpd. */
+function singleChunkRpd(records: Uint8Array): Uint8Array {
+  const body = new Uint8Array(zstdCompressSync(records));
+  const rpd = new Uint8Array(4 + body.length);
+  new DataView(rpd.buffer).setUint32(0, body.length);
+  rpd.set(body, 4);
+  return rpd;
+}
+
 describe("decode", () => {
   const r = decodeRrf(CHAVRON);
 
@@ -23,14 +38,19 @@ describe("decode", () => {
   });
 
   it("positions match the game's own split coordinates", () => {
-    let ok = 0, n = 0;
+    let ok = 0;
+    let n = 0;
     for (const e of r.timelines) {
-      if (!e.data || e.data.length !== 3) continue;
+      if (!e.data || e.data.length !== 3) {
+        continue;
+      }
       const tick = e.time / 50;
       const track = r.events.get(e.uuid)!.filter((x) => x.pos && x.type.startsWith("PLAYER"));
       const near = track.reduce((a, b) => (Math.abs(b.t - tick) < Math.abs(a.t - tick) ? b : a));
       n++;
-      if (Math.max(...near.pos!.map((v, i) => Math.abs(v - e.data![i]))) <= 3) ok++;
+      if (Math.max(...near.pos!.map((v, i) => Math.abs(v - e.data![i]))) <= 3) {
+        ok++;
+      }
     }
     expect(n).toBe(41);
     expect(ok).toBeGreaterThanOrEqual(36);
@@ -41,8 +61,12 @@ describe("decode", () => {
     const items = new Set(ev.filter((e) => e.type === "INVENTORY_SLOT").map((e) => e.item));
     expect(items).toContain("ender_pearl");
     expect(items).toContain("iron_pickaxe");
-    expect(new Set(ev.filter((e) => e.type === "ENTITY_ADD").map((e) => e.entity))).toContain("piglin");
-    expect(new Set(ev.filter((e) => e.type === "CONTAINER").map((e) => e.container))).toContain("crafting");
+    expect(new Set(ev.filter((e) => e.type === "ENTITY_ADD").map((e) => e.entity))).toContain(
+      "piglin",
+    );
+    expect(new Set(ev.filter((e) => e.type === "CONTAINER").map((e) => e.container))).toContain(
+      "crafting",
+    );
   });
 
   it("refuses encrypted replays", () => {
@@ -51,12 +75,20 @@ describe("decode", () => {
 });
 
 describe("walk", () => {
-  for (const [name, bytes] of [["chavron", CHAVRON], ["ammy", AMMY]] as const) {
+  for (const [name, bytes] of [
+    ["chavron", CHAVRON],
+    ["ammy", AMMY],
+  ] as const) {
     it(`record lengths walk every ${name} chunk exactly`, () => {
       for (const c of splitChunks(readRrf(bytes).rpd)) {
         const raw = new Uint8Array(zstdDecompressSync(c.body));
         let i = 17;
-        while (i < raw.length) { const t = raw[i], d = raw[i + 1]; i += 2 + (d === 255 ? 4 : 0); i += recordLength(t, raw, i); }
+        while (i < raw.length) {
+          const t = raw[i];
+          const d = raw[i + 1];
+          i += 2 + (d === 255 ? 4 : 0);
+          i += recordLength(t, raw, i);
+        }
         expect(i).toBe(raw.length);
       }
     });
@@ -65,25 +97,35 @@ describe("walk", () => {
 
 describe("6.0.11 records", () => {
   const dragonZeroWithAngle = Uint8Array.from([
-    ...Array(16).fill(0xab), 0x83,
-    88, 255, 0, 0, 0, 10, 2, 0x3f, 0x80, 0, 0,
-    13, 1, 4,
+    ...Array(16).fill(0xab),
+    0x83,
+    88,
+    255,
+    0,
+    0,
+    0,
+    10,
+    2,
+    0x3f,
+    0x80,
+    0,
+    0,
+    13,
+    1,
+    4,
   ]);
 
   it("reads a DRAGON_ZERO that carries one float", () => {
     const bytes = zipSync({
       "meta.json": strToU8(JSON.stringify({ ...readRrf(CHAVRON).meta, symmetricKey: null })),
       "timelines.json": strToU8("[]"),
-      "replay.rpd": (() => {
-        const z = new Uint8Array(zstdCompressSync(dragonZeroWithAngle));
-        const out = new Uint8Array(4 + z.length);
-        new DataView(out.buffer).setUint32(0, z.length);
-        out.set(z, 4);
-        return out;
-      })(),
+      "replay.rpd": singleChunkRpd(dragonZeroWithAngle),
     });
     const ev = [...decodeRrf(bytes).events.values()][0];
-    expect(ev.map((e) => [e.t, e.type, e.slot])).toEqual([[10, "DRAGON_ZERO", undefined], [11, "HELD_SLOT", 4]]);
+    expect(ev.map((e) => [e.t, e.type, e.slot])).toEqual([
+      [10, "DRAGON_ZERO", undefined],
+      [11, "HELD_SLOT", 4],
+    ]);
   });
 
   it("walks a DRAGON_ZERO that carries one float", () => {
@@ -95,7 +137,10 @@ describe("merge", () => {
   const orig = decodeRrf(CHAVRON);
 
   it("round-trips both runners exactly", () => {
-    const m = mergeRunners([{ bytes: CHAVRON, uuid: ME }, { bytes: CHAVRON, uuid: CHAV }]);
+    const m = mergeRunners([
+      { bytes: CHAVRON, uuid: ME },
+      { bytes: CHAVRON, uuid: CHAV },
+    ]);
     const back = decodeRrf(m.bytes);
     expect(back.events.get(ME)).toEqual(orig.events.get(ME));
     expect(back.events.get(CHAV)).toEqual(orig.events.get(CHAV));
@@ -104,12 +149,18 @@ describe("merge", () => {
   });
 
   it("refuses runners on different seeds", () => {
-    expect(() => mergeRunners([{ bytes: CHAVRON, uuid: ME }, { bytes: AMMY, uuid: readRrf(AMMY).meta.players[0].uuid }])).toThrow(/different seeds/);
+    expect(() =>
+      mergeRunners([
+        { bytes: CHAVRON, uuid: ME },
+        { bytes: AMMY, uuid: readRrf(AMMY).meta.players[0].uuid },
+      ]),
+    ).toThrow(/different seeds/);
   });
 
   it("shifts a runner's ticks", () => {
     const m = mergeRunners([{ bytes: CHAVRON, uuid: CHAV, shiftTicks: 100 }]);
-    const a = orig.events.get(CHAV)!, b = decodeRrf(m.bytes).events.get(CHAV)!;
+    const a = orig.events.get(CHAV)!;
+    const b = decodeRrf(m.bytes).events.get(CHAV)!;
     expect(b.length).toBe(a.length);
     expect(b.every((e, i) => e.t === a[i].t + 100)).toBe(true);
     expect(retimeChunk(splitChunks(readRrf(CHAVRON).rpd)[0].body, 0)).toBeInstanceOf(Uint8Array);

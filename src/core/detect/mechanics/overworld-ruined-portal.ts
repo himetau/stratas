@@ -9,7 +9,9 @@ export const overworldRuinedPortalMechanic: Mechanic = {
   phase: ["Overworld"],
   detect(s: Side, span?: [number, number]): Occurrence[] {
     const nether = s.run.mark("nether");
-    if (nether === undefined) return [];
+    if (nether === undefined) {
+      return [];
+    }
     const from = span ? span[0] : 0;
     const to = span ? Math.min(span[1], nether) : nether;
     const inOverworld = (t: number, w?: number) =>
@@ -18,12 +20,16 @@ export const overworldRuinedPortalMechanic: Mechanic = {
     const lavaEmpties = s.facts.buckets.filter(
       (b) => b.op === "empty" && b.fluid === "lava" && inOverworld(b.t, s.run.posAt(b.t).w),
     ).length;
-    if (lavaEmpties >= 6) return [];
+    if (lavaEmpties >= 6) {
+      return [];
+    }
 
     const obbyPlaces = s.run.actions.filter(
       (a) => a.kind === "place" && a.what === "obsidian" && inOverworld(a.t0, a.w),
     );
-    if (obbyPlaces.length < 1) return [];
+    if (obbyPlaces.length < 1) {
+      return [];
+    }
 
     const cryingMines = s.run.actions.filter(
       (a) =>
@@ -49,10 +55,14 @@ export const overworldRuinedPortalMechanic: Mechanic = {
     ];
   },
   compare(y: Occurrence[], t: Occurrence[]): Note | null {
-    if (!y.length || !t.length) return null;
+    if (!y.length || !t.length) {
+      return null;
+    }
     const yDurTicks = y[0].t1 - y[0].t0;
     const tDurTicks = t[0].t1 - t[0].t0;
-    if (Math.abs(yDurTicks - tDurTicks) < 40) return null;
+    if (Math.abs(yDurTicks - tDurTicks) < 40) {
+      return null;
+    }
     const yObby = Number(y[0].meta?.obbyPlaced ?? 0);
     const tObby = Number(t[0].meta?.obbyPlaced ?? 0);
     return {

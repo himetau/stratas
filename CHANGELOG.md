@@ -1,6 +1,23 @@
 # Changes
 
-What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
+## 1.7.0
+
+- "Watch in Ranked" asks before starting Ranked when it isn't running, instead of launching it right away.
+- The chart marks the other player's splits too, in their color, so you can see when they left the bastion.
+- Every rod gets its number on the blaze line, even two that drop a second apart.
+- Skipping a finished run on the Practice page clears it. Before, every skip brought back an older one.
+- After you play a queued seed, the Practice page moves on to "Download your private room replay" within seconds of Ranked listing the run. Stratas checks every 20 s while it waits instead of every 2 minutes.
+- The Practice page doesn't list your games on the same seed types anymore.
+- "Blinded with N rods" could say one rod too many when you had leftover powder and eyes.
+- The pickaxe note says which pickaxe you got first: golden, iron or diamond.
+- "In the stronghold" shows once, under Stronghold, not under the fortress phase too.
+- Lava portal build times read like other times, "55 s" instead of "0:55".
+- The gold blocks note doesn't say "mined" when you picked them up or took them from a chest.
+- Clearing the search in Settings brings the sections back.
+- Turning the background off while it's still loading keeps it off.
+- Old Ranked backgrounds you already fetched stay in the list if a later fetch fails partway.
+- A launcher folder Stratas can't read no longer stops the app from loading.
+- Cleaned up the code: it's formatted the same way everywhere now, and a lot of it is simpler. Your analyses come out the same.
 
 ## 1.6.2
 

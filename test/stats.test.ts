@@ -3,13 +3,17 @@ import { readFileSync } from "node:fs";
 import { decodeRrf } from "../src/core/replay/decode";
 import { analyzeRace } from "../src/core/detect/analyze";
 
-const NEI = new Uint8Array(readFileSync(new URL("./fixtures/nei1019-14232012.rrf", import.meta.url)));
-const ME = "fba98cacdc6a495eba271ee046dcbba9", THEM = "16a45c3e54c84de3ac259b960342062b";
+const NEI = new Uint8Array(
+  readFileSync(new URL("./fixtures/nei1019-14232012.rrf", import.meta.url)),
+);
+const ME = "fba98cacdc6a495eba271ee046dcbba9";
+const THEM = "16a45c3e54c84de3ac259b960342062b";
 
 describe("run stats (you vs nei1019)", () => {
   const a = analyzeRace(decodeRrf(NEI), ME, THEM);
   const you = a.stats!.you;
-  const notes = (phase: string) => a.report.find((p) => p.phase === phase)!.notes.map((n) => n.text);
+  const notes = (phase: string) =>
+    a.report.find((p) => p.phase === phase)!.notes.map((n) => n.text);
 
   it("finds the fort precraft and what it made", () => {
     expect(you.precrafts.map((p) => p.kind)).toEqual(["fort"]);
@@ -37,6 +41,11 @@ describe("run stats (you vs nei1019)", () => {
 
   it("names food in the play-by-play and counts overworld wood", () => {
     expect(notes("Overworld")).toContain("Wood: 11 logs, 0 leaves vs 12 logs, 0 leaves");
-    expect(a.report.flatMap((p) => p.steps.you).filter((s) => s.kind === "eat").every((s) => s.text !== "Ate")).toBe(true);
+    expect(
+      a.report
+        .flatMap((p) => p.steps.you)
+        .filter((s) => s.kind === "eat")
+        .every((s) => s.text !== "Ate"),
+    ).toBe(true);
   });
 });

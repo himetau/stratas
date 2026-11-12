@@ -1,6 +1,6 @@
-// Update status the main process sends the UI. Main checks GitHub releases, the UI shows the button
+/** Update status the main process sends the UI. */
 export interface UpdateState {
-  /** off: running from the code or an install that can't update itself */
+  /** The off status means the app runs from source or from an install that cannot update itself. */
   status: "off" | "idle" | "checking" | "none" | "available" | "downloading" | "ready" | "error";
   current: string;
   version?: string;

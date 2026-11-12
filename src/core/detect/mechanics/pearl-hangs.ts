@@ -10,7 +10,12 @@ export const pearlHangsMechanic: Mechanic = {
   phase: ["Bastion", "Nether travel", "Bastion to fortress", "Fortress to stronghold"],
   detect(s: Side, span?: [number, number]): Occurrence[] {
     return pearlHangs(s.run)
-      .filter((h) => !span || (h.thrown >= span[0] && h.thrown <= span[1]) || (h.landed >= span[0] && h.landed <= span[1]))
+      .filter(
+        (h) =>
+          !span ||
+          (h.thrown >= span[0] && h.thrown <= span[1]) ||
+          (h.landed >= span[0] && h.landed <= span[1]),
+      )
       .map((h) => ({
         t0: h.thrown,
         t1: h.landed,
@@ -20,8 +25,11 @@ export const pearlHangsMechanic: Mechanic = {
       }));
   },
   compare(y: Occurrence[], t: Occurrence[]): Note | null {
-    if (!y[0] && !t[0]) return null;
-    const one = (h: Occurrence | undefined) => (h ? `${dur(h.t1 - h.t0)} at ${fmtTime(h.t0)}` : "none");
+    if (!y[0] && !t[0]) {
+      return null;
+    }
+    const one = (h: Occurrence | undefined) =>
+      h ? `${dur(h.t1 - h.t0)} at ${fmtTime(h.t0)}` : "none";
     return {
       text: `Pearl hang: ${one(y[0])} vs ${one(t[0])}`,
       seconds: null,

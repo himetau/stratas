@@ -1,9 +1,10 @@
-// The app's pages talk to window.stratas. In the desktop app that's Electron, here it's the same Service running in the page
 import type { AppState, Bridge, UpdateState } from "../../src/ui/bridge";
 import type { Service } from "../../src/core/service";
 import type { SkinOwner } from "../../src/core/skins";
 import { readFileSync, writeFileSync } from "../shims/fs";
 import { REPLAYS } from "./paths";
+
+const STATE_BATCH_MS = 250;
 
 const download = (file: string) => {
   const bytes = readFileSync(file) as Uint8Array;
@@ -14,34 +15,72 @@ const download = (file: string) => {
   setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
 };
 
+const blobToDataUrl = (b: Blob) =>
+  new Promise<string>((ok) => {
+    const fr = new FileReader();
+    fr.onload = () => ok(String(fr.result));
+    fr.readAsDataURL(b);
+  });
+
+// Mojang's API doesn't answer web pages, mc-heads.net does.
+const fetchSkin = (id: string): Promise<string | null> =>
+  fetch(`https://mc-heads.net/skin/${encodeURIComponent(id)}`)
+    .then((r) => (r.ok ? r.blob() : null))
+    .then((b) => (b ? blobToDataUrl(b) : null))
+    .catch(() => null);
+
 export function webBridge(service: Service, version: string): Bridge {
-  const stateFns: ((s: AppState) => void)[] = [], openFns: ((id: number) => void)[] = [], gameFns: ((g: { id: number | null; title: string; body: string }) => void)[] = [];
-  let pending: ReturnType<typeof setTimeout> | null = null, last = "";
+  const stateFns: ((s: AppState) => void)[] = [];
+  const gameFns: ((g: { id: number | null; title: string; body: string }) => void)[] = [];
+  let pending: ReturnType<typeof setTimeout> | null = null;
+  let last = "";
   const broadcast = () => {
     pending = null;
-    const s = service.state(), json = JSON.stringify(s);
-    if (json === last) return;
+    const s = service.state();
+    const json = JSON.stringify(s);
+    if (json === last) {
+      return;
+    }
     last = json;
-    for (const f of stateFns) f(s);
+    for (const f of stateFns) {
+      f(s);
+    }
   };
-  service.on("changed", () => { if (!pending) pending = setTimeout(broadcast, 250); });
-  service.on("newGame", (g) => gameFns.forEach((f) => f(g)));
-  // User actions go out right away, like the desktop app does
-  const now = <A extends unknown[], R>(fn: (...a: A) => R) => async (...a: A): Promise<Awaited<R>> => { const r = await fn(...a); broadcast(); return r; };
+  service.on("changed", () => {
+    if (!pending) {
+      pending = setTimeout(broadcast, STATE_BATCH_MS);
+    }
+  });
+  service.on("newGame", (g) => {
+    for (const f of gameFns) {
+      f(g);
+    }
+  });
+  const broadcastAfter =
+    <A extends unknown[], R>(fn: (...a: A) => R) =>
+    async (...a: A): Promise<Awaited<R>> => {
+      const r = await fn(...a);
+      broadcast();
+      return r;
+    };
+  const rescan = () => {
+    service.rescanLibrary(true);
+    service.pairRuns();
+  };
   const skins = new Map<string, Promise<string | null>>();
   const update: UpdateState = { status: "off", current: version };
 
-  const bridge: Bridge = {
+  return {
     state: async () => service.state(),
-    settings: now((patch) => service.updateSettings(patch)),
+    settings: broadcastAfter((patch) => service.updateSettings(patch)),
     pick: (opts) => service.pick(opts),
-    enqueue: now((picks) => service.enqueue(picks)),
-    queueStatus: now((id, status) => service.setQueueStatus(id, status)),
+    enqueue: broadcastAfter((picks) => service.enqueue(picks)),
+    queueStatus: broadcastAfter((id, status) => service.setQueueStatus(id, status)),
     practicing: async (id) => service.practicing(id),
     race: async (id) => service.race(id) ?? null,
-    deleteRace: now((id) => service.deleteRace(id)),
+    deleteRace: broadcastAfter((id) => service.deleteRace(id)),
     reanalyze: async () => service.reanalyzeAll(),
-    rescan: now(() => { service.rescanLibrary(true); service.pairRuns(); }),
+    rescan: broadcastAfter(rescan),
     refresh: () => service.refresh(),
     profile: (season, pool) => service.profile(season, pool),
     profileMatch: (id) => service.profileMatch(id),
@@ -49,53 +88,66 @@ export function webBridge(service: Service, version: string): Bridge {
     lookupPlayer: (name) => service.lookupPlayer(name),
     matchElo: (uuid, id) => service.matchElo(uuid, id),
     profileRefresh: (season, pool) => service.profileRefresh(season, pool),
-    // Rank icons and menu art come out of the Ranked mod's files, which the browser can't see
+    // Rank icons and menu art come out of the Ranked mod's files, which the browser can't see.
     rankIcons: async () => ({}),
     rankedAssets: async () => ({ background: null, structures: null }),
     rankedArt: async () => null,
     pickArt: async () => null,
     oldArt: async () => [],
     fetchOldArt: async () => [],
-    // Mojang's API doesn't answer web pages, mc-heads.net does
     skin: (who: SkinOwner) => {
       const id = who?.uuid || who?.name;
-      if (!id) return Promise.resolve(null);
+      if (!id) {
+        return Promise.resolve(null);
+      }
       let p = skins.get(id);
       if (!p) {
-        p = fetch(`https://mc-heads.net/skin/${encodeURIComponent(id)}`).then((r) => (r.ok ? r.blob() : null))
-          .then((b) => (b ? new Promise<string>((ok) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.readAsDataURL(b); }) : null))
-          .catch(() => null);
+        p = fetchSkin(id);
         skins.set(id, p);
       }
       return p;
     },
-    copy: async (text) => { try { await navigator.clipboard.writeText(String(text)); } catch { /* Not allowed */ } },
+    copy: async (text) => {
+      try {
+        await navigator.clipboard.writeText(String(text));
+      } catch {
+        /* The browser refused clipboard access. */
+      }
+    },
     reveal: async (file) => download(file),
     openDir: async () => {},
     pickInstance: async () => null,
     companion: async () => {},
-    // No game to switch to from a web page, so hand over the mixed replay to put in Ranked's folder
     openInMinecraft: async (file) => {
       download(file);
-      return { ok: true, message: "Downloaded. Put it in your Ranked folder under .minecraft/mcsrranked/replay, then in Ranked: My replays, Watch." };
+      return {
+        ok: true,
+        message:
+          "Downloaded. Put it in your Ranked folder under .minecraft/mcsrranked/replay, then in Ranked: My replays, Watch.",
+      };
     },
+    launchRanked: async () => ({ ok: false, message: "The browser version can't start Ranked" }),
     theme: async () => ({ css: "", file: "", found: false }),
     onTheme: () => {},
-    onState: (fn) => { stateFns.push(fn); },
-    onOpenRace: (fn) => { openFns.push(fn); },
-    onNewGame: (fn) => { gameFns.push(fn); },
+    onState: (fn) => {
+      stateFns.push(fn);
+    },
+    onOpenRace: () => {},
+    onNewGame: (fn) => {
+      gameFns.push(fn);
+    },
     onCompanionRace: () => {},
     update: async () => update,
     updateCheck: async () => {},
     updateInstall: async () => {},
     onUpdate: () => {},
     addReplays: async (files) => {
-      for (const f of files) writeFileSync(`${REPLAYS}/${f.name}`, f.bytes);
-      service.rescanLibrary(true);
-      service.pairRuns();
+      for (const f of files) {
+        writeFileSync(`${REPLAYS}/${f.name}`, f.bytes);
+      }
+      rescan();
       broadcast();
       return files.length;
     },
   };
-  return bridge;
 }

@@ -1,5 +1,3 @@
-// Menu backgrounds from older MCSR Ranked releases. Reads only the zip index and the image out of each jar on
-// Modrinth (HTTP range requests), one release per minor version, and keeps each different image once
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "fflate";
@@ -7,89 +5,185 @@ import { inflateSync } from "fflate";
 const VERSIONS = "https://api.modrinth.com/v2/project/mcsr-ranked/version";
 const UA = "Stratas (MCSR Ranked training tool)";
 
-export interface OldArt { key: string; label: string; versions: string; file: string }
+const EOCD_SIGNATURE = 0x06054b50;
+const EOCD_SIZE = 22;
+const MAX_ZIP_COMMENT = 0xffff;
+const CENTRAL_SIGNATURE = 0x02014b50;
+const CENTRAL_HEADER_SIZE = 46;
+const LOCAL_HEADER_SIZE = 30;
+const DEFLATE = 8;
 
-interface Entry { name: string; crc: number; method: number; csize: number; offset: number }
+export interface OldArt {
+  key: string;
+  label: string;
+  versions: string;
+  file: string;
+}
+
+interface Entry {
+  name: string;
+  crc: number;
+  method: number;
+  csize: number;
+  offset: number;
+}
+
+interface ModrinthVersion {
+  version_number: string;
+  files: { url: string; size: number; primary?: boolean }[];
+}
 
 async function range(url: string, from: number, to: number): Promise<Uint8Array> {
   const res = await fetch(url, { headers: { Range: `bytes=${from}-${to}`, "User-Agent": UA } });
-  if (res.status !== 206 && res.status !== 200) throw new Error(`${res.status} for ${url}`);
+  if (res.status !== 206 && res.status !== 200) {
+    throw new Error(`${res.status} for ${url}`);
+  }
   return new Uint8Array(await res.arrayBuffer());
 }
 
-/** Zip central directory of a remote file, from its last 64 KB (end record) then the directory itself */
+const dataView = (bytes: Uint8Array) =>
+  new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+/** Reads the central directory of a remote zip through the end record in its tail. */
 async function zipIndex(url: string, size: number): Promise<Entry[]> {
-  const tail = await range(url, Math.max(0, size - 65_557), size - 1);
-  const dv = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
+  const tail = await range(url, Math.max(0, size - EOCD_SIZE - MAX_ZIP_COMMENT), size - 1);
+  const tailView = dataView(tail);
   let eocd = -1;
-  for (let i = tail.length - 22; i >= 0; i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-  if (eocd < 0) throw new Error("no zip end record");
-  const cdSize = dv.getUint32(eocd + 12, true), cdOff = dv.getUint32(eocd + 16, true);
-  const cd = await range(url, cdOff, cdOff + cdSize - 1);
-  const c = new DataView(cd.buffer, cd.byteOffset, cd.byteLength), dec = new TextDecoder();
+  for (let i = tail.length - EOCD_SIZE; i >= 0; i--) {
+    if (tailView.getUint32(i, true) === EOCD_SIGNATURE) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) {
+    throw new Error("no zip end record");
+  }
+  const cdSize = tailView.getUint32(eocd + 12, true);
+  const cdOffset = tailView.getUint32(eocd + 16, true);
+  const cd = await range(url, cdOffset, cdOffset + cdSize - 1);
+  const cdView = dataView(cd);
+  const decoder = new TextDecoder();
   const out: Entry[] = [];
-  for (let p = 0; p + 46 <= cd.length && c.getUint32(p, true) === 0x02014b50;) {
-    const nameLen = c.getUint16(p + 28, true), extra = c.getUint16(p + 30, true), comment = c.getUint16(p + 32, true);
-    out.push({ name: dec.decode(cd.subarray(p + 46, p + 46 + nameLen)), method: c.getUint16(p + 10, true), crc: c.getUint32(p + 16, true),
-      csize: c.getUint32(p + 20, true), offset: c.getUint32(p + 42, true) });
-    p += 46 + nameLen + extra + comment;
+  let p = 0;
+  while (p + CENTRAL_HEADER_SIZE <= cd.length && cdView.getUint32(p, true) === CENTRAL_SIGNATURE) {
+    const nameLen = cdView.getUint16(p + 28, true);
+    const extraLen = cdView.getUint16(p + 30, true);
+    const commentLen = cdView.getUint16(p + 32, true);
+    out.push({
+      name: decoder.decode(cd.subarray(p + CENTRAL_HEADER_SIZE, p + CENTRAL_HEADER_SIZE + nameLen)),
+      method: cdView.getUint16(p + 10, true),
+      crc: cdView.getUint32(p + 16, true),
+      csize: cdView.getUint32(p + 20, true),
+      offset: cdView.getUint32(p + 42, true),
+    });
+    p += CENTRAL_HEADER_SIZE + nameLen + extraLen + commentLen;
   }
   return out;
 }
 
-/** One file out of a remote zip: its local header says where the data starts */
+/** Downloads one file out of a remote zip. Its local header says where the data starts. */
 async function zipFile(url: string, e: Entry): Promise<Uint8Array> {
-  const head = await range(url, e.offset, e.offset + 29);
-  const h = new DataView(head.buffer, head.byteOffset, head.byteLength);
-  const start = e.offset + 30 + h.getUint16(26, true) + h.getUint16(28, true);
+  const head = dataView(await range(url, e.offset, e.offset + LOCAL_HEADER_SIZE - 1));
+  const start = e.offset + LOCAL_HEADER_SIZE + head.getUint16(26, true) + head.getUint16(28, true);
   const data = await range(url, start, start + e.csize - 1);
-  return e.method === 8 ? inflateSync(data) : data;
+  return e.method === DEFLATE ? inflateSync(data) : data;
 }
 
-/** The menu background in a release: the sharp one if it has it, else the blurred one, else any big gui background */
-const pick = (es: Entry[]) => {
-  const bg = es.filter((e) => /textures\/gui\/background(_blur)?\.png$/i.test(e.name) || (/\/gui\/.*background.*\.png$/i.test(e.name) && !/seed_background|user_background|flags/.test(e.name)));
-  return bg.find((e) => /background\.png$/i.test(e.name)) ?? bg.find((e) => /background_blur\.png$/i.test(e.name)) ?? bg.sort((a, b) => b.csize - a.csize)[0];
-};
+/** Picks a release's menu background: the sharp one, else the blurred one,
+ *  else the biggest gui background. */
+function pickMenuBackground(entries: Entry[]): Entry | undefined {
+  const backgrounds = entries.filter(
+    (e) =>
+      /textures\/gui\/background(_blur)?\.png$/i.test(e.name) ||
+      (/\/gui\/.*background.*\.png$/i.test(e.name) &&
+        !/seed_background|user_background|flags/.test(e.name)),
+  );
+  return (
+    backgrounds.find((e) => /background\.png$/i.test(e.name)) ??
+    backgrounds.find((e) => /background_blur\.png$/i.test(e.name)) ??
+    backgrounds.sort((a, b) => b.csize - a.csize)[0]
+  );
+}
 
-/** What's been fetched before, newest first */
+/** Lists the backgrounds fetched before, newest first. */
 export function cachedOldArt(dir: string): OldArt[] {
-  try { return JSON.parse(readFileSync(join(dir, "index.json"), "utf8")) as OldArt[]; } catch { return []; }
+  try {
+    return JSON.parse(readFileSync(join(dir, "index.json"), "utf8")) as OldArt[];
+  } catch {
+    return [];
+  }
 }
 
-/** Look through one release per minor version and save each different menu background. Slow-ish, goes online */
-export async function fetchOldArt(dir: string, log: (m: string) => void = () => {}): Promise<OldArt[]> {
+/** Returns the newest patch of each minor version, newest first. */
+function newestPerMinor(versions: ModrinthVersion[]): Map<string, ModrinthVersion> {
+  const minors = new Map<string, ModrinthVersion>();
+  // The Modrinth API lists versions newest first.
+  for (const v of versions) {
+    const minor = v.version_number.split(".").slice(0, 2).join(".");
+    if (!minors.has(minor)) {
+      minors.set(minor, v);
+    }
+  }
+  return minors;
+}
+
+/** Saves each different menu background from one Ranked release per minor version on Modrinth.
+ *  Range requests read only each jar's zip index and its background image. */
+export async function fetchOldArt(
+  dir: string,
+  log: (m: string) => void = () => {},
+): Promise<OldArt[]> {
   mkdirSync(dir, { recursive: true });
   const res = await fetch(VERSIONS, { headers: { "User-Agent": UA } });
-  if (!res.ok) throw new Error(`Modrinth ${res.status}`);
-  const all = (await res.json()) as { version_number: string; date_published: string; files: { url: string; size: number; primary?: boolean }[] }[];
-  // Newest patch of each minor version, newest first (the API lists newest first)
-  const minors = new Map<string, typeof all[number]>();
-  for (const v of all) { const m = v.version_number.split(".").slice(0, 2).join("."); if (!minors.has(m)) minors.set(m, v); }
-  const found = new Map<number, OldArt & { crc: number }>();
-  for (const [minor, v] of minors) {
-    const f = v.files.find((x) => x.primary) ?? v.files[0];
-    if (!f) continue;
-    try {
-      const e = pick(await zipIndex(f.url, f.size));
-      if (!e) continue;
-      const seen = found.get(e.crc);
-      // Same image as a newer release, it just goes back further
-      if (seen) { seen.versions = `${minor}–${seen.versions.split("–").at(-1)}`; continue; }
-      const file = join(dir, `${e.crc.toString(16)}.png`);
-      if (!existsSync(file)) writeFileSync(file, await zipFile(f.url, e));
-      found.set(e.crc, { key: `old:${e.crc.toString(16)}`, label: `Ranked ${minor}`, versions: minor, file, crc: e.crc });
-      log(`Ranked ${minor}: new menu background`);
-    } catch (err) { log(`Ranked ${minor}: ${(err as Error).message}`); }
+  if (!res.ok) {
+    throw new Error(`Modrinth ${res.status}`);
   }
-  const list = [...found.values()].map(({ crc: _, ...a }) => ({ ...a, label: `Ranked ${a.versions}` }));
+  const all = (await res.json()) as ModrinthVersion[];
+  const byCrc = new Map<number, Omit<OldArt, "label">>();
+  for (const [minor, v] of newestPerMinor(all)) {
+    const jar = v.files.find((x) => x.primary) ?? v.files[0];
+    if (!jar) {
+      continue;
+    }
+    try {
+      const e = pickMenuBackground(await zipIndex(jar.url, jar.size));
+      if (!e) {
+        continue;
+      }
+      const seen = byCrc.get(e.crc);
+      if (seen) {
+        seen.versions = `${minor}–${seen.versions.split("–").at(-1)}`;
+        continue;
+      }
+      const file = join(dir, `${e.crc.toString(16)}.png`);
+      if (!existsSync(file)) {
+        writeFileSync(file, await zipFile(jar.url, e));
+      }
+      byCrc.set(e.crc, { key: `old:${e.crc.toString(16)}`, versions: minor, file });
+      log(`Ranked ${minor}: new menu background`);
+    } catch (err) {
+      log(`Ranked ${minor}: ${(err as Error).message}`);
+    }
+  }
+  const fetched: OldArt[] = [...byCrc.values()].map(({ key, versions, file }) => ({
+    key,
+    label: `Ranked ${versions}`,
+    versions,
+    file,
+  }));
+  const missedThisTime = cachedOldArt(dir).filter(
+    (old) => existsSync(old.file) && !fetched.some((f) => f.key === old.key),
+  );
+  const list = [...fetched, ...missedThisTime];
   writeFileSync(join(dir, "index.json"), JSON.stringify(list));
   return list;
 }
 
-/** A fetched background as a data URL */
+/** Returns a fetched background as a data URL. */
 export function oldArtData(dir: string, key: string): string | null {
-  const a = cachedOldArt(dir).find((x) => x.key === key);
-  if (!a || !existsSync(a.file)) return null;
-  return `data:image/png;base64,${readFileSync(a.file).toString("base64")}`;
+  const art = cachedOldArt(dir).find((x) => x.key === key);
+  if (!art || !existsSync(art.file)) {
+    return null;
+  }
+  return `data:image/png;base64,${readFileSync(art.file).toString("base64")}`;
 }

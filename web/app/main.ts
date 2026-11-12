@@ -1,5 +1,4 @@
 /// <reference types="vite/client" />
-// Stratas in the browser: the app's Service and pages, with replays you add by hand instead of a watched Ranked folder
 import "../shims/process";
 import "./flag";
 import "../../src/ui/styles.css";
@@ -17,19 +16,29 @@ import pkg from "../../package.json";
 const saved = await load();
 useSqlJs(await initSqlJs({ locateFile: () => wasmUrl }), saved.db);
 loadFiles(saved.files);
-// A pretend Ranked instance for replays you add, so pairing and mixing work like in the app
-if (!existsSync(MOD_JAR)) writeFileSync(MOD_JAR, new Uint8Array(0), 0);
+// The service only finds a Ranked instance at INSTANCE when a Ranked mod jar is in its mods folder.
+if (!existsSync(MOD_JAR)) {
+  writeFileSync(MOD_JAR, new Uint8Array(0), 0);
+}
 
 const { Service } = await import("../../src/core/service");
 const service = new Service(DB);
-service.store.set("settings", { ...service.store.get<Record<string, unknown>>("settings", {}), instancePath: INSTANCE });
+service.store.set("settings", {
+  ...service.store.get<Record<string, unknown>>("settings", {}),
+  instancePath: INSTANCE,
+});
 
-// Save a few seconds after things settle, and when you leave
+const SAVE_DELAY_MS = 4000;
 let timer: ReturnType<typeof setTimeout> | null = null;
 const persist = () => void save({ db: exportDb(), files: allFiles() });
-const soon = () => { if (timer) clearTimeout(timer); timer = setTimeout(persist, 4000); };
-service.on("changed", soon);
-onFilesChanged(soon);
+const persistSoon = () => {
+  if (timer) {
+    clearTimeout(timer);
+  }
+  timer = setTimeout(persist, SAVE_DELAY_MS);
+};
+service.on("changed", persistSoon);
+onFilesChanged(persistSoon);
 addEventListener("pagehide", persist);
 
 (window as unknown as { stratas: unknown }).stratas = webBridge(service, pkg.version);

@@ -7,7 +7,11 @@ import { Service } from "../src/core/service";
 import type { Api } from "../src/core/seeds/api";
 import { fetchProfile } from "../src/core/profile/fetch";
 import { analyzeRanked, eloWinChance } from "../src/core/profile/stats";
-import { analyzeSplitsProfile, buildMatchBreakdown, buildScorecard } from "../src/core/profile/splits";
+import {
+  analyzeSplitsProfile,
+  buildMatchBreakdown,
+  buildScorecard,
+} from "../src/core/profile/splits";
 import { analyzeReplayTrends } from "../src/core/profile/replays";
 import { buildProfileInsights } from "../src/core/profile/insights";
 import type { ApiUserFull, MatchDetail, UserSeasonSummary } from "../src/core/profile/types";
@@ -17,22 +21,68 @@ const CHAV = "e1b919fe90b044b484ff93979e8308a4";
 
 /** Enough Emerald II games (1300-1399) to show next rank medians. Nether 1650 ticks = 82.5s */
 const emeraldTwo = Array.from({ length: 15 }, (_, i) => ({
-  matchId: 900 + i, uuid: `e2-${i}`, elo: 1310 + i * 5, won: true, seedType: "VILLAGE", bastionType: "STABLES",
-  nether: 1650, bastion: 2500, fortress: 5400, blind: 8000, eye: 9200, end: 10000, finish: 11800,
+  matchId: 900 + i,
+  uuid: `e2-${i}`,
+  elo: 1310 + i * 5,
+  won: true,
+  seedType: "VILLAGE",
+  bastionType: "STABLES",
+  nether: 1650,
+  bastion: 2500,
+  fortress: 5400,
+  blind: 8000,
+  eye: 9200,
+  end: 10000,
+  finish: 11800,
 }));
 
-const userFixture = JSON.parse(
-  readFileSync(new URL("./fixtures/api/user-cyoshi.json", import.meta.url), "utf8"),
-) as ApiUserFull;
-const seasonsFixture = JSON.parse(
-  readFileSync(new URL("./fixtures/api/seasons-cyoshi.json", import.meta.url), "utf8"),
-) as UserSeasonSummary;
-const matchesFixture = JSON.parse(
-  readFileSync(new URL("./fixtures/api/matches-cyoshi.json", import.meta.url), "utf8"),
-) as MatchDetail[];
-const detailsFixture = JSON.parse(
-  readFileSync(new URL("./fixtures/api/match-details.json", import.meta.url), "utf8"),
-) as MatchDetail[];
+const villageSplitsAt1420 = {
+  matchId: 3,
+  uuid: "p3",
+  elo: 1420,
+  won: true,
+  seedType: "VILLAGE",
+  bastionType: "STABLES",
+  nether: 1700,
+  bastion: 2600,
+  fortress: 5600,
+  blind: 8200,
+  eye: 9400,
+  end: 10300,
+  finish: 12200,
+};
+const shipwreckSplitsAt1460 = {
+  matchId: 4,
+  uuid: "p4",
+  elo: 1460,
+  won: true,
+  seedType: "SHIPWRECK",
+  bastionType: "HOUSING",
+  nether: 1650,
+  bastion: 2500,
+  fortress: 5400,
+  blind: 8000,
+  eye: 9200,
+  end: 10000,
+  finish: 11800,
+};
+
+const readJson = <T>(name: string) =>
+  JSON.parse(readFileSync(new URL(`./fixtures/api/${name}`, import.meta.url), "utf8")) as T;
+const userFixture = readJson<ApiUserFull>("user-cyoshi.json");
+const seasonsFixture = readJson<UserSeasonSummary>("seasons-cyoshi.json");
+const matchesFixture = readJson<MatchDetail[]>("matches-cyoshi.json");
+const detailsFixture = readJson<MatchDetail[]>("match-details.json");
+
+/** Returns an in-memory store holding the match details and the Emerald II benchmark splits. */
+function storeWithEmeraldTwo(): Store {
+  const store = new Store(":memory:");
+  for (const d of detailsFixture) {
+    store.putMatchDetail(d);
+  }
+  store.putSplits(emeraldTwo);
+  return store;
+}
 
 describe("profile stats engine (analyzeRanked & eloWinChance)", () => {
   it("computes exact win/loss counts, streaks, eloRate+change history, vsHigher/vsLower, sessions, and rivals", () => {
@@ -41,7 +91,11 @@ describe("profile stats engine (analyzeRanked & eloWinChance)", () => {
     expect(eloWinChance(null, 1300)).toBeNull();
 
     // No user.statistics so headline totals come from the match window
-    const { stats: winStats, eloHistory, breakdowns } = analyzeRanked(ME, matchesFixture, detailsFixture, null);
+    const {
+      stats: winStats,
+      eloHistory,
+      breakdowns,
+    } = analyzeRanked(ME, matchesFixture, detailsFixture, null);
     expect(winStats.windowPlayed).toBe(8);
     expect(winStats.windowWins).toBe(4);
     expect(winStats.windowLosses).toBe(3);
@@ -105,17 +159,56 @@ describe("profile stats engine (analyzeRanked & eloWinChance)", () => {
 
 describe("splits, percentiles, scorecard, and match breakdown", () => {
   it("computes percentiles against the splits table and builds next-tier targets", () => {
-    const store = new Store(":memory:");
-    for (const d of detailsFixture) store.putMatchDetail(d);
-
-    // Seed benchmark splits across Elo bands (1200-1600)
-    store.putSplits(emeraldTwo);
+    const store = storeWithEmeraldTwo();
+    // Benchmark splits span the Elo bands from 1200 to 1600.
     store.putSplits([
-      { matchId: 1, uuid: "p1", elo: 1250, won: true, seedType: "VILLAGE", bastionType: "STABLES", nether: 2200, bastion: 3400, fortress: 7200, blind: 10200, eye: 11600, end: 12600, finish: 14800 },
-      { matchId: 2, uuid: "p2", elo: 1290, won: true, seedType: "VILLAGE", bastionType: "STABLES", nether: 2000, bastion: 3100, fortress: 6800, blind: 9600, eye: 11000, end: 12000, finish: 14000 },
-      { matchId: 3, uuid: "p3", elo: 1420, won: true, seedType: "VILLAGE", bastionType: "STABLES", nether: 1700, bastion: 2600, fortress: 5600, blind: 8200, eye: 9400, end: 10300, finish: 12200 },
-      { matchId: 4, uuid: "p4", elo: 1460, won: true, seedType: "SHIPWRECK", bastionType: "HOUSING", nether: 1650, bastion: 2500, fortress: 5400, blind: 8000, eye: 9200, end: 10000, finish: 11800 },
-      { matchId: 5, uuid: "p5", elo: 1510, won: true, seedType: "VILLAGE", bastionType: "STABLES", nether: 1550, bastion: 2400, fortress: 5100, blind: 7600, eye: 8800, end: 9600, finish: 11400 },
+      {
+        matchId: 1,
+        uuid: "p1",
+        elo: 1250,
+        won: true,
+        seedType: "VILLAGE",
+        bastionType: "STABLES",
+        nether: 2200,
+        bastion: 3400,
+        fortress: 7200,
+        blind: 10200,
+        eye: 11600,
+        end: 12600,
+        finish: 14800,
+      },
+      {
+        matchId: 2,
+        uuid: "p2",
+        elo: 1290,
+        won: true,
+        seedType: "VILLAGE",
+        bastionType: "STABLES",
+        nether: 2000,
+        bastion: 3100,
+        fortress: 6800,
+        blind: 9600,
+        eye: 11000,
+        end: 12000,
+        finish: 14000,
+      },
+      villageSplitsAt1420,
+      shipwreckSplitsAt1460,
+      {
+        matchId: 5,
+        uuid: "p5",
+        elo: 1510,
+        won: true,
+        seedType: "VILLAGE",
+        bastionType: "STABLES",
+        nether: 1550,
+        bastion: 2400,
+        fortress: 5100,
+        blind: 7600,
+        eye: 8800,
+        end: 9600,
+        finish: 11400,
+      },
     ]);
 
     const splits = analyzeSplitsProfile(store, ME, 1288, detailsFixture);
@@ -157,13 +250,8 @@ describe("splits, percentiles, scorecard, and match breakdown", () => {
 
 describe("replay trends & insights over corpus fixtures", () => {
   it("aggregates RaceAnalysis rows into phase losses, top causes, mechanics, trends, drills, and insights", () => {
-    const store = new Store(":memory:");
-    for (const d of detailsFixture) store.putMatchDetail(d);
-    store.putSplits(emeraldTwo);
-    store.putSplits([
-      { matchId: 3, uuid: "p3", elo: 1420, won: true, seedType: "VILLAGE", bastionType: "STABLES", nether: 1700, bastion: 2600, fortress: 5600, blind: 8200, eye: 9400, end: 10300, finish: 12200 },
-      { matchId: 4, uuid: "p4", elo: 1460, won: true, seedType: "SHIPWRECK", bastionType: "HOUSING", nether: 1650, bastion: 2500, fortress: 5400, blind: 8000, eye: 9200, end: 10000, finish: 11800 },
-    ]);
+    const store = storeWithEmeraldTwo();
+    store.putSplits([villageSplitsAt1420, shipwreckSplitsAt1460]);
 
     const corpusFiles: [string, string, number][] = [
       ["14182329.rrf", "e1b919fe90b044b484ff93979e8308a4", 14182329],
@@ -173,8 +261,8 @@ describe("replay trends & insights over corpus fixtures", () => {
     ];
 
     corpusFiles.forEach(([file, oppUuid, matchId], i) => {
-      const rep = decodeRrf(new Uint8Array(readFileSync(new URL(`./fixtures/corpus/${file}`, import.meta.url))));
-      const a = analyzeRace(rep, ME, oppUuid);
+      const bytes = readFileSync(new URL(`./fixtures/corpus/${file}`, import.meta.url));
+      const a = analyzeRace(decodeRrf(new Uint8Array(bytes)), ME, oppUuid);
       store.putRace({
         key: `match|${matchId}|${oppUuid}`,
         your_file: file,
@@ -231,7 +319,12 @@ describe("Service.profile() offline & match_detail cache budget", () => {
       userMatchesPage: async () => matchesFixture,
       match: async (id: number) => {
         detailCalls++;
-        return detailsFixture.find((d) => d.id === id) ?? { ...matchesFixture.find((m) => m.id === id)!, timelines: [] };
+        return (
+          detailsFixture.find((d) => d.id === id) ?? {
+            ...matchesFixture.find((m) => m.id === id)!,
+            timelines: [],
+          }
+        );
       },
     } as unknown as Api;
 
@@ -267,11 +360,34 @@ describe("splits radar pool", () => {
     const store = new Store(":memory:");
     const ME = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     // Your 10 games all at 100 s to the Nether, 10 other players all slower at 120 s
-    const row = (matchId: number, uuid: string, nether: number) => ({ matchId, uuid, elo: 1500, won: true, seedType: "VILLAGE", bastionType: "STABLES",
-      nether: nether * 20, bastion: null, fortress: null, blind: null, eye: null, end: null, finish: null });
-    store.putSplits([...Array.from({ length: 10 }, (_, i) => row(i, ME, 100)), ...Array.from({ length: 10 }, (_, i) => row(100 + i, `other${i}`, 120))]);
-    const details = Array.from({ length: 10 }, (_, i) => ({ id: i, type: 2, date: i, players: [{ uuid: ME, nickname: "me", eloRate: 1500 }],
-      timelines: [{ uuid: ME, type: "story.enter_the_nether", time: 100_000 }], completions: [], result: { uuid: ME, time: 0 } })) as never[];
+    const row = (matchId: number, uuid: string, nether: number) => ({
+      matchId,
+      uuid,
+      elo: 1500,
+      won: true,
+      seedType: "VILLAGE",
+      bastionType: "STABLES",
+      nether: nether * 20,
+      bastion: null,
+      fortress: null,
+      blind: null,
+      eye: null,
+      end: null,
+      finish: null,
+    });
+    store.putSplits([
+      ...Array.from({ length: 10 }, (_, i) => row(i, ME, 100)),
+      ...Array.from({ length: 10 }, (_, i) => row(100 + i, `other${i}`, 120)),
+    ]);
+    const details = Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      type: 2,
+      date: i,
+      players: [{ uuid: ME, nickname: "me", eloRate: 1500 }],
+      timelines: [{ uuid: ME, type: "story.enter_the_nether", time: 100_000 }],
+      completions: [],
+      result: { uuid: ME, time: 0 },
+    })) as never[];
     const sp = analyzeSplitsProfile(store, ME, 1500, details, 50);
     const nether = sp.segments.find((s) => s.key === "nether")!;
     expect(sp.bandSampleCount).toBe(10);

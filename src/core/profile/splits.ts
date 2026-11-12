@@ -1,4 +1,3 @@
-// Split analysis, the scorecard, and per match split breakdowns
 import {
   computeBandStats,
   extractSplitsFromTimeline,
@@ -6,19 +5,23 @@ import {
   type SplitRow,
 } from "../seeds/atlas";
 import type { Store } from "../store";
-import { rankOf } from "../tiers";
-import type {
-  Dimension,
-  MatchBreakdownRow,
-  MatchDetail,
-  MatchSplitsBreakdown,
-  MatchTimelineEvent,
-  RankedStats,
-  ScorecardDetail,
-  SplitProfile,
-  SplitSegmentKey,
-  SplitSegmentStat,
+import { rankOf, TIER_THRESHOLDS } from "../tiers";
+import { isFiniteNumber, meanRounded, medianRounded, normUuid } from "./stats";
+import {
+  RANKED_MATCH_TYPE,
+  type Dimension,
+  type MatchBreakdownRow,
+  type MatchDetail,
+  type MatchSplitsBreakdown,
+  type MatchTimelineEvent,
+  type RankedStats,
+  type ScorecardDetail,
+  type SplitProfile,
+  type SplitSegmentKey,
+  type SplitSegmentStat,
 } from "./types";
+
+const MS_PER_TICK = 50;
 
 const SEGMENT_LABELS: Record<SplitSegmentKey, string> = {
   nether: "Entered the Nether",
@@ -30,12 +33,14 @@ const SEGMENT_LABELS: Record<SplitSegmentKey, string> = {
   finish: "Finish",
 };
 
-/** Min next rank games before we show its medians */
+/** Min next rank games before we show its medians. */
 const MIN_NEXT_SAMPLE = 15;
 
-const TIER_THRESHOLDS = [
-  0, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1650, 1800, 2000,
-] as const;
+const BAND_HALF_WIDTH = 100;
+const WORLD_BAND: [number, number] = [0, 10000];
+/** Elo the next rank is found from when you have no Elo. */
+const UNRATED_ELO = 1200;
+const TOP_TIER_MAX_ELO = 4000;
 
 const BREAKDOWN_MILESTONES = [
   { key: "nether", label: "Nether", types: ["story.enter_the_nether", "nether"] },
@@ -43,7 +48,11 @@ const BREAKDOWN_MILESTONES = [
   { key: "fortress", label: "Fortress", types: ["nether.find_fortress", "fortress"] },
   { key: "rod", label: "First rod", types: ["nether.obtain_blaze_rod", "rod"] },
   { key: "blind", label: "Blind", types: ["projectelo.timeline.blind_travel", "blind"] },
-  { key: "stronghold", label: "Stronghold", types: ["story.follow_ender_eye", "eye", "stronghold"] },
+  {
+    key: "stronghold",
+    label: "Stronghold",
+    types: ["story.follow_ender_eye", "eye", "stronghold"],
+  },
   { key: "end", label: "End", types: ["story.enter_the_end", "end"] },
   {
     key: "finish",
@@ -59,76 +68,85 @@ const NON_MILESTONE_MARKERS: Record<string, { key: string; label: string }> = {
   reset: { key: "reset", label: "Reset" },
 };
 
-const normUuid = (u: string | null | undefined): string =>
-  (u ?? "").replace(/-/g, "").toLowerCase();
-
 const clamp100 = (n: number): number =>
   Math.max(0, Math.min(100, Math.round(Number.isFinite(n) ? n : 0)));
 
-function meanMs(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const total = values.reduce((acc, v) => acc + v, 0);
-  return Math.round(total / values.length);
-}
+const toMs = (ticks: number | null | undefined) =>
+  isFiniteNumber(ticks) && ticks > 0 ? Math.round(ticks * MS_PER_TICK) : null;
+const ticksToMs = (ticks: number) => Math.round(ticks * MS_PER_TICK);
+const msToTicks = (ms: number | null) => (ms !== null ? ms / MS_PER_TICK : null);
 
-function medianMs(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return Math.round(sorted[mid]);
-  return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
-}
+const isValidTicks = (ticks: number | null): ticks is number =>
+  ticks !== null && Number.isFinite(ticks) && ticks > 0;
+
+const deltaOf = (a: number | null, b: number | null) => (a !== null && b !== null ? a - b : null);
+
+const inBand = (rows: SplitRow[], [minElo, maxElo]: [number, number]) =>
+  rows.filter((r) => r.elo !== null && r.elo >= minElo && r.elo <= maxElo);
 
 function fasterFraction(yourTicks: number, sortedVals: number[]): number {
   let faster = 0;
   let equal = 0;
   for (const v of sortedVals) {
-    if (v < yourTicks) faster++;
-    else if (v === yourTicks) equal++;
+    if (v < yourTicks) {
+      faster++;
+    } else if (v === yourTicks) {
+      equal++;
+    }
   }
   return (faster + 0.5 * equal) / sortedVals.length;
 }
 
-function computePoolPercentile(
+/** 0-100, higher is faster than more of the values. Null if under 2 values. */
+function percentileIn(ticks: number | null, sorted: number[]): number | null {
+  if (!isValidTicks(ticks) || sorted.length < 2) {
+    return null;
+  }
+  return clamp100(Math.round((1 - fasterFraction(ticks, sorted)) * 100));
+}
+
+/** Your percentile in a pool. A pool under 2 values is compared through its median instead. */
+function poolPercentile(
   yourTicks: number | null,
-  rows: SplitRow[],
-  band: [number, number],
-  key: SplitSegmentKey,
-  statsMedianTicks: number | undefined,
+  sortedPool: number[],
+  poolMedianTicks: number | undefined,
 ): number | null {
-  if (yourTicks === null || !Number.isFinite(yourTicks) || yourTicks <= 0) return null;
-
-  const [minElo, maxElo] = band;
-  const vals = rows
-    .filter((r) => r.elo !== null && r.elo >= minElo && r.elo <= maxElo)
-    .map((r) => r[key])
-    .filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0)
-    .sort((a, b) => a - b);
-
-  if (vals.length >= 2) {
-    return clamp100(Math.round((1 - fasterFraction(yourTicks, vals)) * 100));
+  if (!isValidTicks(yourTicks)) {
+    return null;
   }
-
-  if (vals.length === 1 || (statsMedianTicks !== undefined && Number.isFinite(statsMedianTicks))) {
-    const ref = statsMedianTicks ?? vals[0];
-    if (!ref || ref <= 0) return null;
-    if (yourTicks === ref) return 50;
-    const diffRatio = (ref - yourTicks) / ref;
-    return clamp100(Math.round(50 + diffRatio * 50));
+  if (sortedPool.length >= 2) {
+    return percentileIn(yourTicks, sortedPool);
   }
-
-  return null;
+  const hasPoolMedian = poolMedianTicks !== undefined && Number.isFinite(poolMedianTicks);
+  if (sortedPool.length === 0 && !hasPoolMedian) {
+    return null;
+  }
+  const ref = poolMedianTicks ?? sortedPool[0];
+  if (!ref || ref <= 0) {
+    return null;
+  }
+  if (yourTicks === ref) {
+    return 50;
+  }
+  return clamp100(Math.round(50 + ((ref - yourTicks) / ref) * 50));
 }
 
 function formatPctLabel(percentile: number | null): string {
-  if (percentile === null || !Number.isFinite(percentile)) return "—";
+  if (percentile === null || !Number.isFinite(percentile)) {
+    return "—";
+  }
   const rounded = clamp100(percentile);
   if (rounded >= 50) {
-    const topX = Math.max(1, 100 - rounded);
-    return `Top ${topX}%`;
+    return `Top ${Math.max(1, 100 - rounded)}%`;
   }
-  const bottomY = Math.max(1, rounded);
-  return `Bottom ${bottomY}%`;
+  return `Bottom ${Math.max(1, rounded)}%`;
+}
+
+function completionMs(m: MatchDetail, uuid: string): number | null {
+  const comp = Array.isArray(m.completions)
+    ? m.completions.find((c) => normUuid(c.uuid) === uuid)
+    : undefined;
+  return comp && isFiniteNumber(comp.time) && comp.time > 0 ? comp.time : null;
 }
 
 function extractPlayerRow(
@@ -145,55 +163,71 @@ function extractPlayerRow(
         players: [...players, { uuid: targetUuid, nickname: "", eloRate: fallbackElo }],
       };
 
-  const rows = extractSplitsFromTimeline(matchInput, m.timelines ?? []);
-  const row = rows.find((r) => normUuid(r.uuid) === targetUuid) ?? null;
-  if (!row) return null;
+  const row = extractSplitsFromTimeline(matchInput, m.timelines ?? []).find(
+    (r) => normUuid(r.uuid) === targetUuid,
+  );
+  if (!row) {
+    return null;
+  }
 
-  if (row.finish === null && Array.isArray(m.completions)) {
-    const comp = m.completions.find((c) => normUuid(c.uuid) === targetUuid);
-    if (comp && typeof comp.time === "number" && Number.isFinite(comp.time) && comp.time > 0) {
-      row.finish = Math.round(comp.time / 50);
+  if (row.finish === null) {
+    const finishMs = completionMs(m, targetUuid);
+    if (finishMs !== null) {
+      row.finish = Math.round(finishMs / MS_PER_TICK);
     }
   }
 
   return row;
 }
 
-/** Sorted values for one split, either time to it or time since the previous split */
-function rowValues(rows: SplitRow[], band: [number, number], i: number, segment: boolean): number[] {
-  const key = SPLIT_KEYS[i], prev = i > 0 ? SPLIT_KEYS[i - 1] : null;
+/** Sorted ticks for split i, either time to it or time since the previous split. */
+function splitTicks(rows: SplitRow[], i: number, segment: boolean): number[] {
+  const key = SPLIT_KEYS[i];
+  const prev = i > 0 ? SPLIT_KEYS[i - 1] : null;
   return rows
-    .filter((r) => r.elo !== null && r.elo >= band[0] && r.elo <= band[1])
     .map((r) => {
       const v = r[key];
-      if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) return null;
-      if (!segment || !prev) return v;
+      if (!isValidTicks(v)) {
+        return null;
+      }
+      if (!segment || !prev) {
+        return v;
+      }
       const p = r[prev];
-      return typeof p === "number" && Number.isFinite(p) && p > 0 && v > p ? v - p : null;
+      return isValidTicks(p) && v > p ? v - p : null;
     })
     .filter((v): v is number => v !== null)
     .sort((a, b) => a - b);
 }
 
-/** 0-100, higher is faster than more of the values. Null if under 2 values */
-function percentileIn(ticks: number | null, sorted: number[]): number | null {
-  if (ticks === null || !Number.isFinite(ticks) || ticks <= 0 || sorted.length < 2) return null;
-  return clamp100(Math.round((1 - fasterFraction(ticks, sorted)) * 100));
+function eloBand(elo: number | null): [number, number] {
+  if (elo === null || !Number.isFinite(elo)) {
+    return [1000, 1400];
+  }
+  const e = Math.round(elo);
+  return [Math.max(0, e - BAND_HALF_WIDTH), e + BAND_HALF_WIDTH];
 }
 
-const toMs = (ticks: number | null | undefined) => (typeof ticks === "number" && Number.isFinite(ticks) && ticks > 0 ? Math.round(ticks * 50) : null);
-const medianTicks = (sorted: number[]) => (sorted.length ? medianMs(sorted) : null);
+/** The whole Elo range of the tier above the one elo is in, null from the top tier. */
+function nextTierBand(elo: number): [number, number] | null {
+  const lo = TIER_THRESHOLDS.find((t) => t > elo);
+  if (lo === undefined) {
+    return null;
+  }
+  const nextLo = TIER_THRESHOLDS.find((t) => t > lo);
+  return [lo, nextLo === undefined ? TOP_TIER_MAX_ELO : nextLo - 1];
+}
 
-/** The Elo ranges a profile compares against: yours (±100) and the whole next rank up */
+/** The Elo ranges a profile compares against: yours (±100) and the whole next rank up. */
 export function benchmarkBands(elo: number | null): [number, number][] {
-  if (elo === null || !Number.isFinite(elo)) return [[1000, 1400]];
-  const e = Math.round(elo), out: [number, number][] = [[Math.max(0, e - 100), e + 100]];
-  const nextLo = TIER_THRESHOLDS.find((t) => t > e);
-  if (nextLo !== undefined) out.push([nextLo, (TIER_THRESHOLDS.find((t) => t > nextLo) ?? 4001) - 1]);
-  return out;
+  if (elo === null || !Number.isFinite(elo)) {
+    return [eloBand(null)];
+  }
+  const next = nextTierBand(Math.round(elo));
+  return next ? [eloBand(elo), next] : [eloBand(elo)];
 }
 
-/** `pool` is how many of your newest Ranked matches to take times from */
+/** `pool` is how many of your newest Ranked matches to take times from. */
 export function analyzeSplitsProfile(
   store: Store,
   uuid: string,
@@ -203,156 +237,85 @@ export function analyzeSplitsProfile(
 ): SplitProfile {
   const targetUuid = normUuid(uuid);
 
-  const cumulativeByKey: Record<SplitSegmentKey, number[]> = {
-    nether: [],
-    bastion: [],
-    fortress: [],
-    blind: [],
-    eye: [],
-    end: [],
-    finish: [],
-  };
+  const yourRows = [...(details ?? [])]
+    .filter((m) => m && m.type === RANKED_MATCH_TYPE && Array.isArray(m.timelines))
+    .sort((a, b) => (b.date ?? 0) - (a.date ?? 0))
+    .slice(0, pool)
+    .map((m) => extractPlayerRow(m, targetUuid, yourElo))
+    .filter((row): row is SplitRow => row !== null);
 
-  const segmentByKey: Record<SplitSegmentKey, number[]> = {
-    nether: [],
-    bastion: [],
-    fortress: [],
-    blind: [],
-    eye: [],
-    end: [],
-    finish: [],
-  };
+  // Your own games are in the same table as everyone's, and comparing you with yourself puts every
+  // split at 50%, so the pools hold other players only.
+  const othersInBand = (band: [number, number]) =>
+    inBand(
+      store.splitsForBand(band[0], band[1]).filter((r) => normUuid(r.uuid) !== targetUuid),
+      band,
+    );
 
-  let analyzedMatches = 0;
+  const worldPool = othersInBand(WORLD_BAND);
+  const worldStats = computeBandStats(worldPool, WORLD_BAND);
 
-  const newest = [...(details ?? [])].filter((m) => m && m.type === 2 && Array.isArray(m.timelines)).sort((a, b) => (b.date ?? 0) - (a.date ?? 0)).slice(0, pool);
-  for (const m of newest) {
-    const row = extractPlayerRow(m, targetUuid, yourElo);
-    if (!row) continue;
+  const hasElo = isFiniteNumber(yourElo);
+  const band = eloBand(yourElo);
+  const bandPool = othersInBand(band);
+  const bandStats = computeBandStats(bandPool, band);
+  const bandRange = `${band[0]}–${band[1]} Elo`;
+  const bandLabel = hasElo ? `${rankOf(yourElo).name} (${bandRange})` : bandRange;
 
-    analyzedMatches++;
-
-    for (let i = 0; i < SPLIT_KEYS.length; i++) {
-      const key = SPLIT_KEYS[i];
-      const ticks = row[key];
-      if (ticks !== null && Number.isFinite(ticks) && ticks > 0) {
-        cumulativeByKey[key].push(Math.round(ticks * 50));
-
-        if (i === 0) {
-          segmentByKey[key].push(Math.round(ticks * 50));
-        } else {
-          const prevKey = SPLIT_KEYS[i - 1];
-          const prevTicks = row[prevKey];
-          if (
-            prevTicks !== null &&
-            Number.isFinite(prevTicks) &&
-            prevTicks > 0 &&
-            ticks > prevTicks
-          ) {
-            segmentByKey[key].push(Math.round((ticks - prevTicks) * 50));
-          }
-        }
-      }
-    }
-  }
-
-  // Pools are other players only. Your own games are in the same table (every player in every match we load is),
-  // and comparing you with yourself puts every split at 50%
-  const others = (rows: SplitRow[]) => rows.filter((r) => normUuid(r.uuid) !== targetUuid);
-
-  // World pool
-  const worldBand: [number, number] = [0, 10000];
-  const worldRows = others(store.splitsForBand(worldBand[0], worldBand[1]));
-  const worldStats = computeBandStats(worldRows, worldBand);
-
-  // Your Elo band
-  const hasElo = typeof yourElo === "number" && Number.isFinite(yourElo);
-  const band: [number, number] = hasElo
-    ? [Math.max(0, Math.round(yourElo - 100)), Math.round(yourElo + 100)]
-    : [1000, 1400];
-  const bandRows = others(store.splitsForBand(band[0], band[1]));
-  const bandStats = computeBandStats(bandRows, band);
-  const currentRank = rankOf(hasElo ? yourElo : null);
-  const bandLabel = hasElo
-    ? `${currentRank.name} (${band[0]}–${band[1]} Elo)`
-    : `${band[0]}–${band[1]} Elo`;
-
-  // Next rank up, its whole Elo range (Emerald II is 1300-1399). Only if the index has
-  // enough of its games for a median worth comparing to
-  const effectiveElo = hasElo ? Math.round(yourElo) : 1200;
-  const nextLo = TIER_THRESHOLDS.find((t) => t > effectiveElo) ?? null;
-  const nextHi = nextLo === null ? null : (TIER_THRESHOLDS.find((t) => t > nextLo) ?? 4001) - 1;
-  const nextCandidate: [number, number] | null = nextLo !== null && nextHi !== null ? [nextLo, nextHi] : null;
-  const nextCandidateRows = nextCandidate ? others(store.splitsForBand(nextCandidate[0], nextCandidate[1])) : [];
-  const enoughNext = nextCandidate !== null && computeBandStats(nextCandidateRows, nextCandidate).count >= MIN_NEXT_SAMPLE;
+  const nextCandidate = nextTierBand(hasElo ? Math.round(yourElo) : UNRATED_ELO);
+  const nextCandidatePool = nextCandidate ? othersInBand(nextCandidate) : [];
+  const nextCandidateStats = nextCandidate
+    ? computeBandStats(nextCandidatePool, nextCandidate)
+    : null;
+  const enoughNext = nextCandidateStats !== null && nextCandidateStats.count >= MIN_NEXT_SAMPLE;
   const nextBand = enoughNext ? nextCandidate : null;
-  const nextRankName = nextBand ? rankOf(nextBand[0]).name : null;
-  const nextRows = nextBand ? nextCandidateRows : [];
-  const nextBandRange: [number, number] = nextBand ?? [0, 0];
-  const nextBandStats = computeBandStats(nextRows, nextBandRange);
+  const nextPool = enoughNext ? nextCandidatePool : [];
+  const nextStats = enoughNext ? nextCandidateStats : null;
+
   const segments: SplitSegmentStat[] = SPLIT_KEYS.map((key, i) => {
-    const cumVals = cumulativeByKey[key];
-    const segVals = segmentByKey[key];
+    const cumulative = splitTicks(yourRows, i, false).map(ticksToMs);
+    const segment = splitTicks(yourRows, i, true).map(ticksToMs);
+    const medianMs = medianRounded(cumulative);
+    const segmentMedianMs = medianRounded(segment);
+    const yourTicks = msToTicks(medianMs);
 
-    const best = cumVals.length > 0 ? Math.min(...cumVals) : null;
-    const avg = meanMs(cumVals);
-    const med = medianMs(cumVals);
-
-    const segBest = segVals.length > 0 ? Math.min(...segVals) : null;
-    const segAvg = meanMs(segVals);
-    const segMed = medianMs(segVals);
-
-    const yourTicks = med !== null ? med / 50 : null;
-
-    const worldPercentile = computePoolPercentile(
+    const worldPercentile = poolPercentile(
       yourTicks,
-      worldRows,
-      worldBand,
-      key,
+      splitTicks(worldPool, i, false),
       worldStats.medians[key],
     );
-    const bandPercentile = computePoolPercentile(
-      yourTicks,
-      bandRows,
-      band,
-      key,
-      bandStats.medians[key],
-    );
+    const bandCumulative = splitTicks(bandPool, i, false);
+    const bandPercentile = poolPercentile(yourTicks, bandCumulative, bandStats.medians[key]);
 
-    const targetTicks = nextBand ? nextBandStats.medians[key] : undefined;
-    const targetMs =
-      typeof targetTicks === "number" && Number.isFinite(targetTicks) && targetTicks > 0
-        ? Math.round(targetTicks * 50)
-        : null;
-    const targetDeltaMs = med !== null && targetMs !== null ? med - targetMs : null;
+    const targetTicks = nextStats?.medians[key];
+    const targetMs = toMs(targetTicks);
 
-    const bandCum = rowValues(bandRows, band, i, false), bandSeg = rowValues(bandRows, band, i, true);
-    const nextSeg = rowValues(nextRows, nextBandRange, i, true);
-    const nextSegMed = medianTicks(nextSeg);
+    const bandSegment = splitTicks(bandPool, i, true);
+    const nextSegmentMedian = medianRounded(splitTicks(nextPool, i, true));
 
     return {
       key,
       label: SEGMENT_LABELS[key],
-      bestMs: best,
-      averageMs: avg,
-      medianMs: med,
-      segmentBestMs: segBest,
-      segmentAverageMs: segAvg,
-      segmentMedianMs: segMed,
-      count: cumVals.length,
+      bestMs: cumulative[0] ?? null,
+      averageMs: meanRounded(cumulative),
+      medianMs,
+      segmentBestMs: segment[0] ?? null,
+      segmentAverageMs: meanRounded(segment),
+      segmentMedianMs,
+      count: cumulative.length,
       worldPercentile,
       worldPctLabel: formatPctLabel(worldPercentile),
       bandPercentile,
       bandPctLabel: formatPctLabel(bandPercentile),
       targetMs,
-      targetDeltaMs,
+      targetDeltaMs: deltaOf(medianMs, targetMs),
       bandMedianMs: toMs(bandStats.medians[key]),
-      targetPercentile: percentileIn(targetTicks ?? null, bandCum),
+      targetPercentile: percentileIn(targetTicks ?? null, bandCumulative),
       segment: {
-        bandMedianMs: toMs(medianTicks(bandSeg)),
-        targetMs: toMs(nextSegMed),
-        percentile: percentileIn(segMed !== null ? segMed / 50 : null, bandSeg),
-        targetPercentile: percentileIn(nextSegMed, bandSeg),
+        bandMedianMs: toMs(medianRounded(bandSegment)),
+        targetMs: toMs(nextSegmentMedian),
+        percentile: percentileIn(msToTicks(segmentMedianMs), bandSegment),
+        targetPercentile: percentileIn(nextSegmentMedian, bandSegment),
       },
     };
   });
@@ -368,14 +331,14 @@ export function analyzeSplitsProfile(
 
   return {
     segments,
-    analyzedMatches,
+    analyzedMatches: yourRows.length,
     worldSampleCount: worldStats.count,
     band,
     bandLabel,
     bandSampleCount: bandStats.count,
-    nextRankName,
+    nextRankName: nextBand ? rankOf(nextBand[0]).name : null,
     nextBand,
-    nextBandSampleCount: nextBandStats.count,
+    nextBandSampleCount: nextStats?.count ?? 0,
     speedScore,
   };
 }
@@ -439,17 +402,25 @@ export function buildScorecard(
     },
   ];
 
-  const scorecard: Record<Dimension, number> = {
-    winrate: details[0].score,
-    clutch: details[1].score,
-    closing: details[2].score,
-    form: details[3].score,
-    finishing: details[4].score,
-    speed: details[5].score,
-    survival: details[6].score,
-  };
+  const scorecard = Object.fromEntries(details.map((d) => [d.dimension, d.score])) as Record<
+    Dimension,
+    number
+  >;
 
   return { scorecard, details };
+}
+
+/** Your finish time: the completion entry, else the time of a match you won without a forfeit. */
+function finishMs(detail: MatchDetail, uuid: string): number | null {
+  const completed = completionMs(detail, uuid);
+  if (completed !== null) {
+    return completed;
+  }
+  const result = detail.result;
+  if (detail.forfeited || !result?.uuid || normUuid(result.uuid) !== uuid) {
+    return null;
+  }
+  return isFiniteNumber(result.time) && result.time > 0 ? result.time : null;
 }
 
 function extractPlayerTimeline(
@@ -458,23 +429,25 @@ function extractPlayerTimeline(
 ): { events: MatchTimelineEvent[]; milestoneMs: Map<string, number> } {
   const events: MatchTimelineEvent[] = [];
   const milestoneMs = new Map<string, number>();
-  if (!targetUuid) return { events, milestoneMs };
+  if (!targetUuid) {
+    return { events, milestoneMs };
+  }
 
   const sorted = [...(detail.timelines ?? [])].sort((a, b) => a.time - b.time);
-
   for (const entry of sorted) {
-    if (normUuid(entry.uuid) !== targetUuid) continue;
-    if (typeof entry.time !== "number" || !Number.isFinite(entry.time) || entry.time < 0) continue;
+    if (normUuid(entry.uuid) !== targetUuid || !isFiniteNumber(entry.time) || entry.time < 0) {
+      continue;
+    }
 
-    const milestoneSpec = BREAKDOWN_MILESTONES.find((m) =>
+    const milestone = BREAKDOWN_MILESTONES.find((m) =>
       (m.types as readonly string[]).includes(entry.type),
     );
-    if (milestoneSpec) {
-      if (!milestoneMs.has(milestoneSpec.key)) {
-        milestoneMs.set(milestoneSpec.key, entry.time);
+    if (milestone) {
+      if (!milestoneMs.has(milestone.key)) {
+        milestoneMs.set(milestone.key, entry.time);
         events.push({
-          key: milestoneSpec.key,
-          label: milestoneSpec.label,
+          key: milestone.key,
+          label: milestone.label,
           ms: entry.time,
           milestone: true,
         });
@@ -484,48 +457,35 @@ function extractPlayerTimeline(
 
     const marker = NON_MILESTONE_MARKERS[entry.type];
     if (marker) {
-      events.push({
-        key: marker.key,
-        label: marker.label,
-        ms: entry.time,
-        milestone: false,
-      });
+      events.push({ key: marker.key, label: marker.label, ms: entry.time, milestone: false });
     }
   }
 
   if (!milestoneMs.has("finish")) {
-    let finishMs: number | null = null;
-    if (Array.isArray(detail.completions)) {
-      const comp = detail.completions.find((c) => normUuid(c.uuid) === targetUuid);
-      if (comp && typeof comp.time === "number" && Number.isFinite(comp.time) && comp.time > 0) {
-        finishMs = comp.time;
-      }
-    }
-    if (
-      finishMs === null &&
-      !detail.forfeited &&
-      detail.result?.uuid &&
-      normUuid(detail.result.uuid) === targetUuid &&
-      typeof detail.result.time === "number" &&
-      Number.isFinite(detail.result.time) &&
-      detail.result.time > 0
-    ) {
-      finishMs = detail.result.time;
-    }
-
-    if (finishMs !== null) {
-      milestoneMs.set("finish", finishMs);
-      events.push({
-        key: "finish",
-        label: "Finish",
-        ms: finishMs,
-        milestone: true,
-      });
+    const ms = finishMs(detail, targetUuid);
+    if (ms !== null) {
+      milestoneMs.set("finish", ms);
+      events.push({ key: "finish", label: "Finish", ms, milestone: true });
     }
   }
 
   events.sort((a, b) => a.ms - b.ms);
   return { events, milestoneMs };
+}
+
+/** Time since the previous reached milestone for each reached milestone, null when out of order. */
+function segmentDurations(milestoneMs: Map<string, number>): Map<string, number | null> {
+  const durations = new Map<string, number | null>();
+  let prev = 0;
+  for (const { key } of BREAKDOWN_MILESTONES) {
+    const ms = milestoneMs.get(key);
+    if (ms === undefined) {
+      continue;
+    }
+    durations.set(key, ms >= prev ? ms - prev : null);
+    prev = Math.max(prev, ms);
+  }
+  return durations;
 }
 
 export function buildMatchBreakdown(
@@ -536,68 +496,37 @@ export function buildMatchBreakdown(
   const you = normUuid(yourUuid);
   let them = normUuid(theirUuid);
   if (!them && Array.isArray(detail.players)) {
-    const opp = detail.players.find((p) => normUuid(p.uuid) !== you);
-    if (opp) them = normUuid(opp.uuid);
+    const opponent = detail.players.find((p) => normUuid(p.uuid) !== you);
+    if (opponent) {
+      them = normUuid(opponent.uuid);
+    }
   }
 
   const { events: youEvents, milestoneMs: youMilestones } = extractPlayerTimeline(detail, you);
   const { events: themEvents, milestoneMs: themMilestones } = extractPlayerTimeline(detail, them);
+  const youSegments = segmentDurations(youMilestones);
+  const themSegments = segmentDurations(themMilestones);
 
   const timestamps: MatchBreakdownRow[] = [];
   const segments: MatchBreakdownRow[] = [];
-
-  let prevYouMs = 0;
-  let prevThemMs = 0;
-
-  for (const m of BREAKDOWN_MILESTONES) {
-    const youMs = youMilestones.get(m.key) ?? null;
-    const themMs = themMilestones.get(m.key) ?? null;
-    if (youMs === null && themMs === null) continue;
-
-    const deltaMs = youMs !== null && themMs !== null ? youMs - themMs : null;
-    timestamps.push({
-      key: m.key,
-      label: m.label,
-      youMs,
-      themMs,
-      deltaMs,
-    });
-
-    let youSegMs: number | null = null;
-    if (youMs !== null) {
-      if (youMs >= prevYouMs) {
-        youSegMs = youMs - prevYouMs;
-      }
-      if (youMs > prevYouMs) {
-        prevYouMs = youMs;
-      }
+  for (const { key, label } of BREAKDOWN_MILESTONES) {
+    const youMs = youMilestones.get(key) ?? null;
+    const themMs = themMilestones.get(key) ?? null;
+    if (youMs === null && themMs === null) {
+      continue;
     }
+    timestamps.push({ key, label, youMs, themMs, deltaMs: deltaOf(youMs, themMs) });
 
-    let themSegMs: number | null = null;
-    if (themMs !== null) {
-      if (themMs >= prevThemMs) {
-        themSegMs = themMs - prevThemMs;
-      }
-      if (themMs > prevThemMs) {
-        prevThemMs = themMs;
-      }
-    }
-
-    const segDeltaMs = youSegMs !== null && themSegMs !== null ? youSegMs - themSegMs : null;
+    const youSegMs = youSegments.get(key) ?? null;
+    const themSegMs = themSegments.get(key) ?? null;
     segments.push({
-      key: m.key,
-      label: m.label,
+      key,
+      label,
       youMs: youSegMs,
       themMs: themSegMs,
-      deltaMs: segDeltaMs,
+      deltaMs: deltaOf(youSegMs, themSegMs),
     });
   }
 
-  return {
-    youEvents,
-    themEvents,
-    timestamps,
-    segments,
-  };
+  return { youEvents, themEvents, timestamps, segments };
 }
-

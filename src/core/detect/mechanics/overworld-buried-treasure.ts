@@ -2,17 +2,19 @@ import type { Note, Side } from "../findings";
 import { fmtTime } from "../names";
 import type { Action } from "../run";
 import type { Mechanic, Occurrence } from "./index";
+import { actionPos } from "./overworld";
 
 const BT_SIGNATURE_ITEMS = ["heart_of_the_sea", "cooked_cod", "cooked_salmon", "tnt"] as const;
 const BT_INGOT_ITEMS = ["iron_ingot", "gold_ingot"] as const;
+const DIG_RADIUS = 12;
 const DIG_BLOCK_RE = /sand|gravel|flint|stone|cobble|dirt|andesite|diorite|granite/i;
 
 function isBuriedTreasureChest(a: Action): boolean {
-  if (a.kind !== "chest" || a.w !== 0 || !a.delta) return false;
-  const d = a.delta;
-  const hasSig = BT_SIGNATURE_ITEMS.some((k) => (d[k] ?? 0) > 0);
-  const hasIngot = BT_INGOT_ITEMS.some((k) => (d[k] ?? 0) > 0);
-  return hasSig && hasIngot;
+  if (a.kind !== "chest" || a.w !== 0 || !a.delta) {
+    return false;
+  }
+  const gained = (k: string) => (a.delta?.[k] ?? 0) > 0;
+  return BT_SIGNATURE_ITEMS.some(gained) && BT_INGOT_ITEMS.some(gained);
 }
 
 function isDigBlock(a: Action): boolean {
@@ -20,32 +22,32 @@ function isDigBlock(a: Action): boolean {
   return !item || DIG_BLOCK_RE.test(item);
 }
 
-function posOf(s: Side, a: Action): readonly [number, number, number] {
-  if (a.at) return a.at;
-  const p = s.run.posAt(a.t0);
-  return [p.x, p.y, p.z];
-}
-
 export const overworldBuriedTreasureMechanic: Mechanic = {
   key: "overworld_buried_treasure",
   phase: ["Overworld"],
   detect(s: Side, span?: [number, number]): Occurrence[] {
-    const nether = s.run.mark("nether");
-    const from = span ? span[0] : 0;
-    const to = span ? span[1] : (nether ?? s.run.end);
+    const [from, to] = span ?? [0, s.run.mark("nether") ?? s.run.end];
 
-    const chest = s.run.actions.find(
-      (a) => a.t0 >= from && a.t0 <= to && isBuriedTreasureChest(a),
-    );
-    if (!chest) return [];
+    const chest = s.run.actions.find((a) => a.t0 >= from && a.t0 <= to && isBuriedTreasureChest(a));
+    if (!chest) {
+      return [];
+    }
 
-    const chestPos = posOf(s, chest);
+    const chestPos = actionPos(s, chest);
     const digs = s.run.actions.filter((a) => {
-      if (a.kind !== "mine" || a.w !== 0) return false;
-      if (a.t0 < from || a.t0 > chest.t0) return false;
-      if (!isDigBlock(a)) return false;
-      const mp = posOf(s, a);
-      return Math.hypot(mp[0] - chestPos[0], mp[1] - chestPos[1], mp[2] - chestPos[2]) <= 12;
+      if (a.kind !== "mine" || a.w !== 0) {
+        return false;
+      }
+      if (a.t0 < from || a.t0 > chest.t0) {
+        return false;
+      }
+      if (!isDigBlock(a)) {
+        return false;
+      }
+      const mp = actionPos(s, a);
+      return (
+        Math.hypot(mp[0] - chestPos[0], mp[1] - chestPos[1], mp[2] - chestPos[2]) <= DIG_RADIUS
+      );
     });
 
     const t0 = digs[0]?.t0 ?? chest.t0;
@@ -63,7 +65,9 @@ export const overworldBuriedTreasureMechanic: Mechanic = {
     ];
   },
   compare(y: Occurrence[], t: Occurrence[]): Note | null {
-    if (!y.length || !t.length) return null;
+    if (!y.length || !t.length) {
+      return null;
+    }
     const yo = y[0];
     const to = t[0];
     const yDigs = yo.value ?? Number(yo.meta?.digs ?? 0);

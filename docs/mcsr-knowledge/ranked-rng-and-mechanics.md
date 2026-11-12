@@ -5,6 +5,7 @@ MCSR Ranked modifies vanilla Minecraft 1.16.1 random number generation (RNG), wo
 ---
 
 ## 1. Standardized RNG & Filtered Seed Mechanics
+
 By default, MCSR Ranked ties deterministic random sequences to an **RNG Seed** (matching the Overworld seed unless overridden) and generates the Overworld and Nether from independent filtered seeds (preventing cross-dimension seed inference such as Divine Travel).
 
 - **Piglin Barter Sequence:** All runners receive the exact same barter loot sequence in the same order. Obsidian weight is buffed by ~35%, and every 72 barters (8 gold blocks) guarantees at least **6 Obsidian** and exactly **3 Ender Pearl** trades.
@@ -19,6 +20,7 @@ By default, MCSR Ranked ties deterministic random sequences to an **RNG Seed** (
 ---
 
 ## 2. Pearl Hangs (Delayed Chunk-Unload Teleportation)
+
 A **pearl hang** (or stasis pearl) exploits Minecraft's entity-ticking chunk rules to delay an Ender Pearl's landing while the runner performs other tasks.
 
 - **Chunk Unloading Mechanic:** When an Ender Pearl is thrown into or across chunks that stop ticking—either because the pearl travels beyond the player's current **Render Distance (RD)** or the player immediately lowers their RD / moves away (e.g., entering a structure, digging down, or entering a portal)—the projectile freezes mid-air in an unloaded/non-entity-ticking chunk.
@@ -30,6 +32,7 @@ A **pearl hang** (or stasis pearl) exploits Minecraft's entity-ticking chunk rul
 ---
 
 ## 3. Private Room Settings for Set-Seed Practice
+
 Private Rooms allow solo or multiplayer practice with customizable seed generation, RNG overrides, and match rules:
 
 - **Seed & Archetype Selection:**
@@ -43,6 +46,7 @@ Private Rooms allow solo or multiplayer practice with customizable seed generati
 ---
 
 ## Sources & References
+
 - **MCSR Ranked Wiki — RNG Standardization:** [wiki.mcsrranked.com/gameplay/rng](https://wiki.mcsrranked.com/gameplay/rng) (Piglin barter guarantees, mob/block drop sequences, 2nd-eye protection, blind portal `Y >= 48` surface rule, and dragon perch probability threshold).
 - **MCSR Ranked Wiki — Filtered Seeds:** [wiki.mcsrranked.com/gameplay/seed](https://wiki.mcsrranked.com/gameplay/seed) (Elo seed-type distribution, Overworld archetype guarantees, and Bastion/Fortress distance and loot filters).
 - **MCSR Ranked Wiki — Private Rooms:** [wiki.mcsrranked.com/gameplay/private_rooms](https://wiki.mcsrranked.com/gameplay/private_rooms) (Set-seed configuration, supporter tier filters, and custom room game rules).

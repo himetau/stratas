@@ -2,7 +2,15 @@
 import type { ApiMatch } from "./api";
 import type { TimelineEntry } from "../replay/decode";
 
-export const SPLIT_KEYS = ["nether", "bastion", "fortress", "blind", "eye", "end", "finish"] as const;
+export const SPLIT_KEYS = [
+  "nether",
+  "bastion",
+  "fortress",
+  "blind",
+  "eye",
+  "end",
+  "finish",
+] as const;
 export type AtlasSplitKey = (typeof SPLIT_KEYS)[number];
 
 export interface SplitRow {
@@ -33,6 +41,7 @@ export interface BandStats {
 }
 
 const SMALL_SAMPLE_THRESHOLD = 5;
+const MS_PER_TICK = 50;
 
 const TIMELINE_TO_SPLIT: Record<string, AtlasSplitKey> = {
   "story.enter_the_nether": "nether",
@@ -53,11 +62,15 @@ const TIMELINE_TO_SPLIT: Record<string, AtlasSplitKey> = {
 };
 
 const normUuid = (u: string) => u.replace(/-/g, "").toLowerCase();
-const normType = (s: string | null | undefined) => (s ? s.trim().toUpperCase().replace(/\s+/g, "_") : null);
+const normType = (s: string | null | undefined) =>
+  s ? s.trim().toUpperCase().replace(/\s+/g, "_") : null;
 
 /** Split ticks per player from a match detail and its timelines. ticks = time_ms / 50 */
 export function extractSplitsFromTimeline(
-  m: ApiMatch & { timelines?: TimelineEntry[]; changes?: { uuid: string; eloRate?: number | null }[] },
+  m: ApiMatch & {
+    timelines?: TimelineEntry[];
+    changes?: { uuid: string; eloRate?: number | null }[];
+  },
   timelines: TimelineEntry[] = m.timelines ?? [],
 ): SplitRow[] {
   const seedType = m.seedType ?? m.seed?.overworld ?? null;
@@ -67,7 +80,8 @@ export function extractSplitsFromTimeline(
   return (m.players ?? []).map((p) => {
     const targetUuid = normUuid(p.uuid);
     const won = Boolean(m.result?.uuid && normUuid(m.result.uuid) === targetUuid);
-    const elo = p.eloRate ?? m.changes?.find((c) => normUuid(c.uuid) === targetUuid)?.eloRate ?? null;
+    const elo =
+      p.eloRate ?? m.changes?.find((c) => normUuid(c.uuid) === targetUuid)?.eloRate ?? null;
     const splits: Record<AtlasSplitKey, number | null> = {
       nether: null,
       bastion: null,
@@ -79,16 +93,20 @@ export function extractSplitsFromTimeline(
     };
 
     for (const e of sorted) {
-      if (normUuid(e.uuid) !== targetUuid) continue;
+      if (normUuid(e.uuid) !== targetUuid) {
+        continue;
+      }
       const key = TIMELINE_TO_SPLIT[e.type];
-      if (!key || splits[key] !== null) continue;
-      if (typeof e.time === "number" && Number.isFinite(e.time) && e.time >= 0) {
-        splits[key] = Math.round(e.time / 50);
+      if (!key || splits[key] !== null) {
+        continue;
+      }
+      if (Number.isFinite(e.time) && e.time >= 0) {
+        splits[key] = Math.round(e.time / MS_PER_TICK);
       }
     }
 
     if (splits.finish === null && won && !m.forfeited && (m.result?.time ?? 0) > 0) {
-      splits.finish = Math.round(m.result.time / 50);
+      splits.finish = Math.round(m.result.time / MS_PER_TICK);
     }
 
     return {
@@ -104,7 +122,9 @@ export function extractSplitsFromTimeline(
 }
 
 function quantile(sorted: number[], q: number): number {
-  if (sorted.length === 1) return sorted[0];
+  if (sorted.length === 1) {
+    return sorted[0];
+  }
   const pos = (sorted.length - 1) * q;
   const lo = Math.floor(pos);
   const hi = Math.ceil(pos);
@@ -124,9 +144,15 @@ export function computeBandStats(
   const wantBastion = normType(bastionType);
 
   const filtered = rows.filter((r) => {
-    if (r.elo === null || r.elo < minElo || r.elo > maxElo) return false;
-    if (wantSeed && normType(r.seedType) !== wantSeed) return false;
-    if (wantBastion && normType(r.bastionType) !== wantBastion) return false;
+    if (r.elo === null || r.elo < minElo || r.elo > maxElo) {
+      return false;
+    }
+    if (wantSeed && normType(r.seedType) !== wantSeed) {
+      return false;
+    }
+    if (wantBastion && normType(r.bastionType) !== wantBastion) {
+      return false;
+    }
     return true;
   });
 
@@ -139,7 +165,9 @@ export function computeBandStats(
       .map((r) => r[key])
       .filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0)
       .sort((a, b) => a - b);
-    if (!vals.length) continue;
+    if (!vals.length) {
+      continue;
+    }
     medians[key] = quantile(vals, 0.5);
     p25[key] = quantile(vals, 0.25);
     p75[key] = quantile(vals, 0.75);
