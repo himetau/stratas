@@ -1,5 +1,13 @@
 # Changes
 
+## 1.7.1
+
+- Opponent levels are Emerald (1200-1499), Diamond (1500-1999) and Netherite (2000+), not based on your Elo anymore
+- Opening a finished practice run removes it from Practice
+- "Play the seed" says it moves on once you finish the run
+- Removed the level tag next to each player on Practice
+- Splits-only notice doesn't say you reset before an iron pickaxe anymore
+
 ## 1.7.0
 
 - "Watch in Ranked" asks before starting Ranked when it isn't running, instead of launching it right away.
