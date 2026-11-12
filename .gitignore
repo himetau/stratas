@@ -7,3 +7,4 @@ src/ui/dev/cast
 release
 /artifacts/
 __pycache__/
+/games/
