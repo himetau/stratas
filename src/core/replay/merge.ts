@@ -33,7 +33,7 @@ export function retimeChunk(body: Uint8Array, shift: number): Uint8Array {
   return new Uint8Array(zstdCompressSync(raw));
 }
 
-export function mergeRunners(sources: RunnerSource[], options: { matchSourceSize?: boolean } = {}): MergeResult {
+export function mergeRunners(sources: RunnerSource[], options: { matchSourceSize?: boolean; sizeDonors?: () => SizeReference[] } = {}): MergeResult {
   if (!sources.length) throw new ReplayError("at least one runner is required");
   const metas: ReplayMeta[] = [];
   const references: SizeReference[] = [];
@@ -77,7 +77,7 @@ export function mergeRunners(sources: RunnerSource[], options: { matchSourceSize
     result: finishes.length ? { uuid: finishes[0].uuid, time: finishes[0].time } : { uuid: null, time: Math.max(0, ...timelines.map((e) => e.time)) },
   };
   if (options.matchSourceSize ?? metas.some((m) => m.version >= 41)) {
-    ({ rpd, meta } = matchReplaySize(rpd, meta, references));
+    ({ rpd, meta } = matchReplaySize(rpd, meta, references, options.sizeDonors?.()));
   }
   timelines.sort((a, b) => b.time - a.time);
   const bytes = zipSync({

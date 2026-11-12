@@ -5,6 +5,10 @@ import { checkReadable, readRrf, ReplayError, splitChunks, type ReplayMeta } fro
 
 export interface SizeReference { meta: ReplayMeta; rpd: Uint8Array }
 export const REPLAY_EXPORT_VERSION = 1;
+export const SIZE_FIT_FAILURE = "mixed replay payload";
+
+/** Thrown when a mix decodes fine but is too big to pass as either original. */
+export class ReplaySizeError extends ReplayError {}
 
 export function requiresReplayVerification(version: string | null): boolean {
   const [major = 0, minor = 0, patch = 0] = (version ?? "").split(".").map(Number);
@@ -23,20 +27,23 @@ function pack(bodies: Uint8Array[]): Uint8Array {
   return out;
 }
 
-/** Fit real chunks to an original payload size without adding or removing records. */
-export function matchReplaySize(rpd: Uint8Array, meta: ReplayMeta, references: SizeReference[]) {
+/** Fit real chunks to an original payload size without adding or removing records.
+ * Donors are originals from any seed whose match ID a mix may carry when no same-seed source fits. */
+export function matchReplaySize(rpd: Uint8Array, meta: ReplayMeta, references: SizeReference[], donors: SizeReference[] = []) {
   const candidates = references.filter(({ meta: ref }) => {
     if (ref.overworldSeed !== meta.overworldSeed || ref.netherSeed !== meta.netherSeed || ref.theEndSeed !== meta.theEndSeed) return false;
     // Race verification also sends the first player's UUID; keep that identity intact.
     return ref.matchId != null || ref.raceId != null && ref.players[0]?.uuid === meta.players[0]?.uuid;
   });
+  const matchDonors = donors.filter(({ meta: ref }) => ref.matchId != null && ref.raceId == null);
+  const fits = (ref: SizeReference) => {
+    const gap = ref.rpd.length - rpd.length;
+    return gap === 0 || gap >= 8;
+  };
   let bodies = splitChunks(rpd).map((c) => c.body);
   if (!bodies.length) throw new ReplayError("cannot size-match a replay without chunks");
   for (let attempt = 0; attempt < 2; attempt++) {
-    const reference = candidates.find((ref) => {
-      const gap = ref.rpd.length - rpd.length;
-      return gap === 0 || gap >= 8;
-    });
+    const reference = candidates.find(fits) ?? (attempt ? matchDonors.find(fits) : undefined);
     if (reference) {
       const gap = reference.rpd.length - rpd.length;
       if (gap) {
@@ -55,7 +62,7 @@ export function matchReplaySize(rpd: Uint8Array, meta: ReplayMeta, references: S
         meta: { ...meta, matchId: reference.meta.matchId, raceId: reference.meta.raceId ?? null, stratasReplayVersion: REPLAY_EXPORT_VERSION },
       };
     }
-    if (!attempt && candidates.length) {
+    if (!attempt && (candidates.length || matchDonors.length)) {
       // Also strips padding left by a previous export. Higher compression can
       // make a mix that exceeds both original sizes fit without dropping events.
       bodies = bodies.map((body) => {
@@ -67,7 +74,7 @@ export function matchReplaySize(rpd: Uint8Array, meta: ReplayMeta, references: S
       rpd = pack(bodies);
     }
   }
-  throw new ReplayError(`mixed replay payload (${rpd.length} bytes) cannot fit an original replay size (${candidates.map((r) => r.rpd.length).join(", ") || "no matching source"}); use the original full replays`);
+  throw new ReplaySizeError(`${SIZE_FIT_FAILURE} (${rpd.length} bytes) cannot fit an original replay size (${candidates.map((r) => r.rpd.length).join(", ") || "no matching source"}); add a Ranked replay from any game bigger than about ${Math.ceil((rpd.length + 8) / 1024)} KB`);
 }
 
 /** Repair an existing mix using an untouched original from the same seed. */

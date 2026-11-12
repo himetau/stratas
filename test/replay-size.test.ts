@@ -5,7 +5,7 @@ import { constants, zstdCompressSync, zstdDecompressSync } from "node:zlib";
 import { strToU8, unzipSync, zipSync } from "fflate";
 import { decodeRrf, readRrf, splitChunks } from "../src/core/replay/decode";
 import { mergeRunners } from "../src/core/replay/merge";
-import { matchReplaySize, repairReplay, requiresReplayVerification } from "../src/core/replay/size";
+import { matchReplaySize, repairReplay, ReplaySizeError, requiresReplayVerification } from "../src/core/replay/size";
 
 const original = new Uint8Array(readFileSync(new URL("./fixtures/chavron-14182329.rrf", import.meta.url)));
 const ME = "fba98cacdc6a495eba271ee046dcbba9";
@@ -62,6 +62,30 @@ describe("Ranked replay size verification", () => {
     expect(() => repairReplay(solo.bytes, patch(original, { theEndSeed: "different" }))).toThrow(/no matching source/);
     const source = readRrf(solo.bytes);
     expect(() => matchReplaySize(source.rpd, source.meta, [{ ...source, rpd: new Uint8Array(1) }])).toThrow(/cannot fit/);
+  });
+
+  it("borrows a larger original's match ID from another seed when no source fits", () => {
+    const source = readRrf(solo.bytes);
+    const donor = readRrf(patch(original, { overworldSeed: "other", matchId: 777, raceId: null }));
+    const tooSmall = { ...source, rpd: new Uint8Array(1) };
+    const fitted = matchReplaySize(source.rpd, source.meta, [tooSmall], [donor]);
+    expect(fitted.rpd.length).toBe(donor.rpd.length);
+    expect(fitted.meta).toMatchObject({ matchId: 777, raceId: null, overworldSeed: source.meta.overworldSeed });
+    splitChunks(fitted.rpd).forEach((c, i) => deepStrictEqual(zstdDecompressSync(c.body), zstdDecompressSync(splitChunks(source.rpd)[i].body)));
+  });
+
+  it("prefers a same-seed source over a donor and never borrows a race ID", () => {
+    const source = readRrf(solo.bytes);
+    const donor = readRrf(patch(original, { overworldSeed: "other", matchId: 777 }));
+    const sameSeed = readRrf(original);
+    expect(matchReplaySize(source.rpd, source.meta, [sameSeed], [donor]).meta.matchId).toBe(sameSeed.meta.matchId);
+    const race = readRrf(patch(original, { overworldSeed: "other", matchId: null, raceId: 5 }));
+    expect(() => matchReplaySize(source.rpd, source.meta, [], [race])).toThrow(ReplaySizeError);
+  });
+
+  it("marks an oversized mix as a size failure, not a format failure", () => {
+    const source = readRrf(solo.bytes);
+    expect(() => matchReplaySize(source.rpd, source.meta, [{ ...source, rpd: new Uint8Array(1) }])).toThrow(ReplaySizeError);
   });
 
   it("keeps the UUID required for race verification", () => {

@@ -155,3 +155,26 @@ describe("service: the whole loop on a fake Ranked folder", () => {
     expect(svc.state().races.filter((r) => r.kind === "race").length).toBe(before);
   });
 });
+
+describe("service: version gate", () => {
+  it("forgets a gate failure that was only an oversized mix", () => {
+    const root = mkdtempSync(join(tmpdir(), "stratas-"));
+    const mc = join(root, "minecraft");
+    mkdirSync(join(mc, "mods"), { recursive: true });
+    writeFileSync(join(mc, "mods", "mcsrranked-6.0.12.jar"), "");
+    mkdirSync(join(mc, "mcsrranked", "replay"), { recursive: true });
+    const svc = new Service(":memory:", { offline: true, poolDir: join(root, "games") });
+    try {
+      svc.store.set("settings", { nickname: "cyoshi", uuid: ME, instancePath: root });
+      svc.store.set("gate", {
+        "6.0.12": { status: "failed", detail: "mixed replay payload (619485 bytes) cannot fit an original replay size (347920, 596462); use the original full replays" },
+        "6.0.4": { status: "failed", detail: "unknown record format" },
+      });
+      svc.start();
+      expect(svc.state().gate.status).toBe("unverified");
+      expect(svc.store.get<Record<string, unknown>>("gate", {})).toEqual({ "6.0.4": { status: "failed", detail: "unknown record format" } });
+    } finally {
+      svc.stop(); rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

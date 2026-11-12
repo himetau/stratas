@@ -2,6 +2,11 @@
 
 What's new in each version, in plain words. The section for a version goes on top of its GitHub release.
 
+## 1.6.1
+
+- A mixed replay that's bigger than both of its source replays now borrows the match ID of a bigger replay you have, so Ranked 6.0.11+ still plays it. This works on the website too.
+- One mixed replay that can't fit no longer stops every other mixed replay with "Ranked's replay format changed". Stratas clears that message on its next start and rebuilds the blocked games.
+
 ## 1.6.0
 
 - Mixed replays work with Ranked 6.0.11 and 6.0.12's replay verification. Your runs and the opponent's recorded actions stay unchanged.

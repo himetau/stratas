@@ -4,9 +4,9 @@ import { EventEmitter } from "node:events";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { unzipSync, strFromU8 } from "fflate";
-import { decodeRrf, ReplayError, type ReplayMeta } from "./replay/decode";
+import { decodeRrf, readRrf, ReplayError, type ReplayMeta } from "./replay/decode";
 import { mergeRunners } from "./replay/merge";
-import { REPLAY_EXPORT_VERSION, requiresReplayVerification } from "./replay/size";
+import { REPLAY_EXPORT_VERSION, ReplaySizeError, requiresReplayVerification, SIZE_FIT_FAILURE, type SizeReference } from "./replay/size";
 import { analyzeRace, ANALYSIS_VERSION, type RaceAnalysis } from "./detect/analyze";
 import { quickRace } from "./detect/quick";
 import type { Finding } from "./detect/explain";
@@ -147,6 +147,7 @@ export class Service extends EventEmitter {
 
   start() {
     this.locateInstance();
+    this.forgetSizeFitGates();
     // Reread every replay if the sorting rules changed
     const LIBRARY_VERSION = 4;
     const fresh = this.store.get<number>("libraryVersion", 1) !== LIBRARY_VERSION;
@@ -330,6 +331,13 @@ export class Service extends EventEmitter {
     const g = this.store.get<Record<string, { status: GateState["status"]; detail: string }>>("gate", {});
     if (!v) return { version: null, status: "unverified", detail: "No Ranked mod found" };
     return { version: v, ...(g[v] ?? { status: "unverified", detail: "No replay made with this version has been checked yet" }) };
+  }
+
+  /** Drops gate failures that were only an oversized mix, not a format change. */
+  private forgetSizeFitGates() {
+    const g = this.store.get<Record<string, { status: string; detail: string }>>("gate", {});
+    const kept = Object.fromEntries(Object.entries(g).filter(([, v]) => !(v.status === "failed" && v.detail.startsWith(SIZE_FIT_FAILURE))));
+    if (Object.keys(kept).length !== Object.keys(g).length) this.store.set("gate", kept);
   }
 
   private setGate(status: GateState["status"], detail: string) {
@@ -746,6 +754,13 @@ export class Service extends EventEmitter {
     } catch { return null; }
   }
 
+  private largestOriginals(): SizeReference[] {
+    const originals = this.store.runs().filter((r) => r.match_id != null && (r.kind === "practice" || r.kind === "ranked" || r.kind === "reference"));
+    return originals.sort((a, b) => b.size - a.size).slice(0, 3).flatMap((r) => {
+      try { return [readRrf(new Uint8Array(readFileSync(r.file)))]; } catch { return []; }
+    });
+  }
+
   private buildRace(run: RunRow, ref: RunRow, them: { uuid: string; nickname: string; eloRate: number | null }, tier: string | null, key: string) {
     const me = this.settings().uuid!;
     const base = { key, your_file: run.file, your_uuid: me, their_file: ref.file, their_uuid: them.uuid, their_name: them.nickname,
@@ -760,6 +775,7 @@ export class Service extends EventEmitter {
       decodeRrf(yb); decodeRrf(tb);
       const merged = mergeRunners([{ bytes: yb, uuid: me }, { bytes: tb, uuid: them.uuid }], {
         matchSourceSize: requiresReplayVerification(this.instance?.modVersion ?? null) ? true : undefined,
+        sizeDonors: () => this.largestOriginals(),
       });
       const replay = decodeRrf(merged.bytes);
       const analysis = analyzeRace(replay, me, them.uuid, { leave: this.leaveGoals() });
@@ -774,7 +790,7 @@ export class Service extends EventEmitter {
       this.log(`Game ready: ${name.replace(/\.rrf$/, "")} (${fmtDur(analysis.finalGap)} ${analysis.finalGap >= 0 ? "behind" : "ahead"})`);
     } catch (e) {
       const msg = (e as Error).message;
-      if (e instanceof ReplayError && run.mtime > (this.instance?.modTime ?? 0)) this.setGate("failed", msg);
+      if (e instanceof ReplayError && !(e instanceof ReplaySizeError) && run.mtime > (this.instance?.modTime ?? 0)) this.setGate("failed", msg);
       this.store.putRace({ ...base, race_file: null, final_gap: 0, analysis: "{}", error: msg });
       this.log(`Couldn't build the mixed replay vs ${them.nickname}: ${msg}`);
     }
